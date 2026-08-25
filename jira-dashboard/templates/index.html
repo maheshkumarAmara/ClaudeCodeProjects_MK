@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JIRA Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css?v=45">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="filters">
+                <div class="multi-select project-multi-select" id="project-multi-select">
+                    <div class="multi-select-toggle" id="project-toggle">-- Select Board --</div>
+                    <div class="multi-select-dropdown" id="project-dropdown"></div>
+                </div>
+                <div class="multi-select" id="sprint-multi-select">
+                    <div class="multi-select-toggle" id="sprint-toggle">All Sprints</div>
+                    <div class="multi-select-dropdown" id="sprint-dropdown"></div>
+                </div>
+                <div class="date-range-filter" id="date-range-filter">
+                    <span class="date-range-label">Created:</span>
+                    <input type="date" id="date-from" class="date-input" title="From date">
+                    <span class="date-range-sep">→</span>
+                    <input type="date" id="date-to" class="date-input" title="To date">
+                    <button id="btn-clear-dates" class="btn-clear-dates" title="Clear date filter" style="display:none;">✕</button>
+                </div>
+                <select id="filter-type">
+                    <option value="">All Types</option>
+                    <option value="story">Stories</option>
+                    <option value="bug">Defects</option>
+                    <option value="epic" style="display:none;">Epic</option>
+                </select>
+                <div class="status-filter-group">
+                    <button class="status-operator-btn" id="status-operator" title="Toggle: equals / not equals">=</button>
+                    <div class="multi-select" id="status-multi-select">
+                        <div class="multi-select-toggle" id="status-toggle">All Statuses</div>
+                        <div class="multi-select-dropdown" id="status-dropdown"></div>
+                    </div>
+                </div>
+                <select id="sort-by" title="Sort issues">
+                    <option value="priority">Sort: Priority</option>
+                    <option value="created-desc">Sort: Created ↓ Newest</option>
+                    <option value="created-asc">Sort: Created ↑ Oldest</option>
+                    <option value="status">Sort: Status A–Z</option>
+                    <option value="key" selected>Sort: Key A–Z</option>
+                </select>
+                <button id="btn-refresh" title="Refresh data">Refresh</button>
+                <label class="toggle-switch auto-refresh-toggle" title="Auto-refresh every 5 min">
+                    <input type="checkbox" id="auto-refresh-toggle">
+                    <span class="toggle-slider"></span>
+                    <span class="auto-refresh-label">Auto</span>
+                </label>
+                <span id="fetch-freshness" class="fetch-freshness" style="display:none;"></span>
+                <div class="qa-filter-group">
+                    <button class="status-operator-btn" id="qa-operator" title="Toggle: equals / not equals">=</button>
+                    <div class="multi-select" id="qa-multi-select">
+                        <div class="multi-select-toggle" id="qa-toggle">All QA Contacts</div>
+                        <div class="multi-select-dropdown" id="qa-dropdown"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div id="toast" class="toast" style="display:none;"></div>
+
+    <main>
+        <div id="loading" class="loading">Loading boards...</div>
+        <div id="error" class="error" style="display:none;"></div>
+
+        <div class="tab-nav" id="tab-nav" style="display:none;">
+            <button class="tab-btn active" data-tab="status">Story/Bug Validation Status</button>
+            <button class="tab-btn" data-tab="qa-tracking">QA Tracking</button>
+            <button class="tab-btn" data-tab="alerts">Alerts <span id="alerts-tab-count" class="alert-tab-badge" style="display:none;">0</span></button>
+            <button class="tab-btn" data-tab="metrics">Metrics</button>
+            <button class="tab-btn" data-tab="workload">Workload</button>
+        </div>
+
+        <div id="tab-status">
+        <div id="health-score-banner" class="health-score-banner" style="display:none;">
+            <span class="health-score-label">Sprint Health</span>
+            <span id="health-score-value" class="health-score-value">--</span>
+            <span id="health-score-detail" class="health-score-detail"></span>
+        </div>
+        <div id="stats-section" style="display:none;">
+            <div class="section-header">
+                <div class="section-header-top">
+                    <div>
+                        <h2><span id="stats-title">Story/Bug Validation Status</span> <span id="project-badge" class="project-badge"></span></h2>
+                        <p id="stats-subtitle" class="stats-subtitle"></p>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div class="export-buttons" id="export-buttons-status" style="display:none;">
+                            <button id="btn-export-status" class="btn-export">Export CSV</button>
+                            <button id="btn-export-status-xlsx" class="btn-export btn-export-excel">Export Excel</button>
+                        </div>
+                        <div class="toggle-area">
+                            <div class="view-mode-btns" id="view-mode-btns">
+                                <button class="view-mode-btn active" data-mode="failed">Failed</button>
+                                <button class="view-mode-btn" data-mode="both">Both</button>
+                                <button class="view-mode-btn" data-mode="passed">Passed</button>
+                            </div>
+                            <span id="toggle-label" class="toggle-label fail-label">Showing Failed (0)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="stats-bar" class="stats-bar"></div>
+        </div>
+
+        <div id="owner-section" style="display:none;">
+            <h3 class="owner-heading">Owner Action Summary</h3>
+            <div id="owner-cards" class="owner-cards"></div>
+        </div>
+
+        <div id="unassigned-section" style="display:none;">
+            <h3 class="owner-heading unassigned-heading">Unassigned QA Contact</h3>
+            <div id="unassigned-cards" class="owner-cards"></div>
+        </div>
+        </div>
+
+        <div id="tab-qa-tracking" style="display:none;">
+            <div class="section-header">
+                <div class="section-header-top">
+                    <div>
+                        <h2>QA Tracking <span id="qa-tracking-badge" class="project-badge"></span></h2>
+                        <p id="qa-tracking-subtitle" class="stats-subtitle"></p>
+                    </div>
+                    <div class="export-buttons" id="export-buttons-qa-tracking" style="display:none;">
+                        <button id="btn-export-qa-tracking" class="btn-export">Export CSV</button>
+                        <button id="btn-export-qa-tracking-xlsx" class="btn-export btn-export-excel">Export Excel</button>
+                    </div>
+                </div>
+            </div>
+            <div id="qa-tracking-loading" class="loading" style="display:none;">Loading QA tracking data...</div>
+            <div id="qa-tracking-table"></div>
+            <div id="velocity-section" class="velocity-section" style="display:none;">
+                <h3 class="owner-heading">QA Velocity</h3>
+                <div id="velocity-container" class="velocity-container"></div>
+            </div>
+        </div>
+
+        <div id="tab-alerts" style="display:none;">
+            <div class="section-header">
+                <div class="section-header-top">
+                    <div>
+                        <h2>Alerts <span id="alerts-badge" class="project-badge"></span></h2>
+                        <p id="alerts-subtitle" class="stats-subtitle"></p>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <button id="btn-slack-config" class="btn-secondary btn-slack-config" title="Configure Slack integration">⚙ Slack</button>
+                        <div class="export-buttons" id="export-buttons-alerts" style="display:none;">
+                            <button id="btn-export-alerts" class="btn-export">Export CSV</button>
+                            <button id="btn-export-alerts-xlsx" class="btn-export btn-export-excel">Export Excel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Slack config row (hidden by default) -->
+            <div id="slack-config-row" class="slack-config-row" style="display:none;">
+                <span class="slack-config-label">🔑 Slack Bot Token</span>
+                <input type="password" id="slack-token-input" class="slack-token-input" placeholder="xoxb-..." autocomplete="off">
+                <button id="btn-slack-save" class="btn-secondary">Save</button>
+                <span id="slack-config-status" class="slack-config-status"></span>
+            </div>
+            <div id="bulk-action-bar" class="bulk-action-bar" style="display:none;">
+                <label><input type="checkbox" id="alerts-select-all"> Select All</label>
+                <button id="btn-bulk-ping" class="btn-secondary">Ping (Jira)</button>
+                <button id="btn-bulk-slack" class="btn-secondary btn-slack" title="Send Slack DM to selected">💬 Slack DM</button>
+                <span id="bulk-selected-count" class="bulk-count">0 selected</span>
+            </div>
+            <div id="alerts-loading" class="loading" style="display:none;">Scanning for alerts...</div>
+            <div id="alerts-container"></div>
+        </div>
+
+        <div id="tab-metrics" style="display:none;">
+            <div class="section-header">
+                <div class="section-header-top">
+                    <div>
+                        <h2>Metrics <span id="metrics-badge" class="project-badge"></span></h2>
+                        <p id="metrics-subtitle" class="stats-subtitle"></p>
+                    </div>
+                    <div class="export-buttons" id="export-buttons-metrics" style="display:none;">
+                        <button id="btn-export-metrics" class="btn-export">Export CSV</button>
+                        <button id="btn-export-metrics-xlsx" class="btn-export btn-export-excel">Export Excel</button>
+                    </div>
+                </div>
+            </div>
+            <div id="metrics-container"></div>
+            <div id="sprint-comparison-section" class="sprint-comparison-section" style="display:none;">
+                <h3 class="owner-heading">Sprint Comparison</h3>
+                <button id="btn-snapshot" class="btn-secondary">Take Snapshot</button>
+                <div id="sprint-comparison-container" class="sprint-comparison-container"></div>
+            </div>
+        </div>
+
+        <div id="tab-workload" style="display:none;">
+            <div class="section-header">
+                <div class="section-header-top">
+                    <div>
+                        <h2>Workload <span id="workload-badge" class="project-badge"></span></h2>
+                        <p id="workload-subtitle" class="stats-subtitle">Issues per QA engineer in active sprint</p>
+                    </div>
+                </div>
+            </div>
+            <div id="workload-loading" class="loading" style="display:none;">Loading workload data...</div>
+            <div id="workload-container" class="workload-container"></div>
+        </div>
+    </main>
+
+
+    </div>
+
+    <script>
+        const DEFAULT_PROJECT = {{ default_project | tojson }};
+    </script>
+    <script src="/static/script.js?v=51"></script>
+    <script>
+        (function () {
+            var retries = 0;
+            var MAX_RETRIES = 3;
+            var shuttingDown = false;
+
+            function onShutdown() {
+                shuttingDown = true;
+                window.close();
+                // Fallback overlay if window.close() is blocked by the browser
+                document.body.innerHTML =
+                    '<div style="display:flex;align-items:center;justify-content:center;' +
+                    'height:100vh;flex-direction:column;font-family:sans-serif;color:#555;gap:12px">' +
+                    '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.5">' +
+                    '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>' +
+                    '<line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+                    '<p style="margin:0;font-size:1.1rem;font-weight:500">Server has stopped</p>' +
+                    '<p style="margin:0;font-size:.9rem;color:#999">You can close this tab.</p></div>';
+            }
+
+            function connect() {
+                var ws = new WebSocket("ws://127.0.0.1:8000/ws/keepalive");
+                ws.onopen = function () { retries = 0; };
+                ws.onmessage = function (e) {
+                    if (e.data === "shutdown") onShutdown();
+                };
+                ws.onclose = function () {
+                    if (shuttingDown) return;
+                    if (retries < MAX_RETRIES) {
+                        retries++;
+                        setTimeout(connect, 1500);
+                    } else {
+                        onShutdown();
+                    }
+                };
+            }
+            connect();
+        })();
+    </script>
+</body>
+</html>

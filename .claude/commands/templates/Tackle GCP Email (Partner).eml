@@ -1,0 +1,1421 @@
+Delivered-To: andrew.chaet@rubrik.com
+Received: by 2002:a05:6520:2424:b0:32b:5700:bd5c with SMTP id o4csp197204lkm;
+        Fri, 27 Feb 2026 07:43:55 -0800 (PST)
+X-Forwarded-Encrypted: i=4; AJvYcCXJ1M0npKqfuZ92etVGFA+RLsgbvC7YMlw9s6yXbIFHidb8BRHowTiNrhCOoKEUrOh2THh4r9hXiUAPNgk=@rubrik.com
+X-Received: by 2002:a05:6808:c236:b0:464:a1ee:c412 with SMTP id 5614622812f47-464beb439f9mr1845110b6e.31.1772207034651;
+        Fri, 27 Feb 2026 07:43:54 -0800 (PST)
+ARC-Seal: i=3; a=rsa-sha256; t=1772207034; cv=pass;
+        d=google.com; s=arc-20240605;
+        b=bukBy8yWhrIAUV217XFYs8jgtO+uAG7job9WYdW9gVocWQ4LjCzZkpBYsu6s7HLIsG
+         /1ceyU11LAgNwU1HnW0xx/Yj6GCyhdP/vXLfVXNiqvxlUzWTkTSh8keNEknl39es3NgE
+         O6FtNkDGpxZ14ag09panjl7EYnaXSOf+klGABNQ4HGEVaz5W1Kj/AIcUaizJqUFpKbNl
+         tdCUaFRBy0Lz/XI+H9KRTNGAvIhRprB9J6p32lr0Ln91DecWoHKyIVXMJCtpZb85SUDS
+         /Spnc1kfvxJy+zVKij8LBLibJCbQKp+zLVDO9XpigQo/gjjPDG6S/aomBAzYtkDWXQ6K
+         eD/g==
+ARC-Message-Signature: i=3; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=list-unsubscribe:list-archive:list-help:list-post:list-id
+         :mailing-list:precedence:reply-to:mime-version:feedback-id:to
+         :message-id:subject:date:from:dkim-signature;
+        bh=k/NFZk2+ZRT1GBTLRQ5V2K+aOMN0rLMoo9Qw+2uZKio=;
+        fh=1E10MoNuRO/KKxdNiAoPoxnhkXK6Xwgx9W8iX6ztfo8=;
+        b=al5ImH/eFZsyZlGD2XYGSCn6HQlPRJJtkcpDcjOPpwr2vWIcxyRCeWvFniM/LRMYdH
+         wrk2OCXepZdEuGxUNgKPayLbJg6NW49pMOku8W6kaakE+upbR5Y+95Og1gRGh/OhdoqM
+         zUmKMhgQGXfcY8n5jj5Gws0K4hjj5DhQ7xYBr79Z92BxZeHY0gUH8WnTBkV+Bj7bo4PP
+         p9ixoHY3r+fNChVIen5A26HNEPvaqd2lTpxA7dovngqn/3/qpkaQP6thfOpOt6TqLzaF
+         TA34fT5RnsNTS5oA3a42M/Rj68i07EJEZIAAx+7DxII+lQn6C6h/TyxoMuIUUAN9X1jB
+         FwDw==;
+        dara=google.com
+ARC-Authentication-Results: i=3; mx.google.com;
+       dkim=pass header.i=@rubrik.com header.s=google header.b=S4ODbvdr;
+       arc=pass (i=2 spf=pass spfdomain=pm.tackle.io dkim=pass dkdomain=pm.mtasv.net dkim=pass dkdomain=tackle.io dmarc=pass fromdomain=tackle.io);
+       spf=pass (google.com: domain of marketplace+bncbcmn7o4vwygrbopxq3gqmgqejqzhtsi@rubrik.com designates 209.85.220.69 as permitted sender) smtp.mailfrom=marketplace+bncBCMN7O4VWYGRBOPXQ3GQMGQEJQZHTSI@rubrik.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=rubrik.com;
+       dara=fail header.i=@rubrik.com
+Return-Path: <marketplace+bncBCMN7O4VWYGRBOPXQ3GQMGQEJQZHTSI@rubrik.com>
+Received: from mail-sor-f69.google.com (mail-sor-f69.google.com. [209.85.220.69])
+        by mx.google.com with SMTPS id 586e51a60fabf-4160cf257b5sor2717556fac.3.2026.02.27.07.43.54
+        for <andrew.chaet@rubrik.com>
+        (Google Transport Security);
+        Fri, 27 Feb 2026 07:43:54 -0800 (PST)
+Received-SPF: pass (google.com: domain of marketplace+bncbcmn7o4vwygrbopxq3gqmgqejqzhtsi@rubrik.com designates 209.85.220.69 as permitted sender) client-ip=209.85.220.69;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@rubrik.com header.s=google header.b=S4ODbvdr;
+       arc=pass (i=2 spf=pass spfdomain=pm.tackle.io dkim=pass dkdomain=pm.mtasv.net dkim=pass dkdomain=tackle.io dmarc=pass fromdomain=tackle.io);
+       spf=pass (google.com: domain of marketplace+bncbcmn7o4vwygrbopxq3gqmgqejqzhtsi@rubrik.com designates 209.85.220.69 as permitted sender) smtp.mailfrom=marketplace+bncBCMN7O4VWYGRBOPXQ3GQMGQEJQZHTSI@rubrik.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=rubrik.com;
+       dara=fail header.i=@rubrik.com
+ARC-Seal: i=2; a=rsa-sha256; t=1772207034; cv=pass;
+        d=google.com; s=arc-20240605;
+        b=WINdDb8Ho/mCooC4hUkV3JM7lhFa61DDGf7d4duG57e4g6ub/Holr/ib+dwC4Tryh4
+         IJfvVEGniW00QobFNqIzDmPWNWdrwtzLmsebQ1FxYfJczFvB1aZR4jBsggIjZIliSARL
+         JPnC0oAyLQLYNqdDTDDhUFXItR0XQKtZknC/wiB0RlwuENhvNUF5LJDbwlqfzF4wNcdN
+         d/xcEQfuncm5NCxYK+ne81Jzaxo2EkFV4Uy+FyeFgcr5Et/onNGZvjH4saDleolSohpD
+         mjCLS+xn3qjWszRC5x5qB8h7F38EZMQuhQ4hPW73o9AJ166O0e+PCnFIyP0dhyQm6dKV
+         Hd4w==
+ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=list-unsubscribe:list-archive:list-help:list-post:list-id
+         :mailing-list:precedence:reply-to:mime-version:feedback-id:to
+         :message-id:subject:date:from:dkim-signature;
+        bh=k/NFZk2+ZRT1GBTLRQ5V2K+aOMN0rLMoo9Qw+2uZKio=;
+        fh=1E10MoNuRO/KKxdNiAoPoxnhkXK6Xwgx9W8iX6ztfo8=;
+        b=Z/I6BqlmX6gt4YqKV7/Npgjep/Eb+s/3m5Rjdg7kQxmulcbge+tF8GjigYss+7jezb
+         GBjuz5/hjwOLa/sKbV7yY0WFGGw7WN1w8UWpide4koYc2d4Jq9N46SOioPw8oy2UraiV
+         R0m6FZ2eb9Oj+y/7mWoo1b+iCH83un13xACObnEyncAsk6X7qNTA6Ix41oit52+uUwkW
+         V9T/omMHRL6m0m0hBYz9YB6GfOEu63RP0PueGgWIbTPAduxLDYovmJZBv6Ooi4QEbcTJ
+         RW9UtJsFGmqPQlUsnjR8VJ/ok0O1iCuHLcZVlcxfeNs7z0swINeJSti3WeF4By8wIN9L
+         y8bw==;
+        darn=rubrik.com
+ARC-Authentication-Results: i=2; mx.google.com;
+       dkim=pass header.i=@pm.mtasv.net header.s=pm20250324 header.b=TEt3CL+8;
+       dkim=pass header.i=@tackle.io header.s=20170815160923pm header.b=f1jFIO+v;
+       spf=pass (google.com: domain of pm_bounces@pm.tackle.io designates 104.245.209.213 as permitted sender) smtp.mailfrom=pm_bounces@pm.tackle.io;
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=tackle.io
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=rubrik.com; s=google; t=1772207034; x=1772811834; darn=rubrik.com;
+        h=list-unsubscribe:list-archive:list-help:list-post:list-id
+         :mailing-list:precedence:reply-to:x-original-authentication-results
+         :x-original-sender:mime-version:feedback-id:to:message-id:subject
+         :date:from:from:to:cc:subject:date:message-id:reply-to;
+        bh=k/NFZk2+ZRT1GBTLRQ5V2K+aOMN0rLMoo9Qw+2uZKio=;
+        b=S4ODbvdrOPHQugvr9GD71NkRMOiBLoFcKKNBxzfGIesdZ6nYjSKgPjzUoyc/7zucOv
+         0hL0xZ5Dqm/lisCVlenQlRqEBVqDItaPqdU1wcRFMqPfo8yL49wNbNOcjIuoOzGdsCfO
+         p8YtH1DX0c4Cuy1h1wAUig4TgThL7CZ8VUDxDf+iRj9pzMF0Y/fH7GqMeBOr2Mpy9ZcZ
+         nUci8j52IEcLYaTUs00vDdcpRZi68dlIXcW2o5lePtmIoiK3lTFiczqnEOnlCvhjcLnE
+         oZUmHZKtjb8S55APaN87Flu3gnatQgaSF9Re7PBZJijQGQkWNU07fKp4k9Upyu5towWC
+         AehQ==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1772207034; x=1772811834;
+        h=list-unsubscribe:list-archive:list-help:list-post
+         :x-spam-checked-in-group:list-id:mailing-list:precedence:reply-to
+         :x-original-authentication-results:x-original-sender:mime-version
+         :feedback-id:to:message-id:subject:date:from:x-beenthere:x-beenthere
+         :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to;
+        bh=k/NFZk2+ZRT1GBTLRQ5V2K+aOMN0rLMoo9Qw+2uZKio=;
+        b=BgvXhPra+GM3KdquMjcT74kBiReoAYte9gHLROewc/p5ml7kiRvjOPJthRC0aURdkg
+         V6/S3/rEnN6SbZXu50C4A3Ben6q5a7oNWHPFIPuVxt7EhEo/urmZihDthoNNrUEKUvz/
+         KRVVYUAUCiUyk+CC2W9xZdmAuqMsUxdx43brNpwiVgz+nmMqqxF241eVeqzcwfB0nx4d
+         WPO2FfGKrDQXD7fseMnrMpcq++JKkM0cdmXa3XId2q7uBZ1GV5I7pYtZDBtO1KQ8WPki
+         NqjIrjFvPppM7NHYTr5Gs+8s2fE/DUNrHvA1zibh1KgJtXWu1tVlFW9i5KIN7dOZSCFM
+         Wjpw==
+X-Forwarded-Encrypted: i=2; AJvYcCV/oXQ7KGf/CRXPkm7nFd8mliVa4x1Ce4esSNcWepKbCAiKp1ey0GNtgXHNJxzULwg7bIF2NrB862LfMxE=@rubrik.com
+X-Gm-Message-State: AOJu0YyqjiO6SYdO3Jo3j96QfmuFhT3p4qa/PbSg58LIrHR0zdJBSyQ0
+	NMMUiVieuZI2dyiuOeqMYp4hvj3GZ/tLq5qyb55AFhPfTmrG4AxwXvOX9qC7pJv7Omkujg==
+X-Received: by 2002:a05:6870:4794:b0:40a:6f47:795d with SMTP id 586e51a60fabf-41626de9c4cmr1741839fac.19.1772207033964;
+        Fri, 27 Feb 2026 07:43:53 -0800 (PST)
+X-BeenThere: marketplace@rubrik.com; h="AV1CL+FBI58NUGoum52aVieH7jQqurfB9BfZSIpjNfDswoOS2A=="
+Received: by 2002:a05:6870:a34d:b0:3ec:461d:1e8f with SMTP id
+ 586e51a60fabf-415ee255f72ls1676571fac.2.-pod-prod-03-us; Fri, 27 Feb 2026
+ 07:43:53 -0800 (PST)
+X-Forwarded-Encrypted: i=2; AJvYcCVsTij6tz59HKY/9kBvc+agcIuqKXcTWzn36fMzLdyWBKcexAd6g9D4bP85deEP05XAN4xWKUz67Wqddw==@rubrik.com
+X-Received: by 2002:a05:6871:2b1d:b0:3e8:8e56:6718 with SMTP id 586e51a60fabf-416270a457fmr1909264fac.52.1772207033387;
+        Fri, 27 Feb 2026 07:43:53 -0800 (PST)
+X-BeenThere: marketplace-notifications@rubrik.com; h="AV1CL+GJ6frZXX1nA5shFP70K6BV9f4SbIWi0zrwXlORloKG7w=="
+Received: by 2002:a05:6870:a34d:b0:3ec:461d:1e8f with SMTP id
+ 586e51a60fabf-415ee255f72ls1676565fac.2.-pod-prod-03-us; Fri, 27 Feb 2026
+ 07:43:52 -0800 (PST)
+X-Received: by 2002:a05:6808:1999:b0:45e:b624:5639 with SMTP id 5614622812f47-464be922eaamr2031319b6e.10.1772207032644;
+        Fri, 27 Feb 2026 07:43:52 -0800 (PST)
+ARC-Seal: i=1; a=rsa-sha256; t=1772207032; cv=none;
+        d=google.com; s=arc-20240605;
+        b=hrnTwrcAfCWchNjPESIa5BSxzvSqW0X0U7t6QwkL9rOV9nE33rxHyN6hUMtMWAsta1
+         hKJ6PdVh8x9zx6pKHB3pC4DSdWZQAhwhq2ThSMx9uqyydq1/5a/3iJFXCFZYaK5sVPq5
+         3pWYOAdHhZV8WdzmKR/VPDkojFd9kSURYILLp8PO6OH0lnJN3ThRRikcRPh+9lGGpaWW
+         cx5wP04D6GUHkZuchiF43kuqG78gsBseN2Ij08tNuE6gBlQVpYwmx6srnFcq5JoR+Uqi
+         T/WAz9TXsfJK2WQA0ppA1J+bB7dD2X1CBmXc/+TBUDpRkMb5aWhRzWFZ+a7RTHl1Rhed
+         C/OA==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=mime-version:feedback-id:to:message-id:subject:date:from
+         :dkim-signature:dkim-signature;
+        bh=k/NFZk2+ZRT1GBTLRQ5V2K+aOMN0rLMoo9Qw+2uZKio=;
+        fh=45c78SlqiLMN4UnGt6/OwnVeEcqfzgsX1VoeYqEijXY=;
+        b=BDB50WgZOZ2/ozf76n3bjkqxmtRW1YqCQsAFxVnmdt8jXUGO3nQz3v45vgRCCuQI0n
+         RRAsB04fNTWDn9c/rm/L/+HoWFayQ7bez3nbh025RD0KIfA7BVaZ3kNpGxQoS7Fu/1lm
+         jU90cEcqbJcg1GDUeUqMs0EomzyzyPPMWPjL9VkUnXTmvCNp3+AUKgaQEBvxmaPXq3Q9
+         I8Yx/JTfE+U6xa0hqSYco2Elnm9e8lC+k+kix4r7hSLPQImo9KUerzwmlCFufHlxCOTC
+         pGr7xLiK420qDWpU8QEIi3Sh0MLoG823EFuW2NeyQI2c8IbKC0PcTI3bpQzWIENAi0we
+         lv1g==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@pm.mtasv.net header.s=pm20250324 header.b=TEt3CL+8;
+       dkim=pass header.i=@tackle.io header.s=20170815160923pm header.b=f1jFIO+v;
+       spf=pass (google.com: domain of pm_bounces@pm.tackle.io designates 104.245.209.213 as permitted sender) smtp.mailfrom=pm_bounces@pm.tackle.io;
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=tackle.io
+Received: from mta213a-ord.mtasv.net (mta213a-ord.mtasv.net. [104.245.209.213])
+        by mx.google.com with ESMTPS id 5614622812f47-464bb37d97bsi1757803b6e.39.2026.02.27.07.43.52
+        for <marketplace-notifications@rubrik.com>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Fri, 27 Feb 2026 07:43:52 -0800 (PST)
+Received-SPF: pass (google.com: domain of pm_bounces@pm.tackle.io designates 104.245.209.213 as permitted sender) client-ip=104.245.209.213;
+Received: by mta213a-ord.mtasv.net id hk6trg3b84k5 for <marketplace-notifications@rubrik.com>; Fri, 27 Feb 2026 10:43:52 -0500 (envelope-from <pm_bounces@pm.tackle.io>)
+X-PM-IP: 104.245.209.213
+X-IADB-IP: 104.245.209.213
+X-IADB-IP-REVERSE: 213.209.245.104
+From: "'Tackle' via Marketplace Notifications" <Marketplace-notifications@rubrik.com>
+Date: Fri, 27 Feb 2026 15:43:52 +0000
+Subject: [Cloud Marketplace] New GCP Order of Rubrik Security Cloud from TELUS Health
+Message-Id: <b28c0055-9bac-4f04-a0c1-376577b56cd7@mtasv.net>
+To: marketplace-notifications@rubrik.com
+Feedback-ID: s3201108-Z2NwLW9yZGVyLXJlZ2lzdGVyZWQ=:s3201108:a145308:postmark
+X-Complaints-To: abuse@postmarkapp.com
+X-PM-Message-Id: b28c0055-9bac-4f04-a0c1-376577b56cd7
+X-PM-Tag: gcp-order-registered
+X-PM-RCPT: |bTF8MTQ1MzA4fDMyMDExMDh8bWFya2V0cGxhY2Utbm90aWZpY2F0aW9uc0BydWJyaWsuY29t|
+X-PM-Message-Options: v1;1.cvB8hJMynMn1pmnCEN4LeA.2ijWtKFqeWWIDy4dHwHt4c3MeKyRuDe1FgUkew_dSo51_lbiyX5-DiM5dvkKKlNq1nBXo9gl-p70kgMmAB0OsWq9bC6jiwd0ULc6UiOiv5qMkERRHV1Aw_vZDm-LoKEie267CDLzJEyVplR8MwAvqhz1-O97Y9GWO2bwPoNR28E1fSQptZL1sLAIyR0VasPl
+MIME-Version: 1.0
+X-PM-MTA-Pool: transactional-2
+Content-Type: multipart/alternative;
+	boundary=mk3-62a7fad3ddb04216974991cddc885de2; charset=UTF-8
+X-Original-Sender: upstream@tackle.io
+X-Original-Authentication-Results: mx.google.com;       dkim=pass
+ header.i=@pm.mtasv.net header.s=pm20250324 header.b=TEt3CL+8;       dkim=pass
+ header.i=@tackle.io header.s=20170815160923pm header.b=f1jFIO+v;
+       spf=pass (google.com: domain of pm_bounces@pm.tackle.io designates
+ 104.245.209.213 as permitted sender) smtp.mailfrom=pm_bounces@pm.tackle.io;
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=tackle.io
+X-Original-From: Tackle <upstream@tackle.io>
+Reply-To: Tackle <upstream@tackle.io>
+Precedence: list
+Mailing-list: list marketplace@rubrik.com; contact marketplace+owners@rubrik.com
+List-ID: <marketplace.rubrik.com>
+X-Spam-Checked-In-Group: Marketplace-notifications@rubrik.com
+X-Google-Group-Id: 180192665127
+List-Post: <https://groups.google.com/a/rubrik.com/group/marketplace/post>, <mailto:marketplace@rubrik.com>
+List-Help: <https://support.google.com/a/rubrik.com/bin/topic.py?topic=25838>, <mailto:marketplace+help@rubrik.com>
+List-Archive: <https://groups.google.com/a/rubrik.com/group/marketplace/>
+List-Unsubscribe: <mailto:googlegroups-manage+180192665127+unsubscribe@googlegroups.com>,
+ <https://groups.google.com/a/rubrik.com/group/marketplace/subscribe>
+
+--mk3-62a7fad3ddb04216974991cddc885de2
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+
+
+***************************************************************************
+GCP New Order with Registration
+New GCP order of Rubrik Security Cloud from customer Ian Sim.
+***************************************************************************
+
+
+GCP New Order
+Rubrik Security Cloud
+
+Congratulations on the new order from Ian Sim. The details of this order ar=
+e:
+
+
+
+
+Buyer ID (External Account ID)
+9ec55d2c-7c1c-4b7e-9258-6be4075eb7d7
+
+Order Date/Time=20
+2026-02-27T15:43:37.777278Z
+
+Offer ID (Quote External Name)
+8dde3caa-4578-454e-9e92-7c658d7f6b76
+
+Product ID (Solution ID)
+rubrik-security-cloud.endpoints.rubrik-public.cloud.goog
+
+
+
+
+
+*** Registration Details ***
+
+Company Website
+telushealth.com
+
+Billing Address (Include Full Address)
+630 Ren=C3=A9-L=C3=A9vesque Blvd W 22nd Floor Montreal, QC H3B 1S6 Canada
+
+Company
+TELUS Health
+
+Full Name
+Ian Sim
+
+Email Address
+ian.sim@telus.com
+
+Contact Phone Number
+613-880-3533
+
+
+
+*** Entitlements ***
+
+SKU
+private-offer-P1Y
+
+Entitlement ID
+81be38fe-a35c-435e-8f4c-217eedea1738
+
+
+
+
+
+
+
+Please contact them directly to confirm the purchase and gather any additio=
+nal information. It=E2=80=99s time to deploy some software!
+
+Cheers!
+Team Tackle
+
+
+
+=C2=A92020 Tackle.io
+218 N Capitol Blvd.
+Boise, ID 83702
+
+--mk3-62a7fad3ddb04216974991cddc885de2
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.=
+w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns=3D"http://www.w3.=
+org/1999/xhtml" lang=3D"en"><head>
+  <meta name=3D"viewport" content=3D"width=3Ddevice-width, initial-scale=3D=
+1.0">
+  <meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3DUTF-8">
+  <title></title>
+  <!--
+    The style block is collapsed on page load to save you some scrolling.
+    Postmark automatically inlines all CSS properties for maximum email cli=
+ent
+    compatibility. You can just update styles here, and Postmark does the r=
+est.
+    -->
+ =20
+</head>
+<body class=3D"o_body o_bg-light" style=3D"width: 100%;margin: 0px;padding:=
+ 0px;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;background-c=
+olor: #dfe1e6;">
+ =20
+
+ =20
+    <meta charset=3D"utf-8">
+    <meta name=3D"viewport" content=3D"width=3Ddevice-width, initial-scale=3D=
+1, shrink-to-fit=3Dno">
+    <meta name=3D"x-apple-disable-message-reformatting">
+    <meta http-equiv=3D"X-UA-Compatible" content=3D"IE=3Dedge">
+
+  <!-- Email Title-->
+    <title>GCP New Order with Registration</title>
+
+    <style type=3D"text/css">@media (max-width: 649px) { .o_col-full { max-=
+width: 100% !important } .o_col-half { max-width: 50% !important } .o_hide-=
+lg { display: inline-block !important; font-size: inherit !important; max-h=
+eight: none !important; line-height: inherit !important; overflow: visible =
+!important; width: auto !important; visibility: visible !important } .o_hid=
+e-xs, .o_hide-xs.o_col_i { display: none !important; font-size: 0 !importan=
+t; max-height: 0 !important; width: 0 !important; line-height: 0 !important=
+; overflow: hidden !important; visibility: hidden !important; height: 0 !im=
+portant } .o_xs-center { text-align: center !important } .o_xs-left { text-=
+align: left !important } .o_xs-right { text-align: left !important } table.=
+o_xs-left { margin-left: 0 !important; margin-right: auto !important; float=
+: none !important } table.o_xs-right { margin-left: auto !important; margin=
+-right: 0 !important; float: none !important } table.o_xs-center { margin-l=
+eft: auto !important; margin-right: auto !important; float: none !important=
+ } h1.o_heading { font-size: 32px !important; line-height: 41px !important =
+} h2.o_heading { font-size: 26px !important; line-height: 37px !important }=
+ h3.o_heading { font-size: 20px !important; line-height: 30px !important } =
+.o_xs-py-md { padding-top: 24px !important; padding-bottom: 24px !important=
+ } .o_xs-pt-xs { padding-top: 8px !important } .o_xs-pb-xs { padding-bottom=
+: 8px !important } }
+@media screen { @font-face { font-family: "Roboto"; font-style: normal; fon=
+t-weight: 400; src: local("Roboto"), local("Roboto-Regular"), url("https://=
+fonts.gstatic.com/s/roboto/v18/KFOmCnqEu92Fr1Mu7GxKOzY.woff2") format("woff=
+2"); unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, =
+U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF } @font-face { font-family: "=
+Roboto"; font-style: normal; font-weight: 400; src: local("Roboto"), local(=
+"Roboto-Regular"), url("https://fonts.gstatic.com/s/roboto/v18/KFOmCnqEu92F=
+r1Mu4mxK.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+015=
+2-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U=
++2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD } @font-face { font-f=
+amily: "Roboto"; font-style: normal; font-weight: 700; src: local("Roboto B=
+old"), local("Roboto-Bold"), url("https://fonts.gstatic.com/s/roboto/v18/KF=
+OlCnqEu92Fr1MmWUlfChc4EsA.woff2") format("woff2"); unicode-range: U+0100-02=
+4F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2=
+C7F, U+A720-A7FF } @font-face { font-family: "Roboto"; font-style: normal; =
+font-weight: 700; src: local("Roboto Bold"), local("Roboto-Bold"), url("htt=
+ps://fonts.gstatic.com/s/roboto/v18/KFOlCnqEu92Fr1MmWUlfBBc4.woff2") format=
+("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+=
+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, =
+U+2212, U+2215, U+FEFF, U+FFFD } .o_sans, .o_heading { font-family: "Roboto=
+", sans-serif !important } .o_heading, strong, b { font-weight: 700 !import=
+ant } a[x-apple-data-detectors] { color: inherit !important; text-decoratio=
+n: none !important } }</style>
+    <!--[if mso]>
+    <style>
+      table { border-collapse: collapse; }
+      .o_col { float: left; }
+    </style>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+    <![endif]-->
+ =20
+ =20
+    <!-- preview-text -->
+    <table width=3D"100%" cellspacing=3D"0" cellpadding=3D"0" border=3D"0" =
+role=3D"presentation">
+      <tbody>
+        <tr>
+          <td class=3D"o_hide" align=3D"center" style=3D"display: none;font=
+-size: 0;max-height: 0;width: 0;line-height: 0;overflow: hidden;mso-hide: a=
+ll;visibility: hidden;">New GCP order of Rubrik Security Cloud from TELUS H=
+ealth.</td>
+        </tr>
+      </tbody>
+    </table>
+    <!-- header-button -->
+    <table width=3D"100%" cellspacing=3D"0" cellpadding=3D"0" border=3D"0" =
+role=3D"presentation">
+      <tbody>
+        <tr>
+          <td class=3D"o_bg-light o_px-xs o_pt-lg o_xs-pt-xs" align=3D"cent=
+er" style=3D"background-color: #dfe1e6;padding-left: 8px;padding-right: 8px=
+;padding-top: 32px;">
+            <!--[if mso]><table width=3D"632" cellspacing=3D"0" cellpadding=
+=3D"0" border=3D"0" role=3D"presentation"><tbody><tr><td><![endif]-->
+            <table class=3D"o_block" width=3D"100%" cellspacing=3D"0" cellp=
+adding=3D"0" border=3D"0" role=3D"presentation" style=3D"max-width: 632px;m=
+argin: 0 auto;">
+              <tbody>
+                <tr>
+                  <td class=3D"o_re o_bg-dark o_px o_pb-md o_br-t" align=3D=
+"center" style=3D"font-size: 0;vertical-align: top;background-color: #25385=
+8;border-radius: 12px 12px 0px 0px;padding-left: 16px;padding-right: 16px;p=
+adding-bottom: 24px;">
+                    <!--[if mso]><table cellspacing=3D"0" cellpadding=3D"0"=
+ border=3D"0" role=3D"presentation"><tbody><tr><td width=3D"200" align=3D"l=
+eft" valign=3D"top" style=3D"padding:0px 8px;"><![endif]-->
+                    <div class=3D"o_col" style=3D"display: inline-block;ver=
+tical-align: top;width: 100%;max-width: 200px;">
+                      <div style=3D"font-size: 24px; line-height: 24px; hei=
+ght: 24px;">&nbsp; </div>
+                      <div class=3D"o_px-xs o_sans o_text o_left o_xs-cente=
+r" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;margi=
+n-bottom: 0px;font-size: 16px;line-height: 24px;text-align: center;padding-=
+left: 8px;padding-right: 8px;">
+
+                        <!-- Header Logo -->
+                        <p style=3D"margin-top: 0px;margin-bottom: 0px;"><a=
+ class=3D"o_text-white" href=3D"https://tackle.io/" style=3D"text-decoratio=
+n: none; outline: none; color: #FFFFFF;"><img src=3D"https://s3.amazonaws.c=
+om/tackle.io-misc/tackle-logo-light.png" width=3D"80" height=3D"24" alt=3D"=
+Tackle.io" style=3D"max-width: 80px;-ms-interpolation-mode: bicubic;vertica=
+l-align: middle;border: 0;line-height: 100%;height: auto;outline: none;text=
+-decoration: none;"></a></p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <!--[if mso]></td></tr></table><![endif]-->
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+<!--  Feature Area Beginning  -->
+<!-- marketplace-logo-with-lines -->
+  <table width=3D"100%" cellspacing=3D"0" cellpadding=3D"0" border=3D"0" ro=
+le=3D"presentation">
+    <tbody>
+       <tr>
+           <td class=3D"o_bg-light o_px-xs" align=3D"center" style=3D"backg=
+round-color: #dfe1e6;padding-left: 8px;padding-right: 8px;">
+           <!--[if mso]><table width=3D"632" cellspacing=3D"0" cellpadding=3D=
+"0" border=3D"0" role=3D"presentation"><tbody><tr><td><![endif]-->
+              <table class=3D"o_block" width=3D"100%" cellspacing=3D"0" cel=
+lpadding=3D"0" border=3D"0" role=3D"presentation" style=3D"max-width: 632px=
+;margin: 0 auto;">
+                <tbody>
+                  <tr>
+                    <td class=3D"o_bg-dark o_px-md o_py-xl o_xs-py-md o_san=
+s o_text-md o_text-white" align=3D"center" style=3D"font-family: Helvetica,=
+ Arial, sans-serif;margin-top: 0px;margin-bottom: 0px;font-size: 19px;line-=
+height: 28px;background-color: #0052cc;color: #ffffff;padding-left: 24px;pa=
+dding-right: 24px;padding-top: 50px;padding-bottom: 60px;">
+                        <table role=3D"presentation" cellspacing=3D"0" cell=
+padding=3D"0" border=3D"0">
+                            <tbody>
+                              <tr>
+                                <td class=3D"o_bb-primary" height=3D"28" wi=
+dth=3D"30" style=3D"border-bottom: 2px solid #ffffff;">&nbsp; </td>
+                                <td rowspan=3D"2" class=3D"o_sans o_text o_=
+text-white o_px o_py" align=3D"center" style=3D"font-family: Helvetica, Ari=
+al, sans-serif;margin-top: 0px;margin-bottom: 0px;font-size: 16px;line-heig=
+ht: 24px;color: #ffffff;">
+                                    <img src=3D"https://s3.amazonaws.com/ta=
+ckle.io-misc/gcp_marketplace_logo_wht.png" width=3D"80" height=3D"80" alt=3D=
+"GCP Marketplace" style=3D"max-width: 60px;-ms-interpolation-mode: bicubic;=
+vertical-align: middle;border: 0;line-height: 100%;height: auto;outline: no=
+ne;text-decoration: none;">
+                                </td>
+                                <td class=3D"o_bb-primary" height=3D"28" wi=
+dth=3D"30" style=3D"border-bottom: 2px solid #ffffff;">&nbsp; </td>
+                              </tr>
+                              <tr>
+                                <td height=3D"30">&nbsp; </td>
+                                <td height=3D"30">&nbsp; </td>
+                              </tr>
+                            </tbody>
+                        </table>
+                          <!-- Feature Text -->
+                          <p style=3D"margin-top: 0px;margin-bottom: 0px;fo=
+nt-size: 10px;line-height:10px;">&nbsp;</p>
+                          <h2 class=3D"o_heading o_mb-xxs" style=3D"font-fa=
+mily: Helvetica, Arial, sans-serif;font-weight: bold;margin-top: 0px;margin=
+-bottom: 8px;font-size: 32px;line-height: 40px;">New GCP Order</h2>
+                          <p style=3D"margin-top: 0px;margin-bottom: 0px;fo=
+nt-size: 18px;">Rubrik Security Cloud</p>
+                      </td>
+                    </tr>
+                </tbody>
+              </table>
+<!--  Feature Area End -->
+
+            <!--[if mso]></td></tr></table><![endif]-->
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+<!--  Content Beginning  -->
+    <!-- spacer-lg -->
+    <table width=3D"100%" cellspacing=3D"0" cellpadding=3D"0" border=3D"0" =
+role=3D"presentation">
+      <tbody>
+        <tr>
+          <td class=3D"o_bg-light o_px-xs" align=3D"center" style=3D"backgr=
+ound-color: #dfe1e6;padding-left: 8px;padding-right: 8px;">
+            <!--[if mso]><table width=3D"632" cellspacing=3D"0" cellpadding=
+=3D"0" border=3D"0" role=3D"presentation"><tbody><tr><td><![endif]-->
+            <table class=3D"o_block" width=3D"100%" cellspacing=3D"0" cellp=
+adding=3D"0" border=3D"0" role=3D"presentation" style=3D"max-width: 632px;m=
+argin: 0 auto;">
+            </table>
+            <!--[if mso]></td></tr></table><![endif]-->
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <!-- Message Beginning -->
+    <table width=3D"100%" cellspacing=3D"0" cellpadding=3D"0" border=3D"0" =
+role=3D"presentation">
+      <tbody>
+        <tr>
+          <td class=3D"o_bg-light o_px-xs" align=3D"center" style=3D"backgr=
+ound-color: #dfe1e6;padding-left: 8px;padding-right: 8px;">
+            <!--[if mso]><table width=3D"632" cellspacing=3D"0" cellpadding=
+=3D"0" border=3D"0" role=3D"presentation"><tbody><tr><td><![endif]-->
+            <table class=3D"o_block" width=3D"100%" cellspacing=3D"0" cellp=
+adding=3D"0" border=3D"0" role=3D"presentation" style=3D"max-width: 632px;m=
+argin: 0 auto;">
+              <tbody>
+                <tr>
+                  <td class=3D"o_bg-white o_px-md o_py o_sans o_text o_text=
+-secondary" align=3D"left" style=3D"font-family: Helvetica, Arial, sans-ser=
+if;margin-top: 0px;margin-bottom: 0px;font-size: 16px;line-height: 22px;bac=
+kground-color: #ffffff;color: #505f79;padding-left: 60px;padding-right: 60p=
+x;padding-top: 20px;padding-bottom: 16px;">
+                    <p style=3D"margin-top: 0px;margin-bottom: 0px;">Congra=
+tulations on the new order from <strong>TELUS Health</strong>. The details =
+of this order are:</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <!--[if mso]></td></tr></table><![endif]-->
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Key Identifier Block -->
+    <table width=3D"100%" cellspacing=3D"0" cellpadding=3D"0" border=3D"0" =
+role=3D"presentation">
+      <tbody>
+        <tr>
+          <td class=3D"o_bg-light o_px-xs" align=3D"center" style=3D"backgr=
+ound-color: #dfe1e6;padding-left: 8px;padding-right: 8px;">
+            <!--[if mso]><table width=3D"632" cellspacing=3D"0" cellpadding=
+=3D"0" border=3D"0" role=3D"presentation"><tbody><tr><td><![endif]-->
+            <table class=3D"o_block" width=3D"100%" cellspacing=3D"0" cellp=
+adding=3D"0" border=3D"0" role=3D"presentation" style=3D"max-width: 632px;m=
+argin: 0 auto;">
+              <tbody>
+                <tr>
+                  <td class=3D"o_bg-white o_px-md o_py o_sans o_text o_text=
+-secondary" align=3D"center" style=3D"font-family: Helvetica, Arial, sans-s=
+erif;margin-top: 0px;margin-bottom: 0px;font-size: 16px;line-height: 22px;b=
+ackground-color: #ffffff;color: #505f79;padding-left: 60px;padding-right: 6=
+0px;padding-top: 16px;padding-bottom: 8px;">
+                    <table class=3D"o_block" width=3D"100%" cellspacing=3D"=
+0" cellpadding=3D"0" border=3D"0" role=3D"presentation" style=3D"max-width:=
+ 632px;margin: 0 auto;">
+                      <tbody>
+                        <tr>
+                          <td class=3D"o_bg-white o_px-md o_py o_sans o_tex=
+t o_text-secondary" align=3D"center" style=3D"font-family: Helvetica, Arial=
+, sans-serif;margin-top: 0px;margin-bottom: 0px;font-size: 16px;line-height=
+: 22px;background-color: #ebecf0;color: #505f79;padding-left: 60px;padding-=
+right: 60px;padding-top: 16px;padding-bottom: 16px;">
+                            <h4 class=3D"o_heading o_text-dark o_mb-xs" sty=
+le=3D"font-family: Helvetica, Arial, sans-serif;font-weight: bold;margin-to=
+p: 0px;margin-bottom: 8px;color: #505f79;font-size: 18px;line-height: 23px;=
+">Buyer ID (External Account ID)</h4>
+                           =20
+                            <p style=3D"margin-top: 0px;margin-bottom: 0px;=
+">9ec55d2c-7c1c-4b7e-9258-6be4075eb7d7</p>
+                           =20
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <!--[if mso]></td></tr></table><![endif]-->
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Key Values Block -->
+    <table width=3D"100%" cellspacing=3D"0" cellpadding=3D"0" border=3D"0" =
+role=3D"presentation">
+      <tbody>
+        <tr>
+          <td class=3D"o_bg-light o_px-xs" align=3D"center" style=3D"backgr=
+ound-color: #dfe1e6;padding-left: 8px;padding-right: 8px;">
+            <!--[if mso]><table width=3D"632" cellspacing=3D"0" cellpadding=
+=3D"0" border=3D"0" role=3D"presentation"><tbody><tr><td><![endif]-->
+            <table class=3D"o_block" width=3D"100%" cellspacing=3D"0" cellp=
+adding=3D"0" border=3D"0" role=3D"presentation" style=3D"max-width: 632px;m=
+argin: 0 auto;">
+              <tbody>
+                <tr>
+                  <td class=3D"o_re o_bg-white o_px o_pb-md" align=3D"cente=
+r" style=3D"font-size: 0;vertical-align: top;background-color: #ffffff;padd=
+ing-left: 60px;padding-right: 60px;padding-bottom: 16px;">
+                    <div class=3D"o_col o_col-2 o_col-full" style=3D"displa=
+y: inline-block;vertical-align: top;width: 100%;max-width: 632px;">
+                      <div class=3D"o_px-xs" style=3D"padding-left: 0px;pad=
+ding-right: 0px;">
+                        <table width=3D"100%" role=3D"presentation" cellspa=
+cing=3D"0" cellpadding=3D"0" border=3D"0">
+                          <tbody>
+                            <tr>
+                              <td class=3D"o_bg-white o_px-md o_py o_sans o=
+_text o_text-secondary" align=3D"center" style=3D"font-family: Helvetica, A=
+rial, sans-serif;margin-top: 0px;margin-bottom: 0px;font-size: 16px;line-he=
+ight: 22px;background-color: #ebecf0;color: #505f79;padding-left: 24px;padd=
+ing-right: 24px;padding-top: 20px;padding-bottom: 20px;">
+                                <table width=3D"100%" role=3D"presentation"=
+ cellspacing=3D"0" cellpadding=3D"0" border=3D"0">
+                                  <tbody>
+                                   =20
+                                    <tr>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;"><stron=
+g>Order Date/Time</strong></p>
+                                      </td>
+                                      <td width=3D"10%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;">&nbsp;=
+</p>
+                                      </td>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;"><stron=
+g>Offer ID (Quote External Name)</strong></p>
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;">2026-0=
+2-27T15:43:37.777278Z</p>
+                                      </td>
+                                      <td width=3D"10%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;">&nbsp;=
+</p>
+                                      </td>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;">8dde3c=
+aa-4578-454e-9e92-7c658d7f6b76</p>
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 10px;line-height: 10px;color:#505f79;">&nbsp;=
+</p>
+                                      </td>
+                                      <td width=3D"10%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 10px;line-height: 10px;color:#505f79;">&nbsp;=
+</p>
+                                      </td>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 10px;line-height: 10px;color:#505f79;">&nbsp;=
+</p>
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;"><stron=
+g>Product ID (Solution ID)</strong></p>
+                                      </td>
+                                      <td width=3D"10%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;">&nbsp;=
+</p>
+                                      </td>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                       =20
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;">rubrik=
+-security-cloud.endpoints.rubrik-public.cloud.goog</p>
+                                      </td>
+                                      <td width=3D"10%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;">&nbsp;=
+</p>
+                                      </td>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                       =20
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 10px;line-height: 10px;color:#505f79;">&nbsp;=
+</p>
+                                      </td>
+                                      <td width=3D"10%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 10px;line-height: 10px;color:#505f79;">&nbsp;=
+</p>
+                                      </td>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 10px;line-height: 10px;color:#505f79;">&nbsp;=
+</p>
+                                      </td>
+                                    </tr>
+                                   =20
+                                    <tr>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;"><stron=
+g>Is it future dated offer</strong></p>
+                                      </td>
+                                      <td width=3D"10%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;">&nbsp;=
+</p>
+                                      </td>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;"><stron=
+g>Service Start Date</strong></p>
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;">Yes</p=
+>
+                                      </td>
+                                      <td width=3D"10%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;">&nbsp;=
+</p>
+                                      </td>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;">2026-0=
+2-27T15:53:38Z</p>
+                                      </td>
+                                    </tr>
+                                   =20
+                                    <tr>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 10px=
+;margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;"><stro=
+ng>Service End Date</strong></p>
+                                      </td>
+                                      <td width=3D"10%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;">&nbsp;=
+</p>
+                                      </td>
+                                     =20
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 10px=
+;margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;"><stro=
+ng>Reseller Private Offer Plan ID</strong></p>
+                                      </td>
+                                     =20
+                                    </tr>
+                                    <tr>
+                                      <td>
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;">2029-0=
+2-27T08:00:00Z</p>
+                                      </td>
+                                      <td width=3D"10%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;">&nbsp;=
+</p>
+                                      </td>
+                                     =20
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color:#505f79;">167df6=
+7a-451c-4012-9c80-69aeed249431</p>
+                                      </td>
+                                     =20
+                                    </tr>
+                                   =20
+                                  </tbody>
+                                </table>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <!--[if mso]></td></tr></table><![endif]-->
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <!--[if mso]></td></tr></table><![endif]-->
+          </td>
+        </tr>
+      </tbody>
+    </table>
+   =20
+   =20
+                                <!-- End Pricing Section -->
+                             =20
+                           =20
+                         =20
+                       =20
+                        <!--[if mso]></td></tr></table><![endif]-->
+                     =20
+                   =20
+                 =20
+               =20
+             =20
+           =20
+            <!--[if mso]></td></tr></table><![endif]-->
+         =20
+       =20
+     =20
+   =20
+    <!--[if mso]></td></tr></table><![endif]-->
+   =20
+
+   =20
+            <!-- Entitlements -->
+    <table width=3D"100%" cellspacing=3D"0" cellpadding=3D"0" border=3D"0" =
+role=3D"presentation">
+      <tbody>
+        <tr>
+          <td class=3D"o_bg-light o_px-xs" align=3D"center" style=3D"backgr=
+ound-color: #dfe1e6;padding-left: 8px;padding-right: 8px;">
+            <!--[if mso]><table width=3D"632" cellspacing=3D"0" cellpadding=
+=3D"0" border=3D"0" role=3D"presentation"><tbody><tr><td><![endif]-->
+            <table class=3D"o_block" width=3D"100%" cellspacing=3D"0" cellp=
+adding=3D"0" border=3D"0" role=3D"presentation" style=3D"max-width: 632px;m=
+argin: 0 auto;">
+              <tbody>
+                <tr>
+                  <td class=3D"o_bg-white o_px-md o_py o_sans o_text o_text=
+-secondary" align=3D"Center" style=3D"font-family: Helvetica, Arial, sans-s=
+erif;margin-top: 0px;margin-bottom: 0px;font-size: 16px;line-height: 22px;b=
+ackground-color: #ffffff;color: #505f79;padding-left: 60px;padding-right: 6=
+0px;padding-top: 16px;padding-bottom: 0px;">
+                    <h4 class=3D"o_heading o_text-dark o_mb-xs" style=3D"fo=
+nt-family: Helvetica, Arial, sans-serif;font-weight: bold;margin-top: 0px;m=
+argin-bottom: 12px;color: #242b3d;font-size: 20px;line-height: 26px;">Entit=
+lements</h4>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <!--[if mso]></td></tr></table><![endif]-->
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Entitlement Values Block -->
+   =20
+    <table width=3D"100%" cellspacing=3D"0" cellpadding=3D"0" border=3D"0" =
+role=3D"presentation">
+      <tbody>
+        <tr>
+          <td class=3D"o_bg-light o_px-xs" align=3D"center" style=3D"backgr=
+ound-color: #dfe1e6;padding-left: 8px;padding-right: 8px;">
+            <!--[if mso]><table width=3D"632" cellspacing=3D"0" cellpadding=
+=3D"0" border=3D"0" role=3D"presentation"><tbody><tr><td><![endif]-->
+            <table class=3D"o_block" width=3D"100%" cellspacing=3D"0" cellp=
+adding=3D"0" border=3D"0" role=3D"presentation" style=3D"max-width: 632px;m=
+argin: 0 auto;">
+              <tbody>
+                <tr>
+                  <td class=3D"o_re o_bg-white o_px o_pb-md" align=3D"cente=
+r" style=3D"font-size: 0;vertical-align: top;background-color: #ffffff;padd=
+ing-left: 120px;padding-right: 120px;padding-bottom: 16px;">
+                    <!--[if mso]><table cellspacing=3D"0" cellpadding=3D"0"=
+ border=3D"0" role=3D"presentation"><tbody><tr><td width=3D"632" align=3D"c=
+enter" valign=3D"top" style=3D"padding: 0px 8px;"><![endif]-->
+                    <div class=3D"o_col o_col-2 o_col-full" style=3D"displa=
+y: inline-block;vertical-align: top;width: 100%;max-width: 632px;">
+                      <div class=3D"o_px-xs" style=3D"padding-left: 0px;pad=
+ding-right: 0px;">
+                        <table width=3D"100%" role=3D"presentation" cellspa=
+cing=3D"0" cellpadding=3D"0" border=3D"0">
+                          <tbody>
+                            <tr>
+                              <td class=3D"o_bg-dark o_br o_px o_py" align=3D=
+"left" style=3D"background-color: #253858;padding-left: 24px;padding-right:=
+ 24px;padding-top: 20px;padding-bottom: 20px;">
+                                <table width=3D"100%" role=3D"presentation"=
+ cellspacing=3D"0" cellpadding=3D"0" border=3D"0">
+                                  <tbody>
+                                    <tr>
+                                      <td width=3D"25%" class=3D"o_pt-xs" a=
+lign=3D"left" style=3D"padding-top: 6px;">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color: #ffffff;"><stro=
+ng>SKU</strong></p>
+                                      </td>
+                                      <td width=3D"10%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color: #ffffff;">&nbsp=
+;</p>
+                                      </td>
+                                      <td width=3D"65%" class=3D"o_pt-xs" a=
+lign=3D"right" style=3D"padding-top: 6px;">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color: #ffffff;word-br=
+eak: break-all;">private-offer-P1Y</p>
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td width=3D"25%" class=3D"o_pt-xs" a=
+lign=3D"left" style=3D"padding-top: 6px;">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color: #ffffff;"><stro=
+ng>Entitlement ID</strong></p>
+                                      </td>
+                                      <td width=3D"10%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color: #ffffff;">&nbsp=
+;</p>
+                                      </td>
+                                      <td width=3D"65%" class=3D"o_pt-xs" a=
+lign=3D"right" style=3D"padding-top: 6px;">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 21px;color: #ffffff;word-br=
+eak: break-all;">81be38fe-a35c-435e-8f4c-217eedea1738</p>
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <!--[if mso]></td></tr></table><![endif]-->
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <!--[if mso]></td></tr></table><![endif]-->
+          </td>
+        </tr>
+      </tbody>
+    </table>
+   =20
+   =20
+       =20
+                                <!-- End Pricing Section -->
+                             =20
+                           =20
+                         =20
+                       =20
+                        <!--[if mso]></td></tr></table><![endif]-->
+                     =20
+                   =20
+                 =20
+               =20
+             =20
+           =20
+            <!--[if mso]></td></tr></table><![endif]-->
+         =20
+       =20
+     =20
+   =20
+    <!--[if mso]></td></tr></table><![endif]-->
+
+   =20
+   =20
+   =20
+   =20
+
+    <!-- Registration -->
+    <table width=3D"100%" cellspacing=3D"0" cellpadding=3D"0" border=3D"0" =
+role=3D"presentation">
+      <tbody>
+        <tr>
+          <td class=3D"o_bg-light o_px-xs" align=3D"center" style=3D"backgr=
+ound-color: #dfe1e6;padding-left: 8px;padding-right: 8px;">
+            <!--[if mso]><table width=3D"632" cellspacing=3D"0" cellpadding=
+=3D"0" border=3D"0" role=3D"presentation"><tbody><tr><td><![endif]-->
+            <table class=3D"o_block" width=3D"100%" cellspacing=3D"0" cellp=
+adding=3D"0" border=3D"0" role=3D"presentation" style=3D"max-width: 632px;m=
+argin: 0 auto;">
+              <tbody>
+                <tr>
+                  <td class=3D"o_bg-white o_px-md o_py o_sans o_text o_text=
+-secondary" align=3D"Center" style=3D"font-family: Helvetica, Arial, sans-s=
+erif;margin-top: 0px;margin-bottom: 0px;font-size: 16px;line-height: 22px;b=
+ackground-color: #ffffff;color: #505f79;padding-left: 60px;padding-right: 6=
+0px;padding-top: 40px;padding-bottom: 0px;">
+                    <h4 class=3D"o_heading o_text-dark o_mb-xs" style=3D"fo=
+nt-family: Helvetica, Arial, sans-serif;font-weight: bold;margin-top: 0px;m=
+argin-bottom: 0px;color: #242b3d;font-size: 20px;line-height: 26px;">Regist=
+ration Details</h4>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <!--[if mso]></td></tr></table><![endif]-->
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Registrations Values -->
+    <table width=3D"100%" cellspacing=3D"0" cellpadding=3D"0" border=3D"0" =
+role=3D"presentation">
+      <tbody>
+        <tr>
+          <td class=3D"o_bg-light o_px-xs" align=3D"center" style=3D"backgr=
+ound-color: #dfe1e6;padding-left: 8px;padding-right: 8px;">
+            <!--[if mso]><table width=3D"632" cellspacing=3D"0" cellpadding=
+=3D"0" border=3D"0" role=3D"presentation"><tbody><tr><td><![endif]-->
+            <table class=3D"o_block" width=3D"100%" cellspacing=3D"0" cellp=
+adding=3D"0" border=3D"0" role=3D"presentation" style=3D"max-width: 632px;m=
+argin: 0 auto;">
+              <tbody>
+                <tr>
+                  <td class=3D"o_re o_bg-white o_px o_pb-md" align=3D"cente=
+r" style=3D"font-size: 0;vertical-align: top;background-color: #ffffff;padd=
+ing-left: 120px;padding-right: 58px;padding-top: 24px;padding-bottom: 40px;=
+">
+                    <!--[if mso]><table cellspacing=3D"0" cellpadding=3D"0"=
+ border=3D"0" role=3D"presentation"><tbody><tr><td width=3D"480" align=3D"c=
+enter" valign=3D"top" style=3D"padding: 0px 8px;"><![endif]-->
+                    <div class=3D"o_col o_col-full" style=3D"display: inlin=
+e-block;vertical-align: top;width: 100%;max-width: 100%;">
+                      <div class=3D"o_px-xs" style=3D"padding-left: 0px;pad=
+ding-right: 0px;">
+                                <table width=3D"100%" role=3D"presentation"=
+ cellspacing=3D"0" cellpadding=3D"0" border=3D"0">
+                                  <tbody>
+                                   =20
+                                    <tr>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 22px;color: #505f79;word-br=
+eak: break-all;"><strong>Company Website</strong></p>
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 22px;color: #505f79;word-br=
+eak: break-all;">telushealth.com</p>
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td class=3D"o_bg-white" style=3D"fon=
+t-size: 12px;line-height: 12px;height: 12px;background-color: #ffffff;">&nb=
+sp; </td>
+                                    </tr>
+                                   =20
+                                    <tr>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 22px;color: #505f79;word-br=
+eak: break-all;"><strong>Billing Address (Include Full Address)</strong></p=
+>
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 22px;color: #505f79;word-br=
+eak: break-all;">630 Ren=C3=A9-L=C3=A9vesque Blvd W 22nd Floor Montreal, QC=
+ H3B 1S6 Canada</p>
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td class=3D"o_bg-white" style=3D"fon=
+t-size: 12px;line-height: 12px;height: 12px;background-color: #ffffff;">&nb=
+sp; </td>
+                                    </tr>
+                                   =20
+                                    <tr>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 22px;color: #505f79;word-br=
+eak: break-all;"><strong>Company</strong></p>
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 22px;color: #505f79;word-br=
+eak: break-all;">TELUS Health</p>
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td class=3D"o_bg-white" style=3D"fon=
+t-size: 12px;line-height: 12px;height: 12px;background-color: #ffffff;">&nb=
+sp; </td>
+                                    </tr>
+                                   =20
+                                    <tr>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 22px;color: #505f79;word-br=
+eak: break-all;"><strong>Full Name</strong></p>
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 22px;color: #505f79;word-br=
+eak: break-all;">Ian Sim</p>
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td class=3D"o_bg-white" style=3D"fon=
+t-size: 12px;line-height: 12px;height: 12px;background-color: #ffffff;">&nb=
+sp; </td>
+                                    </tr>
+                                   =20
+                                    <tr>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 22px;color: #505f79;word-br=
+eak: break-all;"><strong>Email Address</strong></p>
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 22px;color: #505f79;word-br=
+eak: break-all;">ian.sim@telus.com</p>
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td class=3D"o_bg-white" style=3D"fon=
+t-size: 12px;line-height: 12px;height: 12px;background-color: #ffffff;">&nb=
+sp; </td>
+                                    </tr>
+                                   =20
+                                    <tr>
+                                      <td width=3D"45%" class=3D"o_pt-xs" a=
+lign=3D"left">
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 22px;color: #505f79;word-br=
+eak: break-all;"><strong>Contact Phone Number</strong></p>
+                                        <p class=3D"o_sans o_text-xs o_text=
+-white" style=3D"font-family: Helvetica, Arial, sans-serif;margin-top: 0px;=
+margin-bottom: 0px;font-size: 14px;line-height: 22px;color: #505f79;word-br=
+eak: break-all;">613-880-3533</p>
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td class=3D"o_bg-white" style=3D"fon=
+t-size: 12px;line-height: 12px;height: 12px;background-color: #ffffff;">&nb=
+sp; </td>
+                                    </tr>
+                                   =20
+                                  </tbody>
+                                </table>
+                      </div>
+                    </div>
+                    <!--[if mso]></td></tr></table><![endif]-->
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <!--[if mso]></td></tr></table><![endif]-->
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Paragraph Section -->
+    <table width=3D"100%" cellspacing=3D"0" cellpadding=3D"0" border=3D"0" =
+role=3D"presentation">
+      <tbody>
+        <tr>
+          <td class=3D"o_bg-light o_px-xs" align=3D"center" style=3D"backgr=
+ound-color: #dfe1e6;padding-left: 8px;padding-right: 8px;">
+            <!--[if mso]><table width=3D"632" cellspacing=3D"0" cellpadding=
+=3D"0" border=3D"0" role=3D"presentation"><tbody><tr><td><![endif]-->
+            <table class=3D"o_block" width=3D"100%" cellspacing=3D"0" cellp=
+adding=3D"0" border=3D"0" role=3D"presentation" style=3D"max-width: 632px;m=
+argin: 0 auto;">
+              <tbody>
+                <tr>
+                  <td class=3D"o_bg-white o_px-md o_py o_sans o_text o_text=
+-secondary" align=3D"left" style=3D"font-family: Helvetica, Arial, sans-ser=
+if;margin-top: 0px;margin-bottom: 0px;font-size: 16px;line-height: 22px;bac=
+kground-color: #ffffff;color: #505f79;padding-left: 60px;padding-right: 60p=
+x;padding-top: 0px;padding-bottom: 0px;">
+                    <p style=3D"margin-top: 0px;margin-bottom: 0px;">Please=
+ contact them directly to confirm the purchase and gather any additional in=
+formation. It=E2=80=99s time to deploy some software!</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td class=3D"o_bg-white o_br-b o_sans" style=3D"font-size=
+: 24px;line-height: 24px;height: 24px;font-family: Helvetica, Arial, sans-s=
+erif;margin-top: 0px;margin-bottom: 0px;background-color: #ffffff;">&nbsp; =
+</td>
+                </tr>
+                <tr>
+                  <td class=3D"o_bg-white o_px-md o_py o_sans o_text o_text=
+-secondary" align=3D"left" style=3D"font-family: Helvetica, Arial, sans-ser=
+if;margin-top: 0px;margin-bottom: 0px;font-size: 16px;line-height: 22px;bac=
+kground-color: #ffffff;color: #505f79;padding-left: 60px;padding-right: 60p=
+x;padding-top: 0px;padding-bottom: 0px;">
+                    <p style=3D"margin-top: 0px;margin-bottom: 0px;"><stron=
+g>Cheers!</strong></p>
+                  </td>
+                </tr>
+                <tr>
+                  <td class=3D"o_bg-white o_px-md o_py o_sans o_text o_text=
+-secondary" align=3D"left" style=3D"font-family: Helvetica, Arial, sans-ser=
+if;margin-top: 0px;margin-bottom: 0px;font-size: 16px;line-height: 22px;bac=
+kground-color: #ffffff;color: #505f79;padding-left: 60px;padding-right: 60p=
+x;padding-top: 0px;padding-bottom: 0px;">
+                    <p style=3D"margin-top: 0px;margin-bottom: 0px;">Team T=
+ackle</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <!--[if mso]></td></tr></table><![endif]-->
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- spacer-lg -->
+    <table width=3D"100%" cellspacing=3D"0" cellpadding=3D"0" border=3D"0" =
+role=3D"presentation">
+      <tbody>
+        <tr>
+          <td class=3D"o_bg-light o_px-xs" align=3D"center" style=3D"backgr=
+ound-color: #dfe1e6;padding-left: 8px;padding-right: 8px;">
+            <!--[if mso]><table width=3D"632" cellspacing=3D"0" cellpadding=
+=3D"0" border=3D"0" role=3D"presentation"><tbody><tr><td><![endif]-->
+            <table class=3D"o_block" width=3D"100%" cellspacing=3D"0" cellp=
+adding=3D"0" border=3D"0" role=3D"presentation" style=3D"max-width: 632px;m=
+argin: 0 auto;">
+              <tbody>
+                <tr>
+                  <td class=3D"o_bg-white" style=3D"font-size: 60px;line-he=
+ight: 60px;height: 60px;background-color: #ffffff;">&nbsp; </td>
+                </tr>
+              </tbody>
+            </table>
+            <!--[if mso]></td></tr></table><![endif]-->
+          </td>
+        </tr>
+      </tbody>
+    </table>
+<!-- Content End -->
+
+<!-- Footer Beginning -->
+    <table width=3D"100%" cellspacing=3D"0" cellpadding=3D"0" border=3D"0" =
+role=3D"presentation">
+      <tbody>
+        <tr>
+          <td class=3D"o_bg-light o_px-xs o_pb-lg o_xs-pb-xs" align=3D"cent=
+er" style=3D"background-color: #dfe1e6;padding-left: 8px;padding-right: 8px=
+;padding-bottom: 32px;">
+            <!--[if mso]><table width=3D"632" cellspacing=3D"0" cellpadding=
+=3D"0" border=3D"0" role=3D"presentation"><tbody><tr><td><![endif]-->
+            <table class=3D"o_block" width=3D"100%" cellspacing=3D"0" cellp=
+adding=3D"0" border=3D"0" role=3D"presentation" style=3D"max-width: 632px;m=
+argin: 0 auto;">
+              <tbody>
+                <tr>
+                  <td class=3D"o_bg-white o_br-b o_sans" style=3D"font-size=
+: 8px;line-height: 12px;height: 8px;font-family: Helvetica, Arial, sans-ser=
+if;margin-top: 0px;margin-bottom: 0px;background-color: #ffffff;border-radi=
+us: 0px 0px 12px 12px;">&nbsp; </td>
+                </tr>
+                <tr>
+                  <td class=3D"o_px-md o_py-lg o_br-b o_sans o_text-xs o_te=
+xt-light" align=3D"center" style=3D"font-family: Helvetica, Arial, sans-ser=
+if;margin-top: 0px;margin-bottom: 0px;font-size: 14px;line-height: 21px;col=
+or: #82899a;border-radius: 0px 0px 4px 4px;padding-left: 24px;padding-right=
+: 24px;padding-top: 32px;padding-bottom: 32px;">
+                    <p class=3D"o_mb" style=3D"margin-top: 0px;margin-botto=
+m: 16px;"><a class=3D"o_text-primary" href=3D"https://tackle.io/" style=3D"=
+text-decoration: none; outline: none; color: #126DE5;"><img src=3D"https://=
+s3.amazonaws.com/tackle.io-misc/tackle-logo.png" width=3D"80" height=3D"24"=
+ alt=3D"Tackle.io" style=3D"max-width: 80px;-ms-interpolation-mode: bicubic=
+;vertical-align: middle;border: 0;line-height: 100%;height: auto;outline: n=
+one;text-decoration: none;"></a></p>
+                    <p class=3D"o_mb" style=3D"margin-top: 0px;margin-botto=
+m: 16px;">=C2=A92025 Tackle.io</p>
+                    <p class=3D"o_mb" style=3D"margin-top: 0px;margin-botto=
+m: 8px;">
+                      218 N Capitol Blvd.<br>
+                      Boise, ID 83702
+                    </p>
+
+                    <!-- Footer Icons -->
+                    <!-- <p style=3D"margin-top: 0px;margin-bottom: 0px;">
+                      <a class=3D"o_text-light o_underline" href=3D"https:/=
+/example.com/" style=3D"text-decoration: underline;outline: none;color: #82=
+899a;">Help Center</a> <span class=3D"o_hide-xs">&nbsp; =E2=80=A2 &nbsp;</s=
+pan><br class=3D"o_hide-lg" style=3D"display: none;font-size: 0;max-height:=
+ 0;width: 0;line-height: 0;overflow: hidden;mso-hide: all;visibility: hidde=
+n;">
+                      <a class=3D"o_text-light o_underline" href=3D"https:/=
+/example.com/" style=3D"text-decoration: underline;outline: none;color: #82=
+899a;">Preferences</a> <span class=3D"o_hide-xs">&nbsp; =E2=80=A2 &nbsp;</s=
+pan><br class=3D"o_hide-lg" style=3D"display: none;font-size: 0;max-height:=
+ 0;width: 0;line-height: 0;overflow: hidden;mso-hide: all;visibility: hidde=
+n;">
+                      <a class=3D"o_text-light o_underline" href=3D"https:/=
+/example.com/" style=3D"text-decoration: underline;outline: none;color: #82=
+899a;">Unsubscribe</a>
+                    </p> -->
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <!--[if mso]></td></tr></table><![endif]-->
+            <div class=3D"o_hide-xs" style=3D"font-size: 40px; line-height:=
+ 40px; height: 40px;">&nbsp; </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+ =20
+
+
+
+
+<img src=3D"https://ea.pstmrk.it/open?m=3Dv3_1.D77ETW53N65SqcxstX0iBw.QKh0g=
+mICcE2V4mBjyHysznDOsu6PTqZdXsNUczd7DGw79uO0VLEbJ-IwQvePFuM9E2UTVAOQIFKYDdp_=
+KHZ95LcMorO9UAVTJaryBywjhvObjj-xqG8OI9CeaLBc8CKcwzucLcQAp3daE5pbuIniLu0mAsH=
+UeEf0MiommtKULa5bddcbYCJwVk7blkSUHcB-D4km7-ybbYca7-fWybx5RuzTbi8LDAbLtlv6dS=
+vN59DO8ULJFcNkpb6SMZ2h-EzksmDcpgZRGZ6Tp8gjj1kvZncu3AoowaWmOKsqV41-A8JmQKZv7=
+CdpHJec1jCQYJZ5HeJqxR9Nb-4H2ppFpDM5D0PSpNGkHQydlvLwAPGTKgznJj5Dcw0N1veZ12jN=
+wwn-jaYjyIAmCYD_hW6Wa3gtReDFMaWo0LzvtYD7_bXKubDT03Hw87qBuAEfpWQoKvpHsnDXtj2=
+iLiBGadP4uw7l7CVSbTmUl3iqq-WDfUBexThrihlEI0BKSwzgIVT3jMf-iiI3mcQDuMS_-Y5GjY=
+FbG2PmooIjtpUiPF5-v4jbGznw-AUZ_24O-jvFV7YKjQ0g" width=3D"1" height=3D"1" bo=
+rder=3D"0" alt=3D"" /></body></html>
+
+--mk3-62a7fad3ddb04216974991cddc885de2--

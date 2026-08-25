@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Salary Breakup Calculator (India)</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #ffffff;
+    --text: #1e293b;
+    --muted: #64748b;
+    --accent: #2563eb;
+    --accent-light: #eff6ff;
+    --border: #e2e8f0;
+    --green: #16a34a;
+    --red: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: linear-gradient(180deg, #0f172a 0%, #1e293b 260px, #f1f5f9 260px);
+    color: var(--text);
+    padding: 32px 16px 64px;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  h1 { color: #fff; font-size: 24px; margin: 0 0 4px; }
+  .subtitle { color: #cbd5e1; font-size: 14px; margin: 0 0 28px; }
+
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .card h2 {
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--muted);
+    margin: 0 0 16px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  input[type=number], select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 15px;
+    color: var(--text);
+    background: #f8fafc;
+  }
+  input[type=number]:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: #fff;
+  }
+  .field { margin-bottom: 4px; }
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .checkbox-row input { width: 16px; height: 16px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  td { padding: 9px 8px; border-bottom: 1px solid #f1f5f9; }
+  tr.section-row td { font-weight: 700; background: var(--accent-light); }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.total-row td { font-weight: 700; border-top: 2px solid var(--border); border-bottom: none; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+  }
+  .stat {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .stat .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+  .stat .value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+  .stat.highlight { background: #ecfdf5; border-color: #a7f3d0; }
+  .stat.highlight .value { color: var(--green); }
+  .stat.tax .value { color: var(--red); }
+
+  .note {
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-top: 4px;
+  }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+
+  .steps { display: flex; flex-direction: column; gap: 0; }
+  .step {
+    display: flex;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .step:last-child { border-bottom: none; }
+  .step-num {
+    flex: 0 0 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent-light);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .step.final .step-num { background: #dcfce7; color: var(--green); }
+  .step-body { flex: 1; }
+  .step-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .step-detail { font-size: 13px; color: var(--muted); margin-top: 2px; line-height: 1.5; }
+  .step-result {
+    flex: 0 0 auto;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    align-self: center;
+    white-space: nowrap;
+  }
+  .step.final .step-result { color: var(--red); font-size: 17px; }
+  .step.subtract .step-result::before { content: "− "; color: var(--muted); font-weight: 400; }
+  .step.add .step-result::before { content: "+ "; color: var(--muted); font-weight: 400; }
+  .step.equals .step-result::before { content: "= "; color: var(--muted); font-weight: 400; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Salary Breakup Calculator</h1>
+  <p class="subtitle">Enter your CTC to see PF, income tax (New Regime) and net take-home &mdash; fully editable assumptions below.</p>
+
+  <div class="card">
+    <h2>Inputs</h2>
+    <div class="grid">
+      <div class="field">
+        <label for="ctc">Annual CTC (₹)</label>
+        <input type="number" id="ctc" value="2377608" min="0" step="1000">
+        <div class="note" id="ctcWords" style="margin-top:6px;"></div>
+      </div>
+      <div class="field">
+        <label for="basicPct">Basic Salary (% of CTC)</label>
+        <input type="number" id="basicPct" value="50" min="1" max="90" step="1">
+      </div>
+      <div class="field">
+        <label for="hraPct">HRA (% of Basic)</label>
+        <input type="number" id="hraPct" value="74" min="0" max="100" step="1">
+      </div>
+      <div class="field">
+        <label for="cellAllowance">Cell &amp; Internet Allowance (₹/month)</label>
+        <input type="number" id="cellAllowance" value="3600" min="0" step="100">
+      </div>
+      <div class="field">
+        <label for="specialAllowance">Special Allowance (₹/month)</label>
+        <input type="number" id="specialAllowance" value="13869" min="0" step="100">
+      </div>
+      <div class="field">
+        <label for="wellness">Wellness Reimbursement (₹/month)</label>
+        <input type="number" id="wellness" value="1500" min="0" step="100">
+      </div>
+      <div class="field">
+        <label for="annualBonus">Annual Bonus (₹, optional)</label>
+        <input type="number" id="annualBonus" value="0" min="0" step="1000">
+      </div>
+      <div class="field">
+        <label for="ptMonthly">Professional Tax (₹/month)</label>
+        <input type="number" id="ptMonthly" value="200" min="0" step="10">
+      </div>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="capPF">
+      <label for="capPF" style="margin:0;">Cap PF wage at statutory ceiling of ₹15,000/month (unchecked = PF on actual Basic)</label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Salary Structure &amp; Deductions</h2>
+    <div class="two-col">
+      <div>
+        <table>
+          <thead><tr><th>Earnings</th><th class="num">Annual (₹)</th><th class="num">Monthly (₹)</th></tr></thead>
+          <tbody id="earningsBody"></tbody>
+        </table>
+      </div>
+      <div>
+        <table>
+          <thead><tr><th>Deductions</th><th class="num">Annual (₹)</th><th class="num">Monthly (₹)</th></tr></thead>
+          <tbody id="deductionsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>How Gratuity Is Calculated</h2>
+    <p class="note" style="margin-top:-6px;">Gratuity is a statutory benefit under the Payment of Gratuity Act — your employer sets aside a share of your Basic every year so it's ready to pay out when you leave after 5+ years of service.</p>
+    <div class="steps" id="gratuitySteps"></div>
+  </div>
+
+  <div class="card">
+    <h2>How Your Income Tax Is Calculated</h2>
+    <p class="note" style="margin-top:-6px;">Step by step, in plain numbers — India's New Tax Regime.</p>
+    <div class="steps" id="taxSteps"></div>
+  </div>
+
+  <div class="card">
+    <h2>Summary</h2>
+    <div class="summary-grid">
+      <div class="stat">
+        <div class="label">Gross Salary (Annual)</div>
+        <div class="value" id="sumGross">₹0</div>
+      </div>
+      <div class="stat tax">
+        <div class="label">Total Tax + Cess (Annual)</div>
+        <div class="value" id="sumTax">₹0</div>
+      </div>
+      <div class="stat highlight">
+        <div class="label">Net Take-Home (Annual)</div>
+        <div class="value" id="sumNetAnnual">₹0</div>
+      </div>
+      <div class="stat highlight">
+        <div class="label">Net Take-Home (Monthly)</div>
+        <div class="value" id="sumNetMonthly">₹0</div>
+      </div>
+    </div>
+  </div>
+
+  <p class="note">
+    Assumptions: Basic (50% of CTC), HRA (74% of Basic), Cell &amp; Internet Allowance, Special Allowance and Wellness
+    Reimbursement are all manual inputs above — Gross Salary is simply their sum, so it moves as you edit any of them.
+    "Total CTC" is computed by adding Employer PF and Gratuity back on top of that Gross Salary, so it reflects what
+    you've entered rather than a fixed target — adjust any field to match your own company's structure. Employer PF
+    and Gratuity are treated as part of CTC (added on top of Gross Salary, not deducted from it). A one-time Bonus is
+    added to taxable income for the year but excluded from the recurring monthly take-home. Income tax uses FY 2025-26
+    New Tax Regime slabs with ₹75,000 standard deduction and Section 87A rebate (nil tax up to ₹12L taxable income);
+    marginal relief just above ₹12L is not modeled, and real payroll often spreads TDS unevenly across months (e.g.
+    more in the month a bonus is paid) rather than the flat monthly average shown here. Professional tax varies by
+    state — adjust the monthly value above. This is a template for estimation, not a
+    payroll or tax filing tool.
+  </p>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const inr = n => '₹' + Math.round(n).toLocaleString('en-IN');
+
+  const NEW_REGIME_SLABS = [
+    { from: 0,        to: 400000,   rate: 0.00 },
+    { from: 400000,   to: 800000,   rate: 0.05 },
+    { from: 800000,   to: 1200000,  rate: 0.10 },
+    { from: 1200000,  to: 1600000,  rate: 0.15 },
+    { from: 1600000,  to: 2000000,  rate: 0.20 },
+    { from: 2000000,  to: 2400000,  rate: 0.25 },
+    { from: 2400000,  to: Infinity, rate: 0.30 },
+  ];
+  const STANDARD_DEDUCTION = 75000;
+  const REBATE_THRESHOLD = 1200000; // taxable income <= this => nil tax under 87A
+
+  function computeSlabTax(taxableIncome) {
+    const rows = [];
+    let tax = 0;
+    for (const slab of NEW_REGIME_SLABS) {
+      if (taxableIncome <= slab.from) {
+        rows.push({ label: rangeLabel(slab), rate: slab.rate, amount: 0, slabWidth: 0, upper: slab.from });
+        continue;
+      }
+      const upper = Math.min(taxableIncome, slab.to);
+      const amountInSlab = Math.max(0, upper - slab.from);
+      const taxInSlab = amountInSlab * slab.rate;
+      tax += taxInSlab;
+      rows.push({ label: rangeLabel(slab), rate: slab.rate, amount: taxInSlab, slabWidth: amountInSlab, upper, from: slab.from });
+    }
+    return { tax, rows };
+  }
+
+  function rangeLabel(slab) {
+    const fmt = v => v === Infinity ? '∞' : '₹' + (v/100000) + 'L';
+    return `${fmt(slab.from)} – ${fmt(slab.to)}`;
+  }
+
+  const ONES = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten',
+    'Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const TENS = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+
+  function threeDigitsToWords(n) {
+    let str = '';
+    if (n >= 100) {
+      str += ONES[Math.floor(n / 100)] + ' Hundred';
+      n %= 100;
+      if (n) str += ' ';
+    }
+    if (n >= 20) {
+      str += TENS[Math.floor(n / 10)];
+      if (n % 10) str += ' ' + ONES[n % 10];
+    } else if (n > 0) {
+      str += ONES[n];
+    }
+    return str;
+  }
+
+  // Indian numbering system: crore / lakh / thousand / hundred.
+  function numberToIndianWords(num) {
+    num = Math.round(num);
+    if (num === 0) return 'Zero Rupees Only';
+    const crore = Math.floor(num / 10000000); num %= 10000000;
+    const lakh = Math.floor(num / 100000); num %= 100000;
+    const thousand = Math.floor(num / 1000); num %= 1000;
+    const hundred = num;
+
+    const parts = [];
+    if (crore) parts.push(threeDigitsToWords(crore) + ' Crore');
+    if (lakh) parts.push(threeDigitsToWords(lakh) + ' Lakh');
+    if (thousand) parts.push(threeDigitsToWords(thousand) + ' Thousand');
+    if (hundred) parts.push(threeDigitsToWords(hundred));
+    return parts.join(' ') + ' Rupees Only';
+  }
+
+  function calculate() {
+    const ctc = parseFloat($('ctc').value) || 0;
+    const basicPct = (parseFloat($('basicPct').value) || 0) / 100;
+    const hraPct = (parseFloat($('hraPct').value) || 0) / 100;
+    const cellAllowanceAnnual = (parseFloat($('cellAllowance').value) || 0) * 12;
+    const specialAllowanceAnnual = (parseFloat($('specialAllowance').value) || 0) * 12;
+    const wellnessAnnual = (parseFloat($('wellness').value) || 0) * 12;
+    const annualBonus = parseFloat($('annualBonus').value) || 0;
+    const ptMonthly = parseFloat($('ptMonthly').value) || 0;
+    const capPF = $('capPF').checked;
+
+    $('ctcWords').textContent = numberToIndianWords(ctc);
+
+    const basic = ctc * basicPct;
+    const hra = basic * hraPct;
+    const pfWageBase = capPF ? Math.min(basic, 180000) : basic; // ceiling ₹15,000/month
+    const employerPF = pfWageBase * 0.12;
+    const employeePF = pfWageBase * 0.12;
+    const gratuity = basic * 0.0481;
+
+    // Gross Salary is built bottom-up from the earnings line items, since
+    // Special Allowance is now a direct manual entry rather than a balancing figure.
+    const grossSalary = basic + hra + cellAllowanceAnnual + specialAllowanceAnnual + wellnessAnnual;
+    // What the entered components actually cost the company, for comparison
+    // against the "Annual CTC" input (which only drives the Basic/HRA %).
+    const computedCTC = grossSalary + employerPF + gratuity;
+
+    const totalTaxableGross = grossSalary + annualBonus;
+    const taxableIncome = Math.max(0, totalTaxableGross - STANDARD_DEDUCTION);
+    const { tax: slabTax, rows: slabRows } = computeSlabTax(taxableIncome);
+    const rebateApplied = taxableIncome <= REBATE_THRESHOLD;
+    const taxAfterRebate = rebateApplied ? 0 : slabTax;
+    const cess = taxAfterRebate * 0.04;
+    const totalTax = taxAfterRebate + cess;
+
+    const annualPT = ptMonthly * 12;
+    const netAnnual = grossSalary + annualBonus - employeePF - totalTax - annualPT;
+    // Recurring monthly take-home excludes the one-time bonus, matching what
+    // actually lands in the account most months.
+    const netMonthly = (netAnnual - annualBonus) / 12;
+
+    // Earnings table — same line items and order as a typical Indian payslip.
+    // Monthly column is simply Annual ÷ 12, except for one-time items (Bonus,
+    // Total CTC + Bonus) which have no meaningful "per month" figure.
+    const totalDeductionsAnnual = employeePF + annualPT + totalTax;
+    $('earningsBody').innerHTML = `
+      <tr><td>Basic Salary</td><td class="num">${inr(basic)}</td><td class="num">${inr(basic/12)}</td></tr>
+      <tr><td>HRA</td><td class="num">${inr(hra)}</td><td class="num">${inr(hra/12)}</td></tr>
+      <tr><td>Cell &amp; Internet Allowance</td><td class="num">${inr(cellAllowanceAnnual)}</td><td class="num">${inr(cellAllowanceAnnual/12)}</td></tr>
+      <tr><td>Special Allowance</td><td class="num">${inr(specialAllowanceAnnual)}</td><td class="num">${inr(specialAllowanceAnnual/12)}</td></tr>
+      <tr><td>Wellness Reimbursement</td><td class="num">${inr(wellnessAnnual)}</td><td class="num">${inr(wellnessAnnual/12)}</td></tr>
+      <tr class="total-row"><td>Gross Salary</td><td class="num">${inr(grossSalary)}</td><td class="num">${inr(grossSalary/12)}</td></tr>
+      ${annualBonus > 0 ? `<tr><td>Bonus (one-time)</td><td class="num">${inr(annualBonus)}</td><td class="num">—</td></tr>` : ''}
+      <tr class="section-row"><td>Employer PF (part of CTC)</td><td class="num">${inr(employerPF)}</td><td class="num">${inr(employerPF/12)}</td></tr>
+      <tr class="section-row"><td>Gratuity (4.81% of Basic, part of CTC)</td><td class="num">${inr(gratuity)}</td><td class="num">${inr(gratuity/12)}</td></tr>
+      <tr class="total-row"><td>Total CTC (computed from entries above)</td><td class="num">${inr(computedCTC)}</td><td class="num">${inr(computedCTC/12)}</td></tr>
+      ${annualBonus > 0 ? `<tr class="total-row"><td>Total CTC + Bonus (actual annual cost)</td><td class="num">${inr(computedCTC + annualBonus)}</td><td class="num">—</td></tr>` : ''}
+    `;
+
+    // Deductions table. The recurring monthly row is kept separate from
+    // Annual ÷ 12 because it deliberately excludes the one-time bonus.
+    $('deductionsBody').innerHTML = `
+      <tr><td>Employee PF (12% of Basic${capPF ? ', capped' : ''})</td><td class="num">${inr(employeePF)}</td><td class="num">${inr(employeePF/12)}</td></tr>
+      <tr><td>Professional Tax</td><td class="num">${inr(annualPT)}</td><td class="num">${inr(ptMonthly)}</td></tr>
+      <tr><td>Income Tax (incl. 4% cess)</td><td class="num">${inr(totalTax)}</td><td class="num">${inr(totalTax/12)}</td></tr>
+      <tr class="total-row"><td>Total Deductions</td><td class="num">${inr(totalDeductionsAnnual)}</td><td class="num">${inr(totalDeductionsAnnual/12)}</td></tr>
+      <tr class="total-row"><td>Net Take-Home (Annual)</td><td class="num">${inr(netAnnual)}</td><td class="num">${inr(netAnnual/12)}</td></tr>
+      <tr class="total-row"><td>Net Take-Home (Monthly, recurring, excl. bonus)</td><td class="num">—</td><td class="num">${inr(netMonthly)}</td></tr>
+    `;
+
+    // Gratuity steps — plain-language walkthrough
+    const dailyBasic = basic / 26;
+    const fifteenDaysPay = dailyBasic * 15;
+    let gStepNum = 1;
+    const gratuitySteps = [
+      {
+        cls: '', title: 'Start with your monthly Basic Salary',
+        detail: `Basic = ${inr(ctc)} CTC × ${(basicPct*100).toFixed(0)}% ÷ 12 months.`,
+        result: inr(basic / 12)
+      },
+      {
+        cls: '', title: 'Divide by 26 (assumed working days/month) to get one day\'s pay',
+        detail: 'The law treats a month as having 26 working days for this calculation.',
+        result: inr(dailyBasic)
+      },
+      {
+        cls: 'equals', title: 'Multiply by 15 — you earn 15 days\' pay as gratuity for every year worked',
+        detail: 'This is the amount set aside per year of service.',
+        result: inr(fifteenDaysPay)
+      },
+      {
+        cls: 'final', title: 'Annual CTC accrual = 15 days\' pay × 1 year worked',
+        detail: `Same as Basic × 15 ÷ 26 ÷ 12 ≈ Basic × 4.81%. This amount adds up every year you stay, and is paid out in full once you complete 5+ years of continuous service.`,
+        result: inr(gratuity)
+      }
+    ];
+    $('gratuitySteps').innerHTML = gratuitySteps.map(s => `
+      <div class="step ${s.cls}">
+        <div class="step-num">${s.cls === 'final' ? '✓' : gStepNum++}</div>
+        <div class="step-body">
+          <div class="step-title">${s.title}</div>
+          ${s.detail ? `<div class="step-detail">${s.detail}</div>` : ''}
+        </div>
+        <div class="step-result">${s.result}</div>
+      </div>
+    `).join('');
+
+    // Tax steps — plain-language walkthrough
+    let stepNum = 1;
+    const steps = [];
+
+    steps.push({
+      cls: '', title: annualBonus > 0 ? 'Start with Gross Salary + Bonus' : 'Start with Gross Salary',
+      detail: annualBonus > 0
+        ? `Gross Salary (${inr(grossSalary)}) plus your one-time Bonus (${inr(annualBonus)}) — both are taxed together for the year.`
+        : 'This is the sum of Basic, HRA, Cell &amp; Internet Allowance, Special Allowance and Wellness Reimbursement — before Employer PF and Gratuity are added on top to arrive at Total CTC.',
+      result: inr(totalTaxableGross)
+    });
+    steps.push({
+      cls: 'subtract', title: 'Subtract the Standard Deduction',
+      detail: 'A flat ₹75,000 every salaried employee gets, no proof needed.',
+      result: inr(STANDARD_DEDUCTION)
+    });
+    steps.push({
+      cls: 'equals', title: 'This gives your Taxable Income',
+      detail: 'Tax is calculated only on this amount, not your full salary.',
+      result: inr(taxableIncome)
+    });
+
+    const positiveSlabs = slabRows.filter(r => r.amount > 0);
+    if (positiveSlabs.length === 0) {
+      steps.push({
+        cls: '', title: 'Taxable income falls entirely in the 0% slab (up to ₹4,00,000)',
+        detail: 'No tax applies to this portion.',
+        result: inr(0)
+      });
+    } else {
+      steps.push({
+        cls: '', title: 'Tax is applied slab by slab, not on the whole amount',
+        detail: 'Each slice of your taxable income is taxed only at its own rate — the first ₹4,00,000 is always tax-free:',
+        result: ''
+      });
+      positiveSlabs.forEach(r => {
+        steps.push({
+          cls: '', title: `${r.label} taxed at ${(r.rate*100).toFixed(0)}%`,
+          detail: `(${inr(r.upper)} − ${inr(r.from)}) × ${(r.rate*100).toFixed(0)}% = ${inr(r.slabWidth)} × ${(r.rate*100).toFixed(0)}%`,
+          result: inr(r.amount)
+        });
+      });
+    }
+
+    steps.push({
+      cls: 'equals', title: 'Tax before rebate',
+      detail: positiveSlabs.length
+        ? `Add up the tax from every slab: ${positiveSlabs.map(r => inr(r.amount)).join(' + ')} = ${inr(slabTax)}.`
+        : 'No slab produced any tax, so this is ₹0.',
+      result: inr(slabTax)
+    });
+
+    if (rebateApplied) {
+      steps.push({
+        cls: 'subtract', title: 'Section 87A Rebate wipes this out',
+        detail: `Your taxable income (${inr(taxableIncome)}) is ₹12,00,000 or less, so the government fully waives this tax. You owe ₹0 income tax before cess.`,
+        result: inr(slabTax)
+      });
+    } else {
+      steps.push({
+        cls: '', title: 'Section 87A Rebate does not apply',
+        detail: `This rebate only applies when taxable income is ₹12,00,000 or below. Yours is higher, so the tax above stands.`,
+        result: '—'
+      });
+    }
+
+    steps.push({
+      cls: 'add', title: 'Add 4% Health & Education Cess',
+      detail: rebateApplied
+        ? `Cess is 4% of the tax after rebate. Since your tax after rebate is ₹0, the cess is also ₹0 (${inr(taxAfterRebate)} × 4% = ${inr(cess)}).`
+        : `Cess = Tax after rebate × 4% = ${inr(taxAfterRebate)} × 4% = ${inr(cess)}. This goes toward funding public health and education programs, on top of your income tax.`,
+      result: inr(cess)
+    });
+
+    steps.push({
+      cls: 'final', title: 'Total Income Tax Payable (for the year)',
+      detail: `Works out to about ${inr(totalTax/12)} deducted from your salary each month.`,
+      result: inr(totalTax)
+    });
+
+    $('taxSteps').innerHTML = steps.map(s => `
+      <div class="step ${s.cls}">
+        <div class="step-num">${s.cls === 'final' ? '✓' : stepNum++}</div>
+        <div class="step-body">
+          <div class="step-title">${s.title}</div>
+          ${s.detail ? `<div class="step-detail">${s.detail}</div>` : ''}
+        </div>
+        <div class="step-result">${s.result}</div>
+      </div>
+    `).join('');
+
+    $('sumGross').textContent = inr(grossSalary);
+    $('sumTax').textContent = inr(totalTax);
+    $('sumNetAnnual').textContent = inr(netAnnual);
+    $('sumNetMonthly').textContent = inr(netMonthly);
+  }
+
+  ['ctc','basicPct','hraPct','cellAllowance','specialAllowance','wellness','annualBonus','ptMonthly','capPF'].forEach(id => {
+    $(id).addEventListener('input', calculate);
+  });
+
+  calculate();
+</script>
+</body>
+</html>

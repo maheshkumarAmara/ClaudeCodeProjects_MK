@@ -1,0 +1,8 @@
+claude_outputs/
+*.pyc
+__pycache__/
+.DS_Store
+.env
+Order_Validation_App/data/jira_config.json
+Order_Validation_App/data/history.json
+Order_Validation_App/SFTP_Upload/

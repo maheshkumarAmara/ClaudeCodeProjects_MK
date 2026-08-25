@@ -1,0 +1,349 @@
+
+=====================================
+   Order Validation App — Launcher
+=====================================
+
+📦 Checking dependencies...
+
+[notice] A new release of pip is available: 25.3 -> 26.2.1
+[notice] To update, run: pip3 install --upgrade pip
+   Dependencies OK ✅
+
+🔌 Checking Salesforce Bridge server (EDI tool)...
+   Started ✅ (log: /tmp/sf_bridge_server.log)
+
+🚀 Launching Order Validation App...
+   Opening at http://localhost:8510
+   Select QA or UAT environment in the app sidebar.
+
+2026-08-13 11:59:35.981 Uvicorn server started on 0.0.0.0:8510
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8510
+  Network URL: http://172.29.130.77:8510
+  External URL: http://219.64.88.68:8510
+
+  For better performance, install the Watchdog module:
+
+  $ xcode-select --install
+  $ pip install watchdog
+            
+2026-08-13 11:59:39.122 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-08-13 11:59:44.529 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-08-13 12:01:16.555 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-08-13 16:58:38.778 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-08-13 17:00:23.544 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-08-13 17:00:23.592 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-08-13 17:00:36.154 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-08-13 17:00:36.155 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-08-13 17:00:36.208 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+  Stopping...
+launch.sh: line 40: 16958 Terminated: 15          nohup node sf-bridge-server.js > "$BRIDGE_LOG" 2>&1
+
+=====================================
+   Order Validation App — Launcher
+=====================================
+
+📦 Checking dependencies...
+
+=====================================
+   Order Validation App — Launcher
+=====================================
+
+📦 Checking dependencies...
+  WARNING: The script idna is installed in '/Users/Amara.Maheshkumar/Library/Python/3.9/bin' which is not on PATH.
+  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+  WARNING: The script normalizer is installed in '/Users/Amara.Maheshkumar/Library/Python/3.9/bin' which is not on PATH.
+  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+  WARNING: The script idna is installed in '/Users/Amara.Maheshkumar/Library/Python/3.9/bin' which is not on PATH.
+  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+  WARNING: The script normalizer is installed in '/Users/Amara.Maheshkumar/Library/Python/3.9/bin' which is not on PATH.
+  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+  WARNING: The scripts f2py and numpy-config are installed in '/Users/Amara.Maheshkumar/Library/Python/3.9/bin' which is not on PATH.
+  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+  WARNING: The script jsonschema is installed in '/Users/Amara.Maheshkumar/Library/Python/3.9/bin' which is not on PATH.
+  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+  WARNING: The scripts f2py and numpy-config are installed in '/Users/Amara.Maheshkumar/Library/Python/3.9/bin' which is not on PATH.
+  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+  WARNING: The script jsonschema is installed in '/Users/Amara.Maheshkumar/Library/Python/3.9/bin' which is not on PATH.
+  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+  WARNING: The script streamlit is installed in '/Users/Amara.Maheshkumar/Library/Python/3.9/bin' which is not on PATH.
+  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+WARNING: You are using pip version 21.2.4; however, version 26.0.1 is available.
+You should consider upgrading via the '/Library/Developer/CommandLineTools/usr/bin/python3 -m pip install --upgrade pip' command.
+   Dependencies OK ✅
+
+🔌 Checking Salesforce Bridge server (EDI tool)...
+  WARNING: The script streamlit is installed in '/Users/Amara.Maheshkumar/Library/Python/3.9/bin' which is not on PATH.
+  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+   ⚠️  Could not confirm startup — check /tmp/sf_bridge_server.log
+
+🚀 Launching Order Validation App...
+   Opening at http://localhost:8510
+   Select QA or UAT environment in the app sidebar.
+
+launch.sh: line 48: streamlit: command not found
+WARNING: You are using pip version 21.2.4; however, version 26.0.1 is available.
+You should consider upgrading via the '/Library/Developer/CommandLineTools/usr/bin/python3 -m pip install --upgrade pip' command.
+   Dependencies OK ✅
+
+🔌 Checking Salesforce Bridge server (EDI tool)...
+   ⚠️  Could not confirm startup — check /tmp/sf_bridge_server.log
+
+🚀 Launching Order Validation App...
+   Opening at http://localhost:8510
+   Select QA or UAT environment in the app sidebar.
+
+launch.sh: line 48: streamlit: command not found
+
+=====================================
+   Order Validation App — Launcher
+=====================================
+
+📦 Checking dependencies...
+WARNING: You are using pip version 21.2.4; however, version 26.0.1 is available.
+You should consider upgrading via the '/Library/Developer/CommandLineTools/usr/bin/python3 -m pip install --upgrade pip' command.
+   Dependencies OK ✅
+
+🔌 Checking Salesforce Bridge server (EDI tool)...
+   ⚠️  Could not confirm startup — check /tmp/sf_bridge_server.log
+
+🚀 Launching Order Validation App...
+   Opening at http://localhost:8510
+   Select QA or UAT environment in the app sidebar.
+
+launch.sh: line 48: streamlit: command not found
+
+=====================================
+   Order Validation App — Launcher
+=====================================
+
+📦 Checking dependencies...
+WARNING: You are using pip version 21.2.4; however, version 26.0.1 is available.
+You should consider upgrading via the '/Library/Developer/CommandLineTools/usr/bin/python3 -m pip install --upgrade pip' command.
+   Dependencies OK ✅
+
+🔌 Checking Salesforce Bridge server (EDI tool)...
+   ⚠️  Could not confirm startup — check /tmp/sf_bridge_server.log
+
+🚀 Launching Order Validation App...
+   Opening at http://localhost:8510
+   Select QA or UAT environment in the app sidebar.
+
+launch.sh: line 48: streamlit: command not found
+
+=====================================
+   Order Validation App — Launcher
+=====================================
+
+📦 Checking dependencies...
+
+[notice] A new release of pip is available: 25.3 -> 26.2.1
+[notice] To update, run: pip3 install --upgrade pip
+   Dependencies OK ✅
+
+🔌 Checking Salesforce Bridge server (EDI tool)...
+   Started ✅ (log: /tmp/sf_bridge_server.log)
+
+🚀 Launching Order Validation App...
+   Opening at http://localhost:8510
+   Select QA or UAT environment in the app sidebar.
+
+2026-08-17 12:29:42.491 Uvicorn server started on 0.0.0.0:8510
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8510
+  Network URL: http://172.29.130.77:8510
+  External URL: http://219.64.88.68:8510
+
+  For better performance, install the Watchdog module:
+
+  $ xcode-select --install
+  $ pip install watchdog
+            
+2026-08-17 12:33:32.542 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-08-17 12:46:13.507 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-08-17 12:46:13.515 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-08-17 12:46:13.520 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-08-17 12:46:53.306 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-08-17 12:49:22.319 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-08-17 12:53:41.838 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+  Stopping...
+
+=====================================
+   Order Validation App — Launcher
+=====================================
+
+📦 Checking dependencies...
+
+[notice] A new release of pip is available: 25.3 -> 26.2.1
+[notice] To update, run: pip3 install --upgrade pip
+   Dependencies OK ✅
+
+🔌 Checking Salesforce Bridge server (EDI tool)...
+   Started ✅ (log: /tmp/sf_bridge_server.log)
+
+🚀 Launching Order Validation App...
+   Opening at http://localhost:8510
+   Select QA or UAT environment in the app sidebar.
+
+2026-08-21 17:59:03.183 Uvicorn server started on 0.0.0.0:8510
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8510
+  Network URL: http://172.29.130.122:8510
+  External URL: http://219.64.88.68:8510
+
+  For better performance, install the Watchdog module:
+
+  $ xcode-select --install
+  $ pip install watchdog
+            
+2026-08-21 18:00:15.103 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-08-21 18:23:31.191 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+  Stopping...
+
+=====================================
+   Order Validation App — Launcher
+=====================================
+
+📦 Checking dependencies...
+
+[notice] A new release of pip is available: 25.3 -> 26.2.1
+[notice] To update, run: pip3 install --upgrade pip
+   Dependencies OK ✅
+
+🔌 Checking Salesforce Bridge server (EDI tool)...
+   Started ✅ (log: /tmp/sf_bridge_server.log)
+
+🚀 Launching Order Validation App...
+   Opening at http://localhost:8510
+   Select QA or UAT environment in the app sidebar.
+
+2026-08-24 16:39:57.794 Uvicorn server started on 0.0.0.0:8510
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8510
+  Network URL: http://172.29.130.122:8510
+  External URL: http://219.64.88.68:8510
+
+  For better performance, install the Watchdog module:
+
+  $ xcode-select --install
+  $ pip install watchdog
+            
+2026-08-24 16:40:00.930 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-08-24 16:40:10.893 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-08-24 19:13:30.885 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-08-24 19:15:53.170 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+  Stopping...
+
+=====================================
+   Order Validation App — Launcher
+=====================================
+
+📦 Checking dependencies...
+
+[notice] A new release of pip is available: 25.3 -> 26.2.1
+[notice] To update, run: pip3 install --upgrade pip
+   Dependencies OK ✅
+
+🔌 Checking Salesforce Bridge server (EDI tool)...
+   Started ✅ (log: /tmp/sf_bridge_server.log)
+
+🚀 Launching Order Validation App...
+   Opening at http://localhost:8510
+   Select QA or UAT environment in the app sidebar.
+
+2026-08-24 19:58:21.796 Uvicorn server started on 0.0.0.0:8510
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8510
+  Network URL: http://172.29.130.122:8510
+  External URL: http://219.64.88.68:8510
+
+  For better performance, install the Watchdog module:
+
+  $ xcode-select --install
+  $ pip install watchdog
+            
+2026-08-24 20:01:14.289 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-08-24 20:01:24.479 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-08-24 20:01:40.986 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-08-24 20:01:43.179 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-08-24 20:03:53.742 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-08-24 20:06:59.670 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+  Stopping...

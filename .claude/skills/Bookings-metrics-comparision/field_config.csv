@@ -1,0 +1,44 @@
+BLI_Type,Field Name,API Name,Validation Type,Formula / Source,Notes,Active
+Revenue,Gross TCV Amount,Total_Price__c,Source,OLI.TotalPrice,Direct copy from Opportunity Line Item Total Price,Yes
+Revenue,Gross New/Expansion TCV,New_Expansion_TCV__c,Source,OLI.New_Expansion_TCV__c,Direct copy from OLI New/Expansion TCV,Yes
+Revenue,Gross Subsumed Renewal TCV,Subsumed_Renewal_TCV__c,Source,OLI.Subsumed_Renewal_TCV__c,Direct copy from OLI Subsumed Renewal TCV,Yes
+Revenue,Net TCV Amount,Net_TCV_Amount__c,Formula,Total_Price__c * ((100 - Rebate__c) * 0.01),Gross TCV × net factor,Yes
+Revenue,Net New/Expansion TCV,Net_New_Expansion_TCV__c,Formula,New_Expansion_TCV__c * ((100 - Rebate__c) * 0.01),Gross New/Exp TCV × net factor,Yes
+Revenue,Net Subsumed Renewal TCV,Net_Subsumed_Renewal_TCV__c,Formula,Subsumed_Renewal_TCV__c * ((100 - Rebate__c) * 0.01),Gross Subsumed Renewal TCV × net factor,Yes
+Revenue,Gross ACV Amount,Gross_ACV_Amount__c,Source,OLI.ACV_Amount__c,Direct copy from OLI ACV Amount,Yes
+Revenue,Gross New/Expansion ACV,Gross_New_Expansion_ACV__c,Source,OLI.New_Expansion_ACV__c,Direct copy from OLI New/Expansion ACV,Yes
+Revenue,Gross Subsumed Renewal ACV,Gross_Subsumed_Renewal_ACV__c,Source,OLI.Subsumed_Renewal_Amount__c,Direct copy from OLI Subsumed Renewal Amount,Yes
+Revenue,Net ACV Amount,Net_ACV_Amount__c,Formula,Gross_ACV_Amount__c * ((100 - Rebate__c) * 0.01),Gross ACV × net factor,Yes
+Revenue,Net New/Expansion ACV,Net_New_Expansion_ACV__c,Formula,Gross_New_Expansion_ACV__c * ((100 - Rebate__c) * 0.01),Gross New/Exp ACV × net factor,Yes
+Revenue,Net Subsumed Renewal ACV,Net_Subsumed_Renewal_ACV__c,Formula,Gross_Subsumed_Renewal_ACV__c * ((100 - Rebate__c) * 0.01),Gross Subsumed Renewal ACV × net factor,Yes
+Revenue,Promo Discount TCV,PromoDiscTCV__c,Formula,OLI.PromoDiscTCV__c * (OrderItem.Quantity / OLI.Quantity),Prorated by order quantity vs OLI quantity,Yes
+Revenue,Trade-up Credit TCV,Oppty_Trade_Up_Discount__c,Formula,OLI.Oppty_Trade_Up_Discount__c * (OrderItem.Quantity / OLI.Quantity),Prorated by order quantity vs OLI quantity,Yes
+Revenue,Prepayment Credit TCV,Prepayment_Credit__c,Formula,OLI.Prepayment_Credit__c * (OrderItem.Quantity / OLI.Quantity),Prorated by order quantity vs OLI quantity,Yes
+PRF,Gross TCV Amount,Total_Price__c,Source,Referral_Fee_Amount__c from Opportunity (CCR Type=PRF),Referral fee from original opportunity,Yes
+PRF,Gross New/Expansion TCV,New_Expansion_TCV__c,Formula,Total_Price__c * (SUM Revenue BLI New/Exp TCV / SUM Revenue BLI Gross TCV),Proportional allocation of referral fee,Yes
+PRF,Gross Subsumed Renewal TCV,Subsumed_Renewal_TCV__c,Formula,Total_Price__c * (SUM Revenue BLI Subsumed Renewal TCV / SUM Revenue BLI Gross TCV),Proportional allocation of referral fee,Yes
+PRF,Net TCV Amount,Net_TCV_Amount__c,Source,Total_Price__c,Net = Gross for PRF (no rebate),Yes
+PRF,Net New/Expansion TCV,Net_New_Expansion_TCV__c,Source,New_Expansion_TCV__c,Net = Gross for PRF,Yes
+PRF,Net Subsumed Renewal TCV,Net_Subsumed_Renewal_TCV__c,Source,Subsumed_Renewal_TCV__c,Net = Gross for PRF,Yes
+PRF,Gross ACV Amount,Gross_ACV_Amount__c,Formula,Total_Price__c * (SUM Revenue BLI Gross ACV / OLI TCV Amount),Proportional ACV allocation,Yes
+PRF,Net ACV Amount,Net_ACV_Amount__c,Source,Gross_ACV_Amount__c,Net = Gross for PRF,Yes
+PRF,Net New/Expansion ACV,Net_New_Expansion_ACV__c,Source,Gross_New_Expansion_ACV__c,Net = Gross for PRF,Yes
+PRF,Net Subsumed Renewal ACV,Net_Subsumed_Renewal_ACV__c,Source,Gross_Subsumed_Renewal_ACV__c,Net = Gross for PRF,Yes
+Distributor Fee,Gross TCV Amount,Total_Price__c,Formula,SUM(Revenue BLI Gross TCV) * (Rebate__c * -0.01),Negative value representing distributor cost,Yes
+Distributor Fee,Gross New/Expansion TCV,New_Expansion_TCV__c,Formula,SUM(Revenue BLI New/Exp TCV) * (Rebate__c * -0.01),Negative proportional allocation,Yes
+Distributor Fee,Gross Subsumed Renewal TCV,Subsumed_Renewal_TCV__c,Formula,SUM(Revenue BLI Subsumed Renewal TCV) * (Rebate__c * -0.01),Negative proportional allocation,Yes
+Distributor Fee,Gross ACV Amount,Gross_ACV_Amount__c,Formula,SUM(Revenue BLI Gross ACV) * (Rebate__c * -0.01),Negative ACV allocation,Yes
+Distributor Fee,Gross New/Expansion ACV,Gross_New_Expansion_ACV__c,Formula,SUM(Revenue BLI New/Exp ACV) * (Rebate__c * -0.01),Negative proportional ACV,Yes
+Distributor Fee,Gross Subsumed Renewal ACV,Gross_Subsumed_Renewal_ACV__c,Formula,SUM(Revenue BLI Subsumed Renewal ACV) * (Rebate__c * -0.01),Negative proportional ACV,Yes
+Debooking,Gross TCV Amount,Total_Price__c,Source,Debook_Opp.Amount (TCV) OR OLI.TotalPrice,Amount Based: from debook opp; Line Based: from OLI,Yes
+Debooking,Gross New/Expansion TCV,New_Expansion_TCV__c,Source,Debook_Opp.New_Expansion_TCV__c OR OLI.New_Expansion_TCV__c,Amount vs Line Based,Yes
+Debooking,Gross Subsumed Renewal TCV,Subsumed_Renewal_TCV__c,Source,Debook_Opp.Renewal_Subsumed_TCV OR OLI.Subsumed_Renewal_TCV__c,Amount vs Line Based,Yes
+Debooking,Net TCV Amount,Net_TCV_Amount__c,Formula,Total_Price__c * ((100 - Rebate__c) * -0.01),Negative net factor for debooking,Yes
+Debooking,Net New/Expansion TCV,Net_New_Expansion_TCV__c,Formula,New_Expansion_TCV__c * ((100 - Rebate__c) * -0.01),Negative net factor,Yes
+Debooking,Net Subsumed Renewal TCV,Net_Subsumed_Renewal_TCV__c,Formula,Subsumed_Renewal_TCV__c * ((100 - Rebate__c) * -0.01),Negative net factor,Yes
+Debooking,Gross ACV Amount,Gross_ACV_Amount__c,Source,Debook_Opp.ACV OR OLI.ACV_Amount__c,Amount vs Line Based,Yes
+Debooking,Gross New/Expansion ACV,Gross_New_Expansion_ACV__c,Source,Debook_Opp.New_Expansion_ACV__c OR OLI.New_Expansion_ACV__c,Amount vs Line Based,Yes
+Debooking,Gross Subsumed Renewal ACV,Gross_Subsumed_Renewal_ACV__c,Source,Debook_Opp.Renewal_Subsumed_ACV OR OLI.Subsumed_Renewal_Amount__c,Amount vs Line Based,Yes
+Debooking,Net ACV Amount,Net_ACV_Amount__c,Formula,Gross_ACV_Amount__c * ((100 - Rebate__c) * -0.01),Negative net factor,Yes
+Debooking,Net New/Expansion ACV,Net_New_Expansion_ACV__c,Formula,Gross_New_Expansion_ACV__c * ((100 - Rebate__c) * -0.01),Negative net factor,Yes
+Debooking,Net Subsumed Renewal ACV,Net_Subsumed_Renewal_ACV__c,Formula,Gross_Subsumed_Renewal_ACV__c * ((100 - Rebate__c) * -0.01),Negative net factor,Yes

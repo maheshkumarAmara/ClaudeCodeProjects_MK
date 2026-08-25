@@ -1,0 +1,1749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Go-Live Congratulations Generator</title>
+  <style>
+    :root {
+      --primary: #0f6cbd;
+      --primary-dark: #0a4d8c;
+      --primary-light: #e8f1fb;
+      --accent: #107c10;
+      --accent-light: #e5f2e5;
+      --warning: #c4710e;
+      --warning-light: #fdf4e7;
+      --danger: #c42b1c;
+      --purple: #7c3aed;
+      --purple-light: #f3e8ff;
+      --surface: #ffffff;
+      --bg: #f0f2f5;
+      --text: #242424;
+      --text-secondary: #616161;
+      --border: #e0e0e0;
+      --border-light: #f0f0f0;
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #0f6cbd 0%, #0a4d8c 60%, #063b6e 100%);
+      color: #fff;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .header-icon {
+      width: 40px; height: 40px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; }
+    .header-sub { font-size: 11px; opacity: 0.72; margin-top: 2px; }
+
+    /* ── Main layout ── */
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 24px;
+      padding: 24px 32px;
+      max-width: 1380px;
+      margin: 0 auto;
+      align-items: start;
+    }
+
+    /* ── Panels ── */
+    .form-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+    .preview-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      position: sticky;
+      top: 24px;
+      overflow: hidden;
+    }
+
+    /* ── Section ── */
+    .section {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .section:last-child { border-bottom: none; }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .section-icon {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .section-icon.blue   { background: var(--primary-light); color: var(--primary); }
+    .section-icon.green  { background: var(--accent-light);  color: var(--accent); }
+    .section-icon.amber  { background: var(--warning-light); color: var(--warning); }
+    .section-icon.purple { background: var(--purple-light);  color: var(--purple); }
+
+    .section-title { font-size: 13px; font-weight: 700; }
+    .section-sub   { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+
+    /* ── Fields ── */
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px 16px;
+      margin-bottom: 10px;
+    }
+    .form-row:last-child { margin-bottom: 0; }
+
+    .field { display: flex; flex-direction: column; }
+    .field label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+    .field input, .field select, .field textarea {
+      padding: 7px 10px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--surface);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .field textarea { min-height: 90px; resize: vertical; line-height: 1.55; }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(15,108,189,0.12);
+    }
+    .field input[type="password"] { font-family: monospace; letter-spacing: 1px; }
+    .field select {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23616161' d='M2.5 4.5L6 8l3.5-3.5z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+    }
+    .hint { font-size: 10px; color: var(--text-secondary); margin-top: 3px; line-height: 1.5; }
+
+    /* ── Image upload ── */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 20px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #fafafa;
+      margin-top: 10px;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--primary);
+      background: var(--primary-light);
+    }
+    .drop-zone input[type="file"] { display: none; }
+    .drop-zone-icon { color: #bbb; margin-bottom: 6px; }
+    .drop-zone:hover .drop-zone-icon, .drop-zone.drag-over .drop-zone-icon { color: var(--primary); }
+    .drop-zone-text { font-size: 13px; color: var(--text-secondary); }
+    .drop-zone-browse { color: var(--primary); font-weight: 600; text-decoration: underline; cursor: pointer; }
+    .drop-zone-sub { font-size: 10px; color: #bbb; margin-top: 3px; }
+
+    .img-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .img-thumb {
+      position: relative;
+      width: 72px; height: 72px;
+      border-radius: 6px;
+      border: 1.5px solid var(--border);
+      overflow: hidden;
+      background: #f5f5f5;
+      flex-shrink: 0;
+    }
+    .img-thumb img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .img-thumb-name {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(0,0,0,0.55);
+      color: #fff;
+      font-size: 8px;
+      padding: 2px 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .img-thumb-del {
+      position: absolute;
+      top: 3px; right: 3px;
+      width: 18px; height: 18px;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0;
+      transition: background 0.15s;
+    }
+    .img-thumb-del:hover { background: var(--danger); }
+
+    .img-attach-note {
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 600;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .img-preview-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-light);
+    }
+    .img-preview-thumb {
+      width: 56px; height: 56px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      object-fit: cover;
+    }
+
+    /* ── AI analyze status ── */
+    .analyze-status { font-size: 12px; min-height: 18px; padding: 4px 0 0; line-height: 1.5; }
+    .analyze-status.loading  { color: var(--primary); display: flex; align-items: center; gap: 6px; }
+    .analyze-status.success  { color: var(--accent); font-weight: 500; }
+    .analyze-status.error    { color: var(--danger); }
+    .analyze-status.warning  { color: var(--warning); font-weight: 500; }
+
+    .spin {
+      width: 13px; height: 13px;
+      border: 2px solid var(--primary-light);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .ai-filled-flash {
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 3px rgba(16,124,16,0.15) !important;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    /* ── Bullet rows ── */
+    .bullet-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 7px;
+    }
+    .bullet-num {
+      width: 20px; height: 20px;
+      background: var(--primary-light);
+      color: var(--primary);
+      border-radius: 50%;
+      font-size: 10px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .bullet-row input {
+      flex: 1;
+      padding: 7px 10px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .bullet-row input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(15,108,189,0.12);
+    }
+
+    /* ── QA name rows ── */
+    .qa-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 7px;
+    }
+    .qa-row input {
+      flex: 1;
+      padding: 7px 10px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .qa-row input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(16,124,16,0.12);
+    }
+    .qa-row-del {
+      width: 28px; height: 28px;
+      border: none;
+      background: #fef1f0;
+      color: var(--danger);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .qa-row-del:hover { background: #fad4d0; }
+
+    .add-btn {
+      height: 30px;
+      padding: 0 12px;
+      background: var(--accent-light);
+      color: #0b5e0b;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 4px;
+    }
+    .add-btn:hover { background: #c8e8c8; }
+
+    /* ── Tone selector ── */
+    .tone-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .tone-card {
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+      user-select: none;
+    }
+    .tone-card:hover { border-color: #bbb; }
+    .tone-card.active { border-color: var(--primary); background: var(--primary-light); }
+    .tone-emoji  { font-size: 22px; display: block; margin-bottom: 4px; }
+    .tone-name   { font-size: 12px; font-weight: 700; display: block; }
+    .tone-desc   { font-size: 10px; color: var(--text-secondary); margin-top: 2px; display: block; }
+    .tone-card.active .tone-desc { color: #0a4d8c; }
+
+    /* ── Buttons ── */
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 16px 24px; background: #fafbfc; border-top: 1px solid var(--border-light); }
+    .btn {
+      height: 36px;
+      padding: 0 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-primary:disabled { background: #c0c0c0; cursor: not-allowed; transform: none; }
+    .btn-success { background: var(--accent); color: #fff; }
+    .btn-success:hover { background: #0a5c0a; }
+    .btn-success:disabled { background: #c0c0c0; cursor: not-allowed; transform: none; }
+    .btn-outline { background: transparent; color: var(--text); border: 1.5px solid var(--border); }
+    .btn-outline:hover { background: #f0f0f0; }
+    .btn-outline:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* ── Status bar ── */
+    .status-bar {
+      margin: 0 24px 14px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      line-height: 1.5;
+    }
+    .status-bar.success { display: flex; background: var(--accent-light); color: #0b5e0b; }
+    .status-bar.error   { display: flex; background: #fef1f0; color: var(--danger); }
+
+    /* ── Preview panel ── */
+    .preview-header {
+      background: #f8fafc;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .preview-title { font-size: 13px; font-weight: 700; }
+    .char-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 20px;
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+    .char-badge.warn { background: var(--warning-light); color: var(--warning); }
+
+    .preview-body {
+      padding: 18px 20px;
+      min-height: 280px;
+      max-height: calc(100vh - 220px);
+      overflow-y: auto;
+    }
+
+    /* Slack-like message rendering */
+    .slack-msg {
+      font-size: 14px;
+      line-height: 1.65;
+      color: #1d1c1d;
+      word-break: break-word;
+    }
+    .slack-msg strong { font-weight: 700; }
+    .slack-msg em { font-style: italic; }
+    .slack-msg .mention {
+      background: #e8f1fb;
+      color: #0f6cbd;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-weight: 500;
+    }
+    .slack-msg hr {
+      border: none;
+      border-top: 1px solid #e0e0e0;
+      margin: 10px 0;
+    }
+
+    .preview-empty {
+      text-align: center;
+      color: #bbb;
+      padding: 40px 20px;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .preview-actions {
+      padding: 10px 18px;
+      border-top: 1px solid var(--border-light);
+      display: flex;
+      gap: 8px;
+    }
+
+    /* ── Variation picker ── */
+    .variations-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .variation-card {
+      background: #fff;
+      border: 2px solid #c7d9f8;
+      border-radius: 8px;
+      padding: 12px;
+      cursor: default;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .variation-card-label {
+      font-weight: 700;
+      font-size: 11px;
+      color: var(--primary);
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+    .variation-card-preview {
+      color: #555;
+      font-size: 11px;
+      line-height: 1.5;
+      max-height: 72px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      margin-bottom: 8px;
+    }
+    .variation-use-btn {
+      width: 100%;
+      padding: 6px 0;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .variation-use-btn:hover { background: var(--primary-dark); }
+    @media (max-width: 680px) { .variations-grid { grid-template-columns: 1fr; } }
+
+    /* ── Variant preview modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      width: 100%;
+      max-width: 620px;
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalIn 0.18s ease;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.95) translateY(8px); }
+      to   { opacity: 1; transform: scale(1)    translateY(0); }
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-light);
+      background: #f8fafc;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .modal-nav {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .modal-nav-btn {
+      width: 28px; height: 28px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-secondary);
+      font-size: 14px;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .modal-nav-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .modal-nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .modal-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--primary);
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .modal-counter {
+      font-size: 11px;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+    .modal-close {
+      width: 28px; height: 28px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: #999;
+      font-size: 20px;
+      line-height: 1;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .modal-close:hover { background: #f0f0f0; color: #333; }
+    .modal-body {
+      padding: 20px 22px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .modal-footer {
+      padding: 12px 18px;
+      border-top: 1px solid var(--border-light);
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      flex-shrink: 0;
+      background: #fafbfc;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 960px) {
+      .main { grid-template-columns: 1fr; padding: 16px; }
+      .preview-panel { position: static; }
+      .tone-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 580px) {
+      .header { padding: 14px 16px; }
+      .tone-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-icon">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+    </svg>
+  </div>
+  <div>
+    <h1>Go-Live Congratulations Generator</h1>
+    <div class="header-sub">Compose, preview, and send your go-live celebration message to Slack</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ════════════════ FORM PANEL ════════════════ -->
+  <div class="form-panel">
+
+    <!-- 1. Project Details -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div>
+          <div class="section-title">Project Details</div>
+          <div class="section-sub">Name and deployment status</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label>Project Name *</label>
+          <input type="text" id="projectName" placeholder="e.g. Marketplace Order Automation" oninput="livePreview()">
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select id="status" onchange="livePreview()">
+            <option>Live in Production</option>
+            <option>Successfully Deployed</option>
+            <option>Go-Live Complete</option>
+            <option>Released to Production</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Project Scope (brief) -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon amber">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <div>
+          <div class="section-title">Project Scope <span style="font-weight:400;font-size:10px;color:var(--text-secondary);">— kept brief, max 3 highlights</span></div>
+          <div class="section-sub">One sentence + up to 3 key capability bullets</div>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>One-line Summary</label>
+        <input type="text" id="scopeSummary" placeholder="e.g. Replaces manual Excel handoffs with a fully automated order pipeline across Azure, AWS, and GCP." oninput="livePreview()">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:8px;">Key Highlights (up to 3)</label>
+        <div class="bullet-row"><span class="bullet-num">1</span><input type="text" class="bullet-input" placeholder="e.g. Automated order verification & validation across all three marketplaces" oninput="livePreview()"></div>
+        <div class="bullet-row"><span class="bullet-num">2</span><input type="text" class="bullet-input" placeholder="e.g. Stage POs auto-created; booking holds and routing applied automatically" oninput="livePreview()"></div>
+        <div class="bullet-row"><span class="bullet-num">3</span><input type="text" class="bullet-input" placeholder="e.g. Orders routed to NetSuite via MuleSoft; GCP orders held until TCV confirmation" oninput="livePreview()"></div>
+      </div>
+
+      <!-- Image upload -->
+      <div style="margin-top:16px;">
+        <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:2px;">
+          Supporting Images <span style="font-weight:400;">— optional, uploaded to Slack alongside the message</span>
+        </label>
+        <div class="hint" style="margin-bottom:0;">Requires <code>files:write</code> scope on your Slack token in addition to <code>chat:write</code>.</div>
+        <div class="drop-zone" id="dropZone"
+             onclick="document.getElementById('imageInput').click()"
+             ondragover="dragOver(event)"
+             ondragleave="dragLeave(event)"
+             ondrop="dropFiles(event)">
+          <input type="file" id="imageInput" multiple accept="image/*" onchange="handleImages(this.files)">
+          <div class="drop-zone-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </div>
+          <div class="drop-zone-text">Drop images here, <span class="drop-zone-browse">browse files</span>, or paste <kbd style="font-size:10px;background:#eee;border:1px solid #ccc;border-radius:3px;padding:1px 4px;">⌘V</kbd></div>
+          <div class="drop-zone-sub">PNG, JPG, GIF, WEBP · Multiple files OK · Screenshots paste directly</div>
+        </div>
+        <div class="img-grid" id="imgGrid"></div>
+
+        <!-- Anthropic key + re-analyze -->
+        <div style="margin-top:12px;">
+          <div class="field">
+            <label>Anthropic API Key <span style="font-weight:400;">— auto-fills fields from image content</span></label>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="password" id="anthropicKey" placeholder="sk-ant-api03-... or your company key" autocomplete="off" style="flex:1;">
+              <button class="btn btn-outline" onclick="clearAnthropicKey()" title="Clear saved key" style="height:34px;padding:0 10px;flex-shrink:0;font-size:11px;color:#888;">Clear</button>
+            </div>
+            <div class="hint" id="anthropicKeyHint">Upload an image → Claude reads it and fills One-line Summary, Key Highlights, and QA Validation automatically. Key stored locally only.</div>
+          </div>
+          <div class="field" style="margin-top:6px;">
+            <label style="font-size:11px;font-weight:500;color:#666;">
+              API Endpoint <span style="font-weight:400;color:#999;">— change if using a company proxy (leave blank for default)</span>
+            </label>
+            <input type="text" id="anthropicEndpoint" placeholder="https://api.anthropic.com/v1/messages" autocomplete="off" style="font-size:12px;color:#555;">
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:6px;">
+            <button class="btn btn-outline" onclick="manualAnalyze()" id="reAnalyzeBtn" style="height:34px;padding:0 12px;font-size:12px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+              Re-analyze
+            </button>
+          </div>
+        </div>
+        <div class="analyze-status" id="analyzeStatus"></div>
+      </div>
+    </div>
+
+    <!-- 3. QA Team (prominent) -->
+    <div class="section" style="background:#fafffe;">
+      <div class="section-header">
+        <div class="section-icon green">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div>
+          <div class="section-title">⭐ QA Team Recognition <span style="font-weight:400;font-size:10px;color:var(--text-secondary);">— the star of the message</span></div>
+          <div class="section-sub">This section will be the most prominent part of the Slack post</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:7px;">QA Team Members <span style="font-weight:400;">(name or Slack ID like U04DSDP4QBE)</span></label>
+        <div id="qaRowsContainer">
+          <div class="qa-row">
+            <input type="text" class="qa-name-input" placeholder="e.g. Bhavani Marupaka  or  U04DSDP4QBE" oninput="livePreview()">
+            <button class="qa-row-del" onclick="removeQARow(this)" title="Remove">×</button>
+          </div>
+        </div>
+        <button class="add-btn" onclick="addQARow()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add team member
+        </button>
+      </div>
+
+      <div class="field" style="margin-bottom:10px;">
+        <label>What did the QA team specifically validate? *</label>
+        <textarea id="qaContribution" rows="4" placeholder="e.g. Validated end-to-end order flows across Azure, AWS, and GCP — including routing logic, booking holds, TCV confirmation gates, and Azure's 72-hour cancellation waiver. Thoroughly tested edge cases, exception handling, and data accuracy before the first order went live in production." oninput="livePreview()"></textarea>
+        <div class="hint">Be specific — this text shapes the QA spotlight and makes the recognition feel genuine.</div>
+      </div>
+
+      <div class="field">
+        <label>Personal closing line for the QA section <span style="font-weight:400;">(optional)</span></label>
+        <input type="text" id="qaGratitude" placeholder="e.g. Your thoroughness gave us the confidence to ship without hesitation." oninput="livePreview()">
+      </div>
+    </div>
+
+    <!-- 4. Tone -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon purple">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div>
+          <div class="section-title">Message Tone</div>
+          <div class="section-sub">Sets the energy and language style of the post</div>
+        </div>
+      </div>
+      <div class="tone-grid">
+        <div class="tone-card active" id="tc-professional" onclick="selectTone('professional')">
+          <span class="tone-emoji">🏢</span>
+          <span class="tone-name">Professional</span>
+          <span class="tone-desc">Polished, measured, clear</span>
+        </div>
+        <div class="tone-card" id="tc-casual" onclick="selectTone('casual')">
+          <span class="tone-emoji">😊</span>
+          <span class="tone-name">Casual</span>
+          <span class="tone-desc">Friendly, conversational</span>
+        </div>
+        <div class="tone-card" id="tc-celebratory" onclick="selectTone('celebratory')">
+          <span class="tone-emoji">🎉</span>
+          <span class="tone-name">Celebratory</span>
+          <span class="tone-desc">High-energy, enthusiastic</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Slack Settings -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.4 11.1 19.79 19.79 0 0 1 1.19 2.44 2 2 0 0 1 3.16.22h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.09 7.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21 14.92z"/></svg>
+        </div>
+        <div>
+          <div class="section-title">Slack Settings</div>
+          <div class="section-sub">Channel and authentication to post the message</div>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:10px;">
+        <label>Channel(s) <span style="font-weight:400;">(comma-separated for multiple)</span></label>
+        <input type="text" id="slackChannel" placeholder="e.g. it-prodops-qa, general">
+        <div class="hint">Use channel names without # (e.g. <code>it-prodops-qa</code>) or channel IDs.</div>
+      </div>
+      <div class="field">
+        <label>Slack Bot Token</label>
+        <input type="password" id="slackToken" placeholder="xoxb-..." autocomplete="off">
+        <div class="hint">Needs <code>chat:write</code> + <code>files:write</code> scopes. Token is saved locally in your browser only — never transmitted anywhere except Slack's API.</div>
+      </div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="status-bar" id="statusBar"></div>
+
+    <!-- Action buttons -->
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="generatePreview()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Generate Preview
+      </button>
+      <button class="btn btn-success" id="sendBtn" onclick="sendToSlack()" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Send to Slack
+      </button>
+      <button class="btn btn-outline" onclick="clearForm()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        Reset
+      </button>
+    </div>
+  </div>
+
+  <!-- ════════════════ PREVIEW PANEL ════════════════ -->
+  <div class="preview-panel">
+    <div class="preview-header">
+      <span class="preview-title">Slack Message Preview</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button type="button" id="regenBtn" title="Generate AI variants — Claude drafts 3 different versions for you to choose from" style="display:none;height:26px;padding:0 10px;font-size:11px;font-weight:600;background:#eff6ff;border:1px solid #93c5fd;border-radius:5px;cursor:pointer;color:#0a4d8c;flex-direction:row;align-items:center;gap:4px;">
+          ✨ AI Variants
+        </button>
+        <span class="char-badge" id="charBadge">0 chars</span>
+      </div>
+    </div>
+
+    <!-- AI variation picker — appears when Regenerate is clicked -->
+    <div id="variationsPanel" style="display:none;padding:12px 16px;background:#f0f5ff;border-bottom:1px solid #c7d9f8;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span style="font-size:12px;font-weight:700;color:#0a4d8c;">✨ AI-generated variants — pick your favorite to send</span>
+        <button type="button" onclick="closeVariations()" style="background:none;border:none;cursor:pointer;color:#888;font-size:18px;line-height:1;padding:0 6px;border-radius:4px;" title="Close">×</button>
+      </div>
+      <div id="variationsGrid" class="variations-grid"></div>
+    </div>
+
+    <div class="preview-body" id="previewBody">
+      <div class="preview-empty">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#ddd" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto 12px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Fill in the form and click<br><strong>Generate Preview</strong> to see your message here.
+      </div>
+    </div>
+    <!-- Image attachment strip shown in preview -->
+    <div id="previewImgStrip" style="display:none;padding:0 18px 10px;">
+      <div class="img-preview-strip" id="previewImgThumbs"></div>
+    </div>
+
+    <div class="preview-actions">
+      <button class="btn btn-outline" id="copyBtn" onclick="copyMessage()" disabled>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy Text
+      </button>
+      <button class="btn btn-outline" id="downloadBtn" onclick="downloadMessage()" disabled>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download
+      </button>
+      <button class="btn btn-outline" id="claudeCodeBtn" onclick="copyClaudeCommand()" disabled title="Copy a /go-live-congrats command to paste into Claude Code">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        Send via Claude
+      </button>
+    </div>
+    <div id="claudeCommandHint" style="display:none;margin-top:8px;padding:8px 10px;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;font-size:11px;color:#166534;line-height:1.5;">
+      ✅ Command copied! Paste it into <strong>Claude Code</strong> and it will post to Slack instantly.
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- ── Variant full-preview modal ── -->
+<div class="modal-overlay" id="variantModal" onclick="modalOverlayClick(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <button type="button" class="modal-nav-btn" id="modalPrev" onclick="modalNav(-1)" title="Previous variant">&#8592;</button>
+      <span class="modal-label" id="modalLabel"></span>
+      <span class="modal-counter" id="modalCounter"></span>
+      <button type="button" class="modal-nav-btn" id="modalNext" onclick="modalNav(1)" title="Next variant">&#8594;</button>
+      <button type="button" class="modal-close" onclick="closeModal()" title="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="slack-msg" id="modalBody"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline" onclick="closeModal()" style="height:32px;font-size:12px;">Cancel</button>
+      <button type="button" class="btn btn-primary" id="modalUseBtn" onclick="modalUseThis()" style="height:32px;font-size:12px;">
+        Use This ✓
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  var generatedMessage = '';
+  var currentTone = 'professional';
+  var uploadedImages = []; // [{ file: File, dataUrl: string }]
+  var analyzeTimer   = null;
+  var hasAnalyzed    = false; // true after first successful auto-analysis
+
+  /* ── Tone ── */
+  function selectTone(t) {
+    currentTone = t;
+    ['professional','casual','celebratory'].forEach(function(x) {
+      document.getElementById('tc-' + x).classList.toggle('active', x === t);
+    });
+    if (generatedMessage) generatePreview();
+  }
+
+  /* ── QA rows ── */
+  function addQARow() {
+    var container = document.getElementById('qaRowsContainer');
+    var row = document.createElement('div');
+    row.className = 'qa-row';
+    row.innerHTML =
+      '<input type="text" class="qa-name-input" placeholder="Name or Slack User ID" oninput="livePreview()" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;">' +
+      '<button class="qa-row-del" onclick="removeQARow(this)" title="Remove">×</button>';
+    container.appendChild(row);
+  }
+
+  function removeQARow(btn) {
+    var rows = document.querySelectorAll('.qa-row');
+    if (rows.length > 1) { btn.parentElement.remove(); livePreview(); }
+  }
+
+  function getQANames() {
+    return [...document.querySelectorAll('.qa-name-input')]
+      .map(function(i) { return i.value.trim(); }).filter(Boolean);
+  }
+
+  function fmtMention(name) {
+    if (/^[UW][A-Z0-9]{7,10}$/i.test(name.trim())) return '*<@' + name.trim().toUpperCase() + '>*';
+    return '*@' + name + '*';
+  }
+
+  /* ── Image upload ── */
+  function dragOver(e) {
+    e.preventDefault();
+    document.getElementById('dropZone').classList.add('drag-over');
+  }
+  function dragLeave(e) {
+    document.getElementById('dropZone').classList.remove('drag-over');
+  }
+  function dropFiles(e) {
+    e.preventDefault();
+    document.getElementById('dropZone').classList.remove('drag-over');
+    handleImages(e.dataTransfer.files);
+  }
+
+  function handleImages(files) {
+    var arr = Array.from(files).filter(function(f) { return f.type.startsWith('image/'); });
+    if (arr.length === 0) return;
+    var loaded = 0;
+    arr.forEach(function(file) {
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        uploadedImages.push({ file: file, dataUrl: ev.target.result });
+        renderImgGrid();
+        if (generatedMessage) generatePreview();
+        else updatePreviewImgStrip();
+        loaded++;
+        // Only schedule once ALL files in this batch are fully loaded
+        if (loaded === arr.length) scheduleAnalysis();
+      };
+      reader.readAsDataURL(file);
+    });
+    // Reset so the same file can be re-added after removal
+    document.getElementById('imageInput').value = '';
+  }
+
+  function removeImage(idx) {
+    uploadedImages.splice(idx, 1);
+    if (uploadedImages.length === 0) hasAnalyzed = false;
+    renderImgGrid();
+    if (generatedMessage) generatePreview();
+    else updatePreviewImgStrip();
+  }
+
+  function renderImgGrid() {
+    var grid = document.getElementById('imgGrid');
+    if (uploadedImages.length === 0) { grid.innerHTML = ''; return; }
+    grid.innerHTML = uploadedImages.map(function(img, i) {
+      var shortName = img.file.name.length > 12
+        ? img.file.name.slice(0, 10) + '…'
+        : img.file.name;
+      return '<div class="img-thumb">' +
+        '<img src="' + img.dataUrl + '" alt="' + img.file.name + '">' +
+        '<div class="img-thumb-name">' + shortName + '</div>' +
+        '<button class="img-thumb-del" onclick="removeImage(' + i + ')" title="Remove">×</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  function updatePreviewImgStrip() {
+    var strip = document.getElementById('previewImgStrip');
+    var thumbs = document.getElementById('previewImgThumbs');
+    if (uploadedImages.length === 0) {
+      strip.style.display = 'none';
+      thumbs.innerHTML = '';
+      return;
+    }
+    strip.style.display = 'block';
+    thumbs.innerHTML =
+      '<div style="font-size:11px;font-weight:600;color:var(--text-secondary);width:100%;margin-bottom:4px;">📎 ' + uploadedImages.length + ' image' + (uploadedImages.length > 1 ? 's' : '') + ' attached</div>' +
+      uploadedImages.map(function(img) {
+        return '<img class="img-preview-thumb" src="' + img.dataUrl + '" alt="' + img.file.name + '" title="' + img.file.name + '">';
+      }).join('');
+  }
+
+  /* ── Upload one image to one Slack channel ── */
+  async function uploadImageToChannel(imgObj, token, channelId) {
+    // Step 1: get pre-signed upload URL
+    var urlResp = await fetch('https://slack.com/api/files.getUploadURLExternal', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Bearer ' + token
+      },
+      body: new URLSearchParams({ filename: imgObj.file.name, length: imgObj.file.size })
+    });
+    var urlData = await urlResp.json();
+    if (!urlData.ok) throw new Error('getUploadURL: ' + urlData.error);
+
+    // Step 2: upload the file bytes to the pre-signed URL
+    await fetch(urlData.upload_url, {
+      method: 'POST',
+      headers: { 'Content-Type': imgObj.file.type || 'application/octet-stream' },
+      body: imgObj.file
+    });
+
+    // Step 3: complete upload and share to channel
+    var complResp = await fetch('https://slack.com/api/files.completeUploadExternal', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ files: [{ id: urlData.file_id }], channel_id: channelId })
+    });
+    var complData = await complResp.json();
+    if (!complData.ok) throw new Error('completeUpload: ' + complData.error);
+  }
+
+  /* ── Build Slack message ── */
+  function buildMessage() {
+    var projectName  = (document.getElementById('projectName').value.trim()) || 'Project';
+    var status       = document.getElementById('status').value;
+    var scopeSummary = document.getElementById('scopeSummary').value.trim();
+    var bullets      = [...document.querySelectorAll('.bullet-input')].map(function(i) { return i.value.trim(); }).filter(Boolean).slice(0, 3);
+    var qaNames      = getQANames();
+    var qaContrib    = document.getElementById('qaContribution').value.trim();
+    var qaGratitude  = document.getElementById('qaGratitude').value.trim();
+    var tone         = currentTone;
+
+    var msg = '';
+
+    // ── Headline ──
+    msg += '🚀 *' + projectName + ' — ' + status + '!*\n\n';
+
+    // ── Project Scope (brief) ──
+    if (scopeSummary) msg += scopeSummary + '\n\n';
+    if (bullets.length > 0) {
+      msg += '*What shipped:*\n';
+      bullets.forEach(function(b) { msg += '• ' + b + '\n'; });
+      msg += '\n';
+    }
+
+    // ── QA Spotlight ──
+    if (qaNames.length > 0) {
+      msg += '---\n';
+      if (tone === 'celebratory')
+        msg += '🎉 ⭐ *QA Spotlight: The Team That Made This Launch Trustworthy* ⭐ 🎉\n\n';
+      else if (tone === 'casual')
+        msg += '⭐ *Shoutout: The QA Team Behind This Launch* ⭐\n\n';
+      else
+        msg += '⭐ *Spotlight: The QA Team Behind This Launch* ⭐\n\n';
+
+      msg += (qaContrib || 'This launch wouldn\'t have been possible without the rigorous testing and attention to detail from our QA team. They validated the full flow end-to-end, covering edge cases, exception handling, and data accuracy — giving the team the confidence to ship with no hesitation.') + '\n\n';
+
+      var gratitude = qaGratitude
+        || (tone === 'celebratory' ? 'Your work is the reason this launch is solid — thank you! 🙌'
+          : tone === 'casual'      ? 'Honestly, couldn\'t have shipped this without you. Thank you!'
+          :                         'Thank you for your precision and commitment through every round of testing.');
+      msg += '_' + gratitude + '_\n\n';
+
+      msg += '*A huge shoutout and congratulations to:*\n';
+      qaNames.forEach(function(name) { msg += '• 🌟 ' + fmtMention(name) + '\n'; });
+      msg += '---\n\n';
+    }
+
+    // ── Closing ──
+    if (tone === 'celebratory')
+      msg += '🎊 Congratulations — what a milestone! 🙌🚀';
+    else if (tone === 'casual')
+      msg += 'Great work, everyone. Really proud of what this team pulled off. 💪';
+    else
+      msg += 'Congratulations on this significant milestone. 🚀';
+
+    return msg;
+  }
+
+  /* ── Render Slack mrkdwn → HTML ── */
+  function slackToHtml(text) {
+    var html = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    html = html.replace(/^---$/gm, '<hr>');
+    html = html.replace(/&lt;@([A-Z0-9]+)&gt;/gi, '<span class="mention">@$1</span>');
+    html = html.replace(/\*([^*\n]+)\*/g, '<strong>$1</strong>');
+    html = html.replace(/_([^_\n]+)_/g,   '<em>$1</em>');
+    html = html.replace(/\n/g, '<br>');
+    return html;
+  }
+
+  /* ── Generate Preview ── */
+  function generatePreview() {
+    var msg = buildMessage();
+    generatedMessage = msg;
+
+    document.getElementById('previewBody').innerHTML =
+      '<div class="slack-msg">' + slackToHtml(msg) + '</div>';
+
+    var len = msg.length;
+    var badge = document.getElementById('charBadge');
+    badge.textContent = len + ' chars' + (uploadedImages.length ? ' + ' + uploadedImages.length + ' img' : '');
+    badge.className = 'char-badge' + (len > 3000 ? ' warn' : '');
+
+    updatePreviewImgStrip();
+
+    document.getElementById('sendBtn').disabled        = false;
+    document.getElementById('copyBtn').disabled        = false;
+    document.getElementById('downloadBtn').disabled    = false;
+    document.getElementById('claudeCodeBtn').disabled  = false;
+    document.getElementById('regenBtn').style.display  = 'flex';
+  }
+
+  function livePreview() {
+    if (generatedMessage) generatePreview();
+  }
+
+  /* ── Copy ── */
+  function copyMessage() {
+    if (!generatedMessage) return;
+    navigator.clipboard.writeText(generatedMessage).then(function() {
+      var btn = document.getElementById('copyBtn');
+      var orig = btn.innerHTML;
+      btn.innerHTML = '✓ Copied!';
+      setTimeout(function() { btn.innerHTML = orig; }, 1500);
+    });
+  }
+
+  /* ── Download ── */
+  function downloadMessage() {
+    if (!generatedMessage) return;
+    var blob = new Blob([generatedMessage], { type: 'text/plain;charset=utf-8;' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'go-live-message.txt';
+    a.click();
+    setTimeout(function() { URL.revokeObjectURL(a.href); }, 150);
+  }
+
+  /* ── Send via Claude Code ── */
+  function copyClaudeCommand() {
+    if (!generatedMessage) return;
+    var channel = document.getElementById('slackChannel').value.trim() || '#your-channel';
+    var encoded = btoa(unescape(encodeURIComponent(generatedMessage)));
+    var cmd = '/go-live-congrats --channel "' + channel + '" --message "' + encoded + '"';
+    navigator.clipboard.writeText(cmd).then(function() {
+      var hint = document.getElementById('claudeCommandHint');
+      hint.style.display = 'block';
+      var btn = document.getElementById('claudeCodeBtn');
+      btn.textContent = '✅ Copied!';
+      setTimeout(function() {
+        btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg> Send via Claude';
+      }, 2500);
+    });
+  }
+
+  /* ── Send to Slack ── */
+  async function sendToSlack() {
+    var msg   = buildMessage();
+    var token = document.getElementById('slackToken').value.trim();
+    var chRaw = document.getElementById('slackChannel').value.trim();
+
+    if (!token) { showStatus('error', '❌ Please enter your Slack Bot Token before sending.'); return; }
+    if (!chRaw) { showStatus('error', '❌ Please enter at least one Slack channel.'); return; }
+    if (!document.getElementById('projectName').value.trim()) {
+      showStatus('error', '❌ Please enter a project name.'); return;
+    }
+
+    var channels = chRaw.split(',').map(function(c) { return c.trim().replace(/^#/, ''); }).filter(Boolean);
+    var btn = document.getElementById('sendBtn');
+    btn.disabled = true;
+
+    var ok = [], fail = [], imgFail = [];
+    var total = channels.length + (uploadedImages.length * channels.length);
+    var done  = 0;
+
+    function setProgress(label) {
+      btn.textContent = label;
+    }
+
+    // Post text message to each channel
+    for (var i = 0; i < channels.length; i++) {
+      var ch = channels[i];
+      setProgress('⏳ Posting to #' + ch + '…');
+      try {
+        var resp = await fetch('https://slack.com/api/chat.postMessage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json; charset=utf-8', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ channel: ch, text: msg, mrkdwn: true })
+        });
+        var data = await resp.json();
+        if (data.ok) ok.push('#' + ch);
+        else         fail.push('#' + ch + ' (' + (data.error || 'unknown') + ')');
+      } catch(e) {
+        fail.push('#' + ch + ' (' + e.message + ')');
+      }
+      done++;
+    }
+
+    // Upload images to each channel that succeeded
+    if (uploadedImages.length > 0 && ok.length > 0) {
+      for (var ci = 0; ci < channels.length; ci++) {
+        var sch = channels[ci];
+        if (fail.some(function(f) { return f.startsWith('#' + sch); })) continue;
+        for (var ii = 0; ii < uploadedImages.length; ii++) {
+          setProgress('⏳ Uploading image ' + (ii + 1) + '/' + uploadedImages.length + ' to #' + sch + '…');
+          try {
+            await uploadImageToChannel(uploadedImages[ii], token, sch);
+          } catch(e) {
+            imgFail.push(uploadedImages[ii].file.name + ' → #' + sch + ' (' + e.message + ')');
+          }
+          done++;
+        }
+      }
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send to Slack';
+
+    var summary = '';
+    if (ok.length > 0)       summary += '✅ Message posted to ' + ok.join(', ') + '.';
+    if (fail.length > 0)     summary += ' ❌ Failed: ' + fail.join(', ') + '.';
+    if (imgFail.length > 0)  summary += ' ⚠️ Image upload failed: ' + imgFail.join('; ') + '.';
+    else if (uploadedImages.length > 0 && ok.length > 0)
+      summary += ' 🖼️ ' + uploadedImages.length + ' image(s) uploaded.';
+
+    showStatus(fail.length === 0 && imgFail.length === 0 ? 'success' : 'error', summary.trim());
+  }
+
+  /* ── Status bar ── */
+  function showStatus(type, msg) {
+    var bar = document.getElementById('statusBar');
+    bar.textContent = msg;
+    bar.className = 'status-bar ' + type;
+    if (type === 'success') setTimeout(function() { bar.className = 'status-bar'; }, 7000);
+  }
+
+  /* ── Reset ── */
+  function clearForm() {
+    document.getElementById('projectName').value  = '';
+    document.getElementById('scopeSummary').value = '';
+    document.querySelectorAll('.bullet-input').forEach(function(i) { i.value = ''; });
+    document.querySelectorAll('.qa-name-input').forEach(function(i) { i.value = ''; });
+    var rows = document.querySelectorAll('.qa-row');
+    for (var i = 1; i < rows.length; i++) rows[i].remove();
+    document.getElementById('qaContribution').value = '';
+    document.getElementById('qaGratitude').value    = '';
+    document.getElementById('slackChannel').value   = '';
+    // Clear images
+    uploadedImages = [];
+    hasAnalyzed = false;
+    renderImgGrid();
+    document.getElementById('previewImgStrip').style.display = 'none';
+    document.getElementById('previewImgThumbs').innerHTML    = '';
+    selectTone('professional');
+    generatedMessage = '';
+    document.getElementById('previewBody').innerHTML =
+      '<div class="preview-empty">' +
+      '<svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#ddd" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto 12px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' +
+      'Fill in the form and click<br><strong>Generate Preview</strong> to see your message here.</div>';
+    document.getElementById('charBadge').textContent = '0 chars';
+    document.getElementById('charBadge').className   = 'char-badge';
+    document.getElementById('sendBtn').disabled       = true;
+    document.getElementById('copyBtn').disabled       = true;
+    document.getElementById('downloadBtn').disabled   = true;
+    document.getElementById('claudeCodeBtn').disabled = true;
+    document.getElementById('regenBtn').style.display = 'none';
+    document.getElementById('claudeCommandHint').style.display = 'none';
+    document.getElementById('statusBar').className   = 'status-bar';
+  }
+
+  /* ── Paste from clipboard ── */
+  document.addEventListener('paste', function(e) {
+    var items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    var imageFiles = [];
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].kind === 'file' && items[i].type.startsWith('image/')) {
+        var f = items[i].getAsFile();
+        if (f) imageFiles.push(f);
+      }
+    }
+    if (imageFiles.length === 0) return;
+    e.preventDefault();
+    handleImages(imageFiles);
+    // Flash the drop zone to confirm receipt
+    var dz = document.getElementById('dropZone');
+    dz.classList.add('drag-over');
+    setTimeout(function() { dz.classList.remove('drag-over'); }, 600);
+  });
+
+  /* ── Claude image analysis ── */
+  function scheduleAnalysis() {
+    clearTimeout(analyzeTimer);
+    analyzeTimer = setTimeout(function() {
+      var key = document.getElementById('anthropicKey').value.trim();
+      if (!key || uploadedImages.length === 0) return;
+      if (!hasAnalyzed) {
+        // First time: auto-analyze all uploaded images
+        analyzeImages(key);
+      } else {
+        // Already analyzed once — don't auto-overwrite; prompt user to Re-analyze manually
+        showAnalyzeStatus('warning',
+          '📸 ' + uploadedImages.length + ' image' + (uploadedImages.length > 1 ? 's' : '') +
+          ' ready. Click *Re-analyze* to update all fields with all images.');
+      }
+    }, 900);
+  }
+
+  function manualAnalyze() {
+    var key = document.getElementById('anthropicKey').value.trim();
+    if (!key)              { showAnalyzeStatus('error', '❌ Enter your Anthropic API Key first.'); return; }
+    if (!uploadedImages.length) { showAnalyzeStatus('error', '❌ Upload at least one image first.'); return; }
+    analyzeImages(key);
+  }
+
+  async function analyzeImages(apiKey) {
+    showAnalyzeStatus('loading', 'Analyzing image' + (uploadedImages.length > 1 ? 's' : '') + ' with Claude…');
+
+    // Build content blocks: all images first, then the prompt
+    var content = [];
+    uploadedImages.forEach(function(img) {
+      var mediaType = img.file.type || 'image/png';
+      var base64    = img.dataUrl.split(',')[1];
+      content.push({ type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } });
+    });
+    content.push({
+      type: 'text',
+      text: 'Analyze this go-live announcement image and extract content for a Slack congratulations message.\n\nReturn ONLY valid JSON — no markdown, no explanation, just the JSON object:\n{"summary":"One sentence describing what was built and what it replaces or improves (max 130 chars)","highlights":["key capability or outcome 1","key capability or outcome 2","key capability or outcome 3"],"qa_validation":"2-4 sentences describing what the QA team validated: which flows, marketplaces, edge cases, or test scenarios are mentioned"}\n\nIf a field cannot be determined from the image, use an empty string "" or empty array []. Keep each highlight under 90 characters.'
+    });
+
+    try {
+      var endpointInput = document.getElementById('anthropicEndpoint').value.trim();
+      var endpoint = endpointInput || 'https://api.anthropic.com/v1/messages';
+      var resp = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5',
+          max_tokens: 600,
+          messages: [{ role: 'user', content: content }]
+        })
+      });
+
+      if (!resp.ok) {
+        var errData = await resp.json().catch(function() { return {}; });
+        var msg = errData.error ? errData.error.message : ('HTTP ' + resp.status);
+        if (resp.status === 401 || (msg && msg.toLowerCase().includes('api-key'))) {
+          msg = 'Invalid API key — click Clear, then paste a fresh key from console.anthropic.com';
+        }
+        throw new Error(msg);
+      }
+
+      var data    = await resp.json();
+      var rawText = data.content && data.content[0] ? data.content[0].text.trim() : '';
+      // Extract the JSON object even if Claude wraps it in backticks
+      var jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Unexpected response format from Claude.');
+      var result = JSON.parse(jsonMatch[0]);
+      hasAnalyzed = true;
+      autoFillFields(result);
+      showAnalyzeStatus('success', '✅ Fields auto-filled from ' + uploadedImages.length + ' image' + (uploadedImages.length > 1 ? 's' : '') + ' — review and adjust as needed.');
+    } catch(e) {
+      showAnalyzeStatus('error', '❌ Analysis failed: ' + e.message);
+    }
+  }
+
+  function autoFillFields(result) {
+    if (result.summary && result.summary.trim()) {
+      var el = document.getElementById('scopeSummary');
+      el.value = result.summary.trim();
+      flashAiFilled(el);
+    }
+    if (Array.isArray(result.highlights)) {
+      var inputs = document.querySelectorAll('.bullet-input');
+      result.highlights.slice(0, 3).forEach(function(h, i) {
+        if (inputs[i] && h && h.trim()) {
+          inputs[i].value = h.trim();
+          flashAiFilled(inputs[i]);
+        }
+      });
+    }
+    if (result.qa_validation && result.qa_validation.trim()) {
+      var qa = document.getElementById('qaContribution');
+      qa.value = result.qa_validation.trim();
+      flashAiFilled(qa);
+    }
+    // Refresh preview if it was already generated
+    if (generatedMessage) generatePreview();
+  }
+
+  function flashAiFilled(el) {
+    el.classList.add('ai-filled-flash');
+    setTimeout(function() { el.classList.remove('ai-filled-flash'); }, 2500);
+  }
+
+  function showAnalyzeStatus(state, msg) {
+    var el = document.getElementById('analyzeStatus');
+    el.className = 'analyze-status ' + state;
+    if (state === 'loading') {
+      el.innerHTML = '<div class="spin"></div>' + msg;
+    } else {
+      el.textContent = msg;
+      if (state === 'success') setTimeout(function() { el.className = 'analyze-status'; el.textContent = ''; }, 6000);
+    }
+  }
+
+  /* ── AI Regenerate: multi-variant generation ── */
+  var generatedVariations = [];
+
+  async function generateVariations() {
+    var apiKey = document.getElementById('anthropicKey').value.trim();
+    if (!apiKey) {
+      alert('Please enter your Anthropic API Key in the Project Scope section to generate AI variations.');
+      return;
+    }
+
+    // Show loading state inside the panel
+    var panel = document.getElementById('variationsPanel');
+    var grid  = document.getElementById('variationsGrid');
+    panel.style.display = 'block';
+    grid.innerHTML =
+      '<div style="grid-column:1/-1;text-align:center;padding:20px 0;color:#0a4d8c;font-size:12px;display:flex;flex-direction:column;align-items:center;gap:8px;">' +
+      '<div class="spin" style="border-color:#c7d9f8;border-top-color:#0f6cbd;width:20px;height:20px;border-width:3px;"></div>' +
+      'Claude is drafting 3 different versions…</div>';
+
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    // Collect current form data
+    var projectName  = document.getElementById('projectName').value.trim() || 'Project';
+    var status       = document.getElementById('status').value;
+    var scopeSummary = document.getElementById('scopeSummary').value.trim();
+    var bullets      = [...document.querySelectorAll('.bullet-input')].map(function(i) { return i.value.trim(); }).filter(Boolean);
+    var qaNames      = getQANames();
+    var qaContrib    = document.getElementById('qaContribution').value.trim();
+    var qaGratitude  = document.getElementById('qaGratitude').value.trim();
+    var tone         = currentTone;
+
+    var toneDesc = tone === 'celebratory'
+      ? 'high-energy and enthusiastic — use emojis (🎉🙌⭐), punchy phrases, visible excitement'
+      : tone === 'casual'
+      ? 'friendly and conversational — contractions welcome, warm but not over-the-top'
+      : 'professional and polished — clear structure, measured language, minimal filler';
+
+    var prompt =
+      'You are a QA Lead writing a Slack go-live congratulations message. The PRIMARY focus of this message is celebrating and recognizing the QA team\'s work — the project details are secondary context.\n\n' +
+      'Project details:\n' +
+      '- Project: ' + projectName + '\n' +
+      '- Status: ' + status + '\n' +
+      '- Summary: ' + (scopeSummary || '(not provided)') + '\n' +
+      '- What shipped:\n' + (bullets.length ? bullets.map(function(b) { return '  • ' + b; }).join('\n') : '  (not provided)') + '\n' +
+      '- QA Team: ' + (qaNames.length ? qaNames.join(', ') : '(not specified)') + '\n' +
+      '- QA validation work: ' + (qaContrib || '(not provided)') + '\n' +
+      '- Personal gratitude: ' + (qaGratitude || '(not provided)') + '\n' +
+      '- Tone: ' + tone + ' — ' + toneDesc + '\n\n' +
+      'Generate exactly 3 DISTINCT Slack congratulations messages. Structure for EACH:\n\n' +
+      '1. HEADLINE — one bold line: 🚀 *' + projectName + ' — ' + status + '!*\n\n' +
+      '2. PROJECT SCOPE — keep this SHORT (1 sentence + max 3 bullets labeled *What shipped:*). This is just context.\n\n' +
+      '3. QA SPOTLIGHT — this is the HEART of the message. It must be detailed, warm, and specific. Use --- dividers above and below.\n' +
+      '   Vary the header per version (e.g. "⭐ *QA Spotlight*", "🔍 *Behind Every Successful Launch*", "🏆 *The QA Excellence Behind This Go-Live*", "🎯 *Quality Is What Got Us Here*")\n' +
+      '   Write 5–7 rich sentences covering ALL of the following QA dimensions (weave them naturally, not as a list):\n' +
+      '   - Functional testing: validating every feature end-to-end before it reached production\n' +
+      '   - Defect discovery: the sharp eye for catching bugs, edge cases, and integration gaps before users ever saw them\n' +
+      '   - Defect retesting & verification: the discipline of confirming every fix was solid, not just patched\n' +
+      '   - Regression testing: ensuring new changes didn\'t break existing functionality across the full system\n' +
+      '   - Quality gates: holding the bar and refusing to let anything through that wasn\'t production-ready\n' +
+      '   - Timeline discipline: delivering thorough coverage without compromising the go-live date\n' +
+      '   - Cross-platform / cross-scenario coverage: validating across multiple environments, marketplaces, or workflows\n' +
+      '   After the sentences, add a _heartfelt italicized closing line_ of genuine personal gratitude (specific, not generic).\n' +
+      '   Then: *A huge shoutout and congratulations to:*\n' +
+      (qaNames.length ? '   ' + qaNames.map(function(n) { return '• 🌟 *@' + n + '*'; }).join('\\n   ') + '\n' : '   (no names provided)\n') +
+      '   IMPORTANT: Every name must be formatted as • 🌟 *@Name* — bold with @ prefix. Never plain text.\n\n' +
+      '4. CLOSING LINE — one short energetic line to end the message.\n\n' +
+      'Make each version feel GENUINELY different in voice, emotional register, and how it frames the QA team\'s contribution.\n' +
+      'Give each a short descriptor label (e.g. "Bold & Celebratory", "Heartfelt & Personal", "Clean & Concise").\n\n' +
+      'Return ONLY valid JSON, no markdown fences:\n' +
+      '{"variations":[{"label":"Version 1 — [descriptor]","message":"full slack message"},{"label":"Version 2 — [descriptor]","message":"..."},{"label":"Version 3 — [descriptor]","message":"..."}]}';
+
+    try {
+      var endpointInput = document.getElementById('anthropicEndpoint').value.trim();
+      var endpoint = endpointInput || 'https://api.anthropic.com/v1/messages';
+
+      var resp = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5',
+          max_tokens: 3500,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      if (!resp.ok) {
+        var errData = await resp.json().catch(function() { return {}; });
+        var errMsg = errData.error ? errData.error.message : 'HTTP ' + resp.status;
+        if (resp.status === 401) errMsg = 'Invalid API key — use the Clear button and paste a fresh key.';
+        throw new Error(errMsg);
+      }
+
+      var data = await resp.json();
+      var rawText = data.content && data.content[0] ? data.content[0].text.trim() : '';
+      var jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Unexpected response from Claude — no JSON found.');
+      var result = JSON.parse(jsonMatch[0]);
+      if (!result.variations || !result.variations.length) throw new Error('Claude returned no variations.');
+
+      generatedVariations = result.variations;
+      renderVariationCards(generatedVariations);
+
+    } catch(e) {
+      panel.style.display = 'none';
+      alert('Could not generate AI variations: ' + e.message);
+    }
+  }
+
+  function renderVariationCards(variations) {
+    var grid = document.getElementById('variationsGrid');
+    grid.innerHTML = variations.map(function(v, i) {
+      // Strip mrkdwn for the card preview text
+      var preview = v.message
+        .replace(/\*([^*\n]+)\*/g, '$1')
+        .replace(/_([^_\n]+)_/g, '$1')
+        .replace(/^---$/gm, '')
+        .replace(/\n+/g, ' ')
+        .trim()
+        .substring(0, 120);
+      return '<div class="variation-card" id="varCard' + i + '" style="cursor:pointer;" onclick="openModal(' + i + ')" title="Click to read full message">' +
+        '<div class="variation-card-label">' + escapeHtml(v.label) + '</div>' +
+        '<div class="variation-card-preview" style="color:#666;">' + escapeHtml(preview) + '…</div>' +
+        '<div style="display:flex;gap:6px;margin-top:8px;">' +
+        '<button type="button" style="flex:1;padding:5px 0;background:#f0f5ff;color:#0a4d8c;border:1.5px solid #93c5fd;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;" onclick="event.stopPropagation();openModal(' + i + ')">👁 Read Full</button>' +
+        '<button type="button" class="variation-use-btn" style="flex:1;" onclick="event.stopPropagation();applyVariation(' + i + ')">Use This ✓</button>' +
+        '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function applyVariation(idx) {
+    var v = generatedVariations[idx];
+    if (!v) return;
+    generatedMessage = v.message;
+    document.getElementById('previewBody').innerHTML = '<div class="slack-msg">' + slackToHtml(v.message) + '</div>';
+    var len = v.message.length;
+    var badge = document.getElementById('charBadge');
+    badge.textContent = len + ' chars' + (uploadedImages.length ? ' + ' + uploadedImages.length + ' img' : '');
+    badge.className = 'char-badge' + (len > 3000 ? ' warn' : '');
+    // Flash selected card green, then close the panel
+    document.querySelectorAll('.variation-card').forEach(function(c, i) {
+      c.style.borderColor = i === idx ? '#107c10' : '';
+      c.style.background  = i === idx ? '#e5f2e5' : '';
+    });
+    setTimeout(function() { document.getElementById('variationsPanel').style.display = 'none'; }, 700);
+  }
+
+  function closeVariations() {
+    document.getElementById('variationsPanel').style.display = 'none';
+  }
+
+  /* ── Variant full-preview modal ── */
+  var modalCurrentIdx = 0;
+
+  function openModal(idx) {
+    modalCurrentIdx = idx;
+    renderModal(idx);
+    document.getElementById('variantModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function renderModal(idx) {
+    var v = generatedVariations[idx];
+    if (!v) return;
+    document.getElementById('modalLabel').textContent = v.label;
+    document.getElementById('modalCounter').textContent = (idx + 1) + ' / ' + generatedVariations.length;
+    document.getElementById('modalBody').innerHTML = slackToHtml(v.message);
+    document.getElementById('modalPrev').disabled = idx === 0;
+    document.getElementById('modalNext').disabled = idx === generatedVariations.length - 1;
+    // Scroll body to top
+    document.getElementById('variantModal').querySelector('.modal-body').scrollTop = 0;
+  }
+
+  function modalNav(dir) {
+    var next = modalCurrentIdx + dir;
+    if (next < 0 || next >= generatedVariations.length) return;
+    modalCurrentIdx = next;
+    renderModal(next);
+  }
+
+  function modalUseThis() {
+    applyVariation(modalCurrentIdx);
+    closeModal();
+  }
+
+  function closeModal() {
+    document.getElementById('variantModal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function modalOverlayClick(e) {
+    // Close when clicking the dark backdrop (not the box itself)
+    if (e.target === document.getElementById('variantModal')) closeModal();
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  /* ── Persist Slack token ── */
+  window.addEventListener('load', function() {
+    var t = localStorage.getItem('glc_slack_token');
+    if (t) document.getElementById('slackToken').value = t;
+    var ak = localStorage.getItem('glc_anthropic_key');
+    if (ak) {
+      document.getElementById('anthropicKey').value = ak;
+      showKeyHint(ak);
+    }
+    var ep = localStorage.getItem('glc_anthropic_endpoint');
+    if (ep) document.getElementById('anthropicEndpoint').value = ep;
+
+    document.getElementById('regenBtn').addEventListener('click', function() {
+      generateVariations();
+    });
+  });
+  document.getElementById('slackToken').addEventListener('change', function() {
+    if (this.value) localStorage.setItem('glc_slack_token', this.value);
+    else            localStorage.removeItem('glc_slack_token');
+  });
+  document.getElementById('anthropicKey').addEventListener('input', function() {
+    var v = this.value.trim();
+    if (v) { localStorage.setItem('glc_anthropic_key', v); showKeyHint(v); }
+    else   { localStorage.removeItem('glc_anthropic_key'); resetKeyHint(); }
+  });
+
+  function showKeyHint(key) {
+    var hint = document.getElementById('anthropicKeyHint');
+    hint.textContent = 'Saved key ends in …' + key.slice(-6) + '. Key stored locally only.';
+    hint.style.color = '#16a34a';
+  }
+  function resetKeyHint() {
+    var hint = document.getElementById('anthropicKeyHint');
+    hint.textContent = 'Upload an image → Claude reads it and fills One-line Summary, Key Highlights, and QA Validation automatically. Key stored locally only.';
+    hint.style.color = '';
+  }
+  document.getElementById('anthropicEndpoint').addEventListener('input', function() {
+    var v = this.value.trim();
+    if (v) localStorage.setItem('glc_anthropic_endpoint', v);
+    else   localStorage.removeItem('glc_anthropic_endpoint');
+  });
+
+  function clearAnthropicKey() {
+    document.getElementById('anthropicKey').value = '';
+    localStorage.removeItem('glc_anthropic_key');
+    resetKeyHint();
+    showAnalyzeStatus('error', '❌ API key cleared — paste your key again.');
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+fastapi==0.136.3
+uvicorn==0.30.6
+websockets>=12.0
+jira==3.8.0
+python-dotenv==1.0.1
+jinja2==3.1.4

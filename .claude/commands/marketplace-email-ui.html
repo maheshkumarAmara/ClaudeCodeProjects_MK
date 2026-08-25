@@ -1,0 +1,1718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marketplace Email Automation</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+
+    .header { background: #232f3e; color: white; padding: 16px 28px; display: flex; align-items: center; justify-content: space-between; }
+    .header-title { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+    .header-sub { font-size: 12px; color: #8a9bb0; margin-top: 2px; }
+    .provider-pill { padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; }
+
+    .top-bar { background: white; padding: 14px 28px; display: flex; gap: 16px; align-items: flex-end; border-bottom: 1px solid #e5e7eb; }
+    .container { display: grid; grid-template-columns: 420px 1fr; gap: 0; height: calc(100vh - 110px); }
+
+    .form-panel { overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; border-right: 1px solid #e5e7eb; background: #f8f9fb; }
+
+    .card { background: white; border-radius: 10px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+    .card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #888; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; }
+    .card-title-icon { width: 6px; height: 6px; border-radius: 50%; }
+
+    .field { margin-bottom: 10px; }
+    .field:last-child { margin-bottom: 0; }
+    .field label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 5px; }
+    .field input, .field select { width: 100%; padding: 8px 11px; border: 1px solid #dce1e8; border-radius: 7px; font-size: 13px; color: #222; background: #fff; transition: all 0.15s; }
+    .field input:focus, .field select:focus { outline: none; border-color: var(--accent, #ff9900); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #ff9900) 15%, transparent); }
+    .field input::placeholder { color: #bbb; }
+    .tag { font-size: 10px; padding: 1px 7px; border-radius: 8px; font-weight: 600; }
+    .tag-req { background: #fff0f0; color: #d00; }
+    .tag-opt { background: #eef3ff; color: #446; }
+    .tag-info { background: #f5f5f5; color: #888; }
+
+    .form-actions { display: flex; gap: 10px; }
+    .btn { padding: 10px 18px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+    .btn-send { background: var(--accent, #ff9900); color: white; flex: 1; font-size: 15px; }
+    .btn-send:hover { filter: brightness(0.92); }
+    .btn-reset { background: #f0f0f0; color: #555; }
+    .btn-reset:hover { background: #e5e5e5; }
+
+    .top-field { display: flex; flex-direction: column; gap: 4px; }
+    .top-field label { font-size: 12px; font-weight: 600; color: #555; }
+    .top-field select, .top-field input { padding: 8px 12px; border: 1px solid #dce1e8; border-radius: 7px; font-size: 13px; font-weight: 600; color: #222; min-width: 160px; }
+    .top-field select:focus, .top-field input:focus { outline: none; border-color: var(--accent, #ff9900); }
+
+    .preview-panel { overflow-y: auto; padding: 24px 28px; background: white; }
+    .preview-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .preview-header h2 { font-size: 15px; font-weight: 700; color: #232f3e; }
+    .preview-badge { font-size: 11px; padding: 3px 12px; border-radius: 12px; font-weight: 700; color: white; }
+
+    .email-subject-wrap { margin-bottom: 20px; }
+    .email-subject-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #aaa; margin-bottom: 6px; }
+    .email-subject { background: #f7f8fa; border: 1px solid #e8eaed; border-radius: 8px; padding: 10px 14px; font-size: 14px; font-weight: 600; color: #1a1a2e; }
+
+    .email-recipients { display: flex; gap: 20px; margin-bottom: 20px; padding: 12px 14px; background: #f7f8fa; border-radius: 8px; border: 1px solid #e8eaed; }
+    .email-recipients .recip { font-size: 12px; color: #555; }
+    .email-recipients .recip span { font-weight: 700; color: #333; }
+
+    .email-body { font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.7; color: #222; border: 1px solid #e8eaed; border-radius: 10px; overflow: hidden; }
+    .email-body.simple { padding: 24px; }
+    .email-body.simple p { margin-bottom: 14px; }
+    .email-body.simple u { font-weight: 700; color: #1a1a2e; text-decoration: underline; }
+    .email-body.simple b { color: #1a1a2e; }
+
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: white; border-radius: 14px; padding: 28px; max-width: 540px; width: 92%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+    .modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+    .modal p { font-size: 13px; color: #666; margin-bottom: 16px; }
+    .command-box { background: #1a1e2e; color: #a8d8a8; padding: 14px 16px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 13px; word-break: break-all; margin-bottom: 18px; line-height: 1.5; }
+    .modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+    .btn-copy { background: var(--accent, #ff9900); color: white; }
+    .btn-close { background: #f0f0f0; color: #555; }
+
+    .divider { height: 1px; background: #f0f0f0; margin: 4px 0; }
+
+    body[data-provider="AWS"]          { --accent: #ff9900; --accent-bg: #fff8ec; }
+    body[data-provider="GCP_Direct"]   { --accent: #4285f4; --accent-bg: #eef3ff; }
+    body[data-provider="GCP_Partner"]  { --accent: #34a853; --accent-bg: #eafaf1; }
+    body[data-provider="Azure"]        { --accent: #0078d4; --accent-bg: #e8f2ff; }
+    body[data-provider="Azure_Partner"]{ --accent: #0078d4; --accent-bg: #e8f2ff; }
+    body[data-provider="AWS_Partner"]  { --accent: #ff9900; --accent-bg: #fff8ec; }
+  </style>
+</head>
+<body data-provider="AWS">
+
+<div class="header">
+  <div>
+    <div class="header-title">Marketplace Email Automation</div>
+    <div class="header-sub">AWS &nbsp;·&nbsp; GCP &nbsp;·&nbsp; Azure</div>
+  </div>
+  <div class="provider-pill" id="headerPill" style="background:#ff9900; color:#232f3e;">AWS</div>
+</div>
+
+<div class="top-bar">
+  <div class="top-field">
+    <label>Cloud Provider</label>
+    <select id="provider" onchange="onProviderChange()">
+      <option value="AWS">AWS_Direct</option>
+      <option value="AWS_Partner">AWS_Partner</option>
+      <option value="GCP_Direct">GCP_Direct</option>
+      <option value="GCP_Partner">GCP_Partner</option>
+      <option value="Azure">MFST (Azure)_Direct</option>
+      <option value="Azure_Partner">MFST (Azure)_Flex</option>
+    </select>
+  </div>
+  <div class="top-field">
+    <label>Quote Number</label>
+    <input type="text" id="quoteNumber" value="Q-800727" placeholder="Q-182474" oninput="updateAll()">
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="form-panel">
+
+    <!-- Customer Details -->
+    <div class="card" id="customerCard">
+      <div class="card-title">
+        <div class="card-title-icon" style="background:#10b981"></div>
+        Customer Details
+      </div>
+      <div class="field" id="companyField">
+        <label>Company Name</label>
+        <input type="text" id="companyName" value="Brightseed_AWS" oninput="updateAll()">
+      </div>
+      <div class="field" id="accountIdField">
+        <label id="accountLabel">Customer AWS Account ID</label>
+        <input type="text" id="accountId" value="215739188850" oninput="updateAll()">
+        <small id="accountHelpText" style="display:none; font-size:11px; color:#8a9bb0; margin-top:3px; display:none;">Buyer tenant ID</small>
+      </div>
+      <div class="field" id="channelPartnerField" style="display:none">
+        <label>Channel Partner</label>
+        <input type="text" id="channelPartner" value="Presidio Network Solutions" oninput="updateAll()">
+      </div>
+      <div class="field" id="channelPartnerIdField" style="display:none">
+        <label>Channel Partner AWS Account ID</label>
+        <input type="text" id="channelPartnerId" value="113497306513" oninput="updateAll()">
+      </div>
+    </div>
+
+    <!-- Product Details -->
+    <div class="card" id="productDetailsCard">
+      <div class="card-title">
+        <div class="card-title-icon" style="background:#6366f1"></div>
+        Product Details
+      </div>
+      <div class="field">
+        <label id="productNameLabel">Product Name</label>
+        <input type="text" id="productName" value="Rubrik Cloud Cluster" oninput="updateAll()">
+      </div>
+      <div class="field" id="productIdFieldWrapper">
+        <label>Product ID</label>
+        <input type="text" id="productId" value="716d3d79-b071-46e8-a1ff-2cd3d2caf9ee" oninput="updateAll()">
+      </div>
+      <div class="field" id="azurePlanField" style="display:none">
+        <label>Plan</label>
+        <input type="text" id="azurePlan" value="Rubrik Security Cloud - Enterprise Edition" oninput="onAzurePlanEdit()">
+      </div>
+      <div class="field" id="azureProductTypeField" style="display:none">
+        <label>Product Type</label>
+        <input type="text" id="azureProductType" value="Software as a Service" oninput="updateAll()">
+      </div>
+      <div class="field" id="azureTenantIdField" style="display:none">
+        <label>Tenant ID</label>
+        <input type="text" id="azureTenantId" value="6ff60d36-925f-4785-a854-510f909ee561" oninput="updateAll()">
+      </div>
+      <div class="field" id="azureAssetIdField" style="display:none">
+        <label>Asset ID</label>
+        <input type="text" id="azureAssetId" value="9ffe3c3b-8816-4d36-db8a-2b1fb9d89b4d" oninput="updateAll()">
+      </div>
+      <div class="field" id="azureContractStartField" style="display:none">
+        <label>Contract Start Date</label>
+        <input type="text" id="azureContractStart" value="2026-04-22" oninput="updateAll()">
+      </div>
+      <div class="field" id="azureContractEndField" style="display:none">
+        <label>Contract End Date</label>
+        <input type="text" id="azureContractEnd" value="2029-04-21" oninput="updateAll()">
+      </div>
+    </div>
+
+    <!-- Offer / SKU Details -->
+    <div class="card" id="offerDetailsCard">
+      <div class="card-title">
+        <div class="card-title-icon" style="background:#f59e0b"></div>
+        Offer Details
+      </div>
+      <div class="field" id="skuFieldWrapper">
+        <label id="offerNameLabel">Offer Name</label>
+        <input type="text" id="offerName" oninput="onOfferNameEdit()">
+      </div>
+      <div class="field" id="offerIdFieldWrapper">
+        <label id="offerIdLabel">Offer ID</label>
+        <input type="text" id="offerId" value="offer-kaazydeptkcok" oninput="updateAll()">
+        <small id="offerIdHelpText" style="display:none;font-size:11px;color:#8a9bb0;margin-top:3px;">Also known as: Subscription ID</small>
+      </div>
+    </div>
+
+    <!-- Agreement / Order Details -->
+    <div class="card" id="agreementCard">
+      <div class="card-title">
+        <div class="card-title-icon" style="background:#ef4444"></div>
+        <span id="agreementCardTitle">Agreement Details</span>
+      </div>
+      <div class="field" id="agreementFieldWrapper">
+        <label id="agreementIdLabel">Agreement ID</label>
+        <input type="text" id="agreementId" value="agmt-3bsf2zg68bya2uqpzd4leq" oninput="updateAll()">
+      </div>
+      <div class="field">
+        <label id="startDateLabel">Agreement Start Date</label>
+        <input type="text" id="startDate" value="April, 07 2026 10:04 PM UTC" oninput="updateAll()">
+      </div>
+      <div class="field" id="serviceStartDateField" style="display:none">
+        <label>Service Start Date</label>
+        <input type="text" id="serviceStartDate" placeholder="2026-02-27T15:53:38Z" oninput="updateAll()">
+      </div>
+      <div class="field">
+        <label id="endDateLabel">Agreement End Date</label>
+        <input type="text" id="endDate" value="April, 07 2027 10:04 PM UTC" oninput="updateAll()">
+      </div>
+      <div class="field" id="isFutureDatedField" style="display:none">
+        <label>Is it future dated offer</label>
+        <select id="isFutureDated" onchange="updateAll()">
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+      </div>
+      <div class="field" id="resellerPlanIdField" style="display:none">
+        <label>Reseller Private Offer Plan ID</label>
+        <input type="text" id="resellerPlanId" placeholder="167df67a-451c-4012-9c80-69aeed249431" oninput="updateAll()">
+      </div>
+      <div class="field" id="amountField">
+        <label id="amountLabel">Purchase Amount (USD)</label>
+        <input type="text" id="amount" value="25981.68" oninput="updateAll()">
+      </div>
+    </div>
+
+    <!-- Registration Details (GCP_Direct only) -->
+    <div class="card" id="regCard" style="display:none">
+      <div class="card-title">
+        <div class="card-title-icon" style="background:#8b5cf6"></div>
+        Registration Details
+      </div>
+      <div id="companyFieldAnchor"></div>
+      <div class="field">
+        <label>Full Name</label>
+        <input type="text" id="gcpFullName" value="Rajendra Sanda" oninput="updateAll()">
+      </div>
+      <div class="field">
+        <label>Email Address</label>
+        <input type="email" id="gcpEmail" value="rajendra.sanda@highradius.com" oninput="updateAll()">
+      </div>
+      <div class="field">
+        <label>Contact Phone</label>
+        <input type="text" id="gcpPhone" value="+919391656091" oninput="updateAll()">
+      </div>
+      <div class="field">
+        <label>Company Website</label>
+        <input type="text" id="gcpWebsite" value="highradius.com" oninput="updateAll()">
+      </div>
+      <div class="field">
+        <label>Billing Address</label>
+        <input type="text" id="gcpBilling" value="2107 CityWest Blvd, Suite 1100, Houston TX 77042 USA" oninput="updateAll()">
+      </div>
+    </div>
+
+    <!-- Recipients -->
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-icon" style="background:#3b82f6"></div>
+        Email Recipients
+      </div>
+      <div class="field">
+        <label>To <span class="tag tag-req">required</span></label>
+        <input type="email" id="toEmail" placeholder="recipient@rubrik.com" oninput="updateAll()">
+      </div>
+      <div class="field">
+        <label>CC <span class="tag tag-opt">optional</span></label>
+        <input type="text" id="ccEmail" placeholder="cc1@rubrik.com, cc2@rubrik.com" oninput="updateAll()">
+      </div>
+      <div class="field">
+        <label>From <span class="tag tag-info">informational</span></label>
+        <input type="email" id="fromEmail" placeholder="your@rubrik.com" oninput="updateAll()">
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-send" onclick="sendEmail()">Send Email</button>
+      <button class="btn btn-reset" onclick="resetForm()">Reset</button>
+    </div>
+
+  </div>
+
+  <div class="preview-panel">
+    <div class="preview-header">
+      <h2>Email Preview</h2>
+      <div class="preview-badge" id="previewBadge" style="background:#ff9900;">AWS</div>
+    </div>
+    <div class="email-subject-wrap">
+      <div class="email-subject-label">Subject</div>
+      <div class="email-subject" id="previewSubject"></div>
+    </div>
+    <div class="email-recipients" id="previewRecipients" style="display:none">
+      <div class="recip" id="previewTo"></div>
+      <div class="recip" id="previewCc"></div>
+    </div>
+    <div class="email-body simple" id="previewBody"></div>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3>Ready to Send</h3>
+    <p>Copy this command and paste it into <strong>Claude Code</strong> to send the email:</p>
+    <div class="command-box" id="claudeCmd"></div>
+    <div class="modal-btns">
+      <button class="btn btn-close" onclick="closeModal()">Close</button>
+      <button class="btn btn-copy" onclick="copyCmd()">Copy Command</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const COLORS = {
+    AWS: '#ff9900', GCP_Direct: '#4285f4', GCP_Partner: '#34a853',
+    Azure: '#0078d4', Azure_Partner: '#0078d4', AWS_Partner: '#ff9900'
+  };
+
+  const COMPANY_DEFAULTS = {
+    AWS: 'Brightseed_AWS', GCP_Direct: 'HighRadius Corporation', GCP_Partner: 'TELUS Health',
+    Azure: 'Brightseed_MFST (Azure)', Azure_Partner: 'Brightseed_MFST (Azure)',
+    AWS_Partner: 'Myriad Control Tower Prod'
+  };
+
+  const DISPLAY_NAMES = {
+    AWS: 'AWS', GCP_Direct: 'GCP_Direct', GCP_Partner: 'GCP_Partner',
+    Azure: 'MFST (Azure)_Direct', Azure_Partner: 'MFST (Azure)_Partner',
+    AWS_Partner: 'AWS_Partner'
+  };
+
+  const GREET = {
+    AWS: 'AWS Marketplace', GCP_Direct: 'Google Cloud Marketplace', GCP_Partner: 'Google Cloud Marketplace',
+    Azure: 'Microsoft Azure Marketplace', Azure_Partner: 'Microsoft Azure Marketplace',
+    AWS_Partner: 'AWS Marketplace'
+  };
+
+  const PORTALS = {
+    AWS:         '<a href="https://aws.amazon.com/marketplace/management" style="color:#0066cc;">AWS Marketplace Management Portal (AMMP)</a>',
+    GCP_Partner: '<a href="https://console.cloud.google.com/marketplace" style="color:#0066cc;">Google Cloud Marketplace</a>',
+    Azure:       '<a href="https://portal.azure.com/#blade/Microsoft_Azure_Marketplace" style="color:#0066cc;">Azure Marketplace</a>',
+    Azure_Partner:'<a href="https://portal.azure.com/#blade/Microsoft_Azure_Marketplace" style="color:#0066cc;">Azure Marketplace</a>',
+    AWS_Partner: '<a href="https://aws.amazon.com/marketplace/management/agreements" style="color:#0066cc;">AWS Marketplace Management Portal(AMMP)</a>'
+  };
+
+  const TEAMS = {
+    AWS: 'The AWS Marketplace Team', GCP_Direct: 'The Google Cloud Marketplace Team',
+    GCP_Partner: 'The Google Cloud Marketplace Team',
+    Azure: 'The Microsoft Azure Marketplace Team', Azure_Partner: 'The Microsoft Azure Marketplace Team',
+    AWS_Partner: 'The AWS Marketplace Team'
+  };
+
+  let offerNameEdited = false;
+  let azurePlanEdited = false;
+
+  function v(id) { return document.getElementById(id).value.trim(); }
+
+  function autoOfferName() {
+    const p = v('provider');
+    const q = v('quoteNumber') || '{QUOTE_NUMBER}';
+    if (p === 'GCP_Direct' || p === 'GCP_Partner') return 'private-offer-P1Y';
+    if (p === 'Azure') return `${q}_ABN Group_12 Month Term_1.27.26`;
+    if (p === 'Azure_Partner') return `${q}_Crowe Horwath LLP_36 Month Term_03.30.26`;
+    const company = v('companyName').replace(/_(AWS|GCP|Azure)$/i, '');
+    return `${q}_${company} Bio_12 Month Term_03.04.2026`;
+  }
+
+  function onProviderChange() {
+    const p = v('provider');
+    const isGcpDirect   = (p === 'GCP_Direct');
+    const isGcpPartner  = (p === 'GCP_Partner');
+    const isGcpLike     = isGcpDirect || isGcpPartner;
+    const isAzureDirect = (p === 'Azure');
+    const isAzureFlex   = (p === 'Azure_Partner');
+    const isAwsPartner  = (p === 'AWS_Partner');
+    document.body.dataset.provider = p;
+    document.getElementById('companyName').value = COMPANY_DEFAULTS[p] || 'Brightseed_AWS';
+    if (isGcpDirect) {
+      document.getElementById('productName').value = 'Rubrik Security Cloud';
+      document.getElementById('productId').value   = 'rubrik-security-cloud.endpoints.rubrik-public.cloud.goog';
+    }
+    if (isGcpPartner) {
+      document.getElementById('accountId').value        = '9ec55d2c-7c1c-4b7e-9258-6be4075eb7d7';
+      document.getElementById('startDate').value        = '2026-02-27T15:43:37.777278Z';
+      document.getElementById('serviceStartDate').value = '2026-02-27T15:53:38Z';
+      document.getElementById('endDate').value          = '2029-02-27T08:00:00Z';
+      document.getElementById('offerId').value          = '8dde3caa-4578-454e-9e92-7c658d7f6b76';
+      document.getElementById('productId').value        = 'rubrik-security-cloud.endpoints.rubrik-public.cloud.goog';
+      document.getElementById('resellerPlanId').value   = '167df67a-451c-4012-9c80-69aeed249431';
+      document.getElementById('productName').value      = 'Rubrik Security Cloud';
+      // Registration Details defaults for GCP_Partner
+      document.getElementById('gcpWebsite').value  = 'telushealth.com';
+      document.getElementById('gcpBilling').value  = '630 René-Lévesque Blvd W 22nd Floor Montreal, QC H3B 1S6 Canada';
+      document.getElementById('gcpFullName').value = 'Ian Sim';
+      document.getElementById('gcpEmail').value    = 'ian.sim@telus.com';
+      document.getElementById('gcpPhone').value    = '613-880-3533';
+    }
+    if (isAzureDirect) {
+      document.getElementById('offerId').value          = '6fd41ee3-e4bc-4f85-a540-6647942cf64c';
+      document.getElementById('productName').value      = 'Rubrik Cloud Data Management';
+      document.getElementById('azurePlan').value        = 'Rubrik Security Cloud - Enterprise Edition';
+      document.getElementById('azureProductType').value = 'Software as a Service';
+    }
+    if (isAzureFlex) {
+      document.getElementById('offerId').value            = 'ea2c2217-daa8-483d-9413-96659ca960cc';
+      document.getElementById('productName').value        = 'Rubrik Cloud Data Management';
+      document.getElementById('azurePlan').value          = 'Q-843288 Payment Schedule';
+      document.getElementById('azureProductType').value   = 'Software as a Service';
+      document.getElementById('azureTenantId').value      = '6ff60d36-925f-4785-a854-510f909ee561';
+      document.getElementById('azureAssetId').value       = '9ffe3c3b-8816-4d36-db8a-2b1fb9d89b4d';
+      document.getElementById('azureContractStart').value = '2026-04-22';
+      document.getElementById('azureContractEnd').value   = '2029-04-21';
+    }
+
+    const color = COLORS[p] || '#888';
+    const displayName = DISPLAY_NAMES[p] || p;
+    document.getElementById('headerPill').textContent = displayName;
+    document.getElementById('headerPill').style.background = color;
+    document.getElementById('headerPill').style.color = (p === 'AWS' || p === 'AWS_Partner') ? '#232f3e' : 'white';
+    document.getElementById('channelPartnerField').style.display = isAwsPartner ? 'block' : 'none';
+    document.getElementById('channelPartnerIdField').style.display = isAwsPartner ? 'block' : 'none';
+    document.getElementById('amountLabel').textContent = isAwsPartner ? 'Wholesale price (USD)' : 'Purchase Amount (USD)';
+    document.getElementById('previewBadge').textContent = displayName;
+    document.getElementById('previewBadge').style.background = color;
+
+    // Show/hide GCP-specific cards
+    document.getElementById('regCard').style.display = isGcpLike ? 'block' : 'none';
+    document.getElementById('amountField').style.display = (isGcpLike || isAzureDirect || isAzureFlex) ? 'none' : 'block';
+    document.getElementById('productDetailsCard').style.display = isGcpLike ? 'none' : 'block';
+    document.getElementById('offerDetailsCard').style.display = isGcpLike ? 'none' : 'block';
+    // Partner-only fields inline in Order Details card
+    document.getElementById('isFutureDatedField').style.display = isGcpPartner ? 'block' : 'none';
+    document.getElementById('serviceStartDateField').style.display = isGcpPartner ? 'block' : 'none';
+    document.getElementById('resellerPlanIdField').style.display = isGcpPartner ? 'block' : 'none';
+
+    // Azure Direct/Flex-specific show/hide
+    document.getElementById('customerCard').style.display = (isAzureDirect || isAzureFlex) ? 'none' : 'block';
+    document.getElementById('agreementCard').style.display = (isAzureDirect || isAzureFlex) ? 'none' : 'block';
+    document.getElementById('productIdFieldWrapper').style.display = (isAzureDirect || isAzureFlex) ? 'none' : 'block';
+    document.getElementById('azurePlanField').style.display = (isAzureDirect || isAzureFlex) ? 'block' : 'none';
+    document.getElementById('azureProductTypeField').style.display = (isAzureDirect || isAzureFlex) ? 'block' : 'none';
+    document.getElementById('azureTenantIdField').style.display = isAzureFlex ? 'block' : 'none';
+    document.getElementById('azureAssetIdField').style.display = isAzureFlex ? 'block' : 'none';
+    document.getElementById('azureContractStartField').style.display = isAzureFlex ? 'block' : 'none';
+    document.getElementById('azureContractEndField').style.display = isAzureFlex ? 'block' : 'none';
+
+    // Azure_Partner: Offer Details card before Product Details card; all others restore original order
+    const offerCard = document.getElementById('offerDetailsCard');
+    const productCard = document.getElementById('productDetailsCard');
+    if (isAzureFlex) {
+      productCard.parentNode.insertBefore(offerCard, productCard);
+    } else {
+      productCard.parentNode.insertBefore(productCard, offerCard);
+    }
+
+    // Move Company Name field: into Registration Details for GCP, back to Customer Details otherwise
+    const companyField = document.getElementById('companyField');
+    if (isGcpLike) {
+      document.getElementById('companyFieldAnchor').appendChild(companyField);
+    } else {
+      document.getElementById('accountIdField').insertAdjacentElement('beforebegin', companyField);
+    }
+
+    // GCP_Partner: Company → Website → Billing → Full Name → Email → Phone
+    // GCP_Direct:  Company → Full Name → Email → Phone → Website → Billing (restore to end)
+    const gcpWebsiteField = document.getElementById('gcpWebsite').parentElement;
+    const gcpBillingField = document.getElementById('gcpBilling').parentElement;
+    if (isGcpPartner) {
+      const anchor = document.getElementById('companyFieldAnchor');
+      anchor.insertAdjacentElement('afterend', gcpBillingField);
+      anchor.insertAdjacentElement('afterend', gcpWebsiteField);
+    } else if (isGcpDirect) {
+      const regCard = document.getElementById('regCard');
+      regCard.appendChild(gcpWebsiteField);
+      regCard.appendChild(gcpBillingField);
+    }
+
+    // Move SKU, Offer ID, and Product ID fields into Order Details for GCP, back to original cards otherwise
+    const skuField = document.getElementById('skuFieldWrapper');
+    const offerIdField = document.getElementById('offerIdFieldWrapper');
+    const productIdField = document.getElementById('productIdFieldWrapper');
+    if (isGcpDirect) {
+      const entitlementField = document.getElementById('agreementFieldWrapper');
+      entitlementField.insertAdjacentElement('beforebegin', skuField);
+      entitlementField.insertAdjacentElement('afterend', productIdField);
+      productIdField.insertAdjacentElement('afterend', offerIdField);
+    } else if (isGcpPartner) {
+      const entitlementField = document.getElementById('agreementFieldWrapper');
+      entitlementField.insertAdjacentElement('beforebegin', skuField);
+      // Order Date → Service Start → Service End → Is Future Dated → Offer ID → Product ID → Reseller Plan ID
+      const isFD = document.getElementById('isFutureDatedField');
+      isFD.insertAdjacentElement('afterend', offerIdField);
+      offerIdField.insertAdjacentElement('afterend', productIdField);
+    } else {
+      document.getElementById('offerDetailsCard').appendChild(skuField);
+      document.getElementById('offerDetailsCard').appendChild(offerIdField);
+      document.getElementById('productDetailsCard').appendChild(productIdField);
+    }
+
+    // Relabel fields contextually
+    document.getElementById('accountLabel').textContent = isGcpLike
+      ? 'Buyer ID (External Account ID)'
+      : `Customer ${displayName} Account ID`;
+    document.getElementById('accountHelpText').style.display = (p === 'AWS' || p === 'AWS_Partner') ? 'block' : 'none';
+    document.getElementById('productNameLabel').textContent = (isAzureDirect || isAzureFlex) ? 'Product' : 'Product Name';
+    document.getElementById('offerNameLabel').textContent = isGcpLike ? 'SKU' : ((isAzureDirect || isAzureFlex) ? 'Private Offer Name' : 'Offer Name');
+    document.getElementById('offerIdLabel').textContent = isGcpLike ? 'Offer ID (Quote External Name)' : ((isAzureDirect || isAzureFlex) ? 'Private Offer ID' : 'Offer ID');
+    document.getElementById('offerIdHelpText').style.display = isAzureDirect ? 'block' : 'none';
+    document.getElementById('agreementIdLabel').textContent = isGcpLike ? 'Entitlement ID' : 'Agreement ID';
+    document.getElementById('startDateLabel').textContent = isGcpLike ? 'Order Date/Time' : 'Agreement Start Date';
+    document.getElementById('endDateLabel').textContent = isGcpLike ? 'Service End Date' : 'Agreement End Date';
+    document.getElementById('agreementCardTitle').textContent = isGcpLike ? 'Order Details' : 'Agreement Details';
+
+    // Switch preview body class
+    const bodyEl = document.getElementById('previewBody');
+    if (isGcpLike || isAzureDirect || isAzureFlex) {
+      bodyEl.classList.remove('simple');
+    } else {
+      bodyEl.classList.add('simple');
+    }
+
+    offerNameEdited = false;
+    azurePlanEdited = false;
+    updateAll();
+  }
+
+  function onOfferNameEdit() { offerNameEdited = true; updateAll(); }
+  function onAzurePlanEdit() { azurePlanEdited = true; updateAll(); }
+
+  function buildGcpDirectBody(company, accId, prodName, prodId, offId, agmtId, start, end, sku) {
+    const fullName = v('gcpFullName');
+    const gcpEmail = v('gcpEmail');
+    const gcpPhone = v('gcpPhone');
+    const gcpWeb   = v('gcpWebsite');
+    const gcpBill  = v('gcpBilling');
+
+    return `<div style="background-color:#dfe1e6;font-family:Helvetica,Arial,sans-serif;padding:0;font-size:0;line-height:0;">
+
+  <!-- Tackle Header -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;padding-top:32px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td align="center" style="font-size:0;vertical-align:top;background-color:#253858;border-radius:12px 12px 0px 0px;padding-left:16px;padding-right:16px;padding-bottom:24px;">
+                  <div style="display:inline-block;vertical-align:top;width:100%;max-width:200px;">
+                    <div style="font-size:24px;line-height:24px;height:24px;">&nbsp;</div>
+                    <div style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:24px;text-align:center;padding-left:8px;padding-right:8px;">
+                      <p style="margin-top:0px;margin-bottom:0px;"><a href="https://tackle.io/" style="text-decoration:none;outline:none;color:#FFFFFF;"><img src="https://s3.amazonaws.com/tackle.io-misc/tackle-logo-light.png" width="80" height="24" alt="Tackle.io" style="max-width:80px;vertical-align:middle;border:0;line-height:100%;height:auto;outline:none;text-decoration:none;"></a></p>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- GCP Blue Banner -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td align="center" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:19px;line-height:28px;background-color:#0052cc;color:#ffffff;padding-left:24px;padding-right:24px;padding-top:50px;padding-bottom:60px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                    <tbody>
+                      <tr>
+                        <td height="28" width="30" style="border-bottom:2px solid #ffffff;">&nbsp;</td>
+                        <td rowspan="2" align="center" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:24px;color:#ffffff;">
+                          <img src="https://s3.amazonaws.com/tackle.io-misc/gcp_marketplace_logo_wht.png" width="80" height="80" alt="GCP Marketplace" style="max-width:60px;vertical-align:middle;border:0;line-height:100%;height:auto;outline:none;text-decoration:none;">
+                        </td>
+                        <td height="28" width="30" style="border-bottom:2px solid #ffffff;">&nbsp;</td>
+                      </tr>
+                      <tr>
+                        <td height="30">&nbsp;</td>
+                        <td height="30">&nbsp;</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <p style="margin-top:0px;margin-bottom:0px;font-size:10px;line-height:10px;">&nbsp;</p>
+                  <h2 style="font-family:Helvetica,Arial,sans-serif;font-weight:bold;margin-top:0px;margin-bottom:8px;font-size:32px;line-height:40px;">New GCP Order</h2>
+                  <p style="margin-top:0px;margin-bottom:0px;font-size:18px;">${prodName}</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Congratulations -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td align="left" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:22px;background-color:#ffffff;color:#505f79;padding-left:60px;padding-right:60px;padding-top:20px;padding-bottom:16px;">
+                  <p style="margin-top:0px;margin-bottom:0px;">Congratulations on the new order from <strong>${company}</strong>. The details of this order are:</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Buyer ID -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td align="center" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:22px;background-color:#ffffff;color:#505f79;padding-left:60px;padding-right:60px;padding-top:16px;padding-bottom:8px;">
+                  <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+                    <tbody>
+                      <tr>
+                        <td align="center" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:22px;background-color:#ebecf0;color:#505f79;padding-left:60px;padding-right:60px;padding-top:16px;padding-bottom:16px;">
+                          <h4 style="font-family:Helvetica,Arial,sans-serif;font-weight:bold;margin-top:0px;margin-bottom:8px;color:#505f79;font-size:18px;line-height:23px;">Buyer ID (External Account ID)</h4>
+                          <p style="margin-top:0px;margin-bottom:0px;">${accId}</p>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Key Values Block -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td align="center" style="font-size:0;vertical-align:top;background-color:#ffffff;padding-left:60px;padding-right:60px;padding-bottom:16px;">
+                  <div style="display:inline-block;vertical-align:top;width:100%;max-width:632px;">
+                    <div style="padding-left:0px;padding-right:0px;">
+                      <table width="100%" role="presentation" cellspacing="0" cellpadding="0" border="0">
+                        <tbody>
+                          <tr>
+                            <td align="center" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:22px;background-color:#ebecf0;color:#505f79;padding-left:24px;padding-right:24px;padding-top:20px;padding-bottom:20px;">
+                              <table width="100%" role="presentation" cellspacing="0" cellpadding="0" border="0">
+                                <tbody>
+                                  <tr>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;"><strong>Order Date/Time</strong></p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;"><strong>Offer ID (Quote External Name)</strong></p></td>
+                                  </tr>
+                                  <tr>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">${start}</p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">${offId}</p></td>
+                                  </tr>
+                                  <tr>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:10px;line-height:10px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:10px;line-height:10px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:10px;line-height:10px;color:#505f79;">&nbsp;</p></td>
+                                  </tr>
+                                  <tr>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;"><strong>Product ID (Solution ID)</strong></p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="45%" align="left"></td>
+                                  </tr>
+                                  <tr>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">${prodId}</p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="45%" align="left"></td>
+                                  </tr>
+                                  <tr>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:10px;line-height:10px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:10px;line-height:10px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:10px;line-height:10px;color:#505f79;">&nbsp;</p></td>
+                                  </tr>
+                                  <tr>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:10px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;"><strong>Service End Date</strong></p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="45%" align="left"></td>
+                                  </tr>
+                                  <tr>
+                                    <td align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">${end}</p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="45%" align="left"></td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Entitlements Header -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td align="Center" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:22px;background-color:#ffffff;color:#505f79;padding-left:60px;padding-right:60px;padding-top:16px;padding-bottom:0px;">
+                  <h4 style="font-family:Helvetica,Arial,sans-serif;font-weight:bold;margin-top:0px;margin-bottom:12px;color:#242b3d;font-size:20px;line-height:26px;">Entitlements</h4>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Entitlement Values -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td align="center" style="font-size:0;vertical-align:top;background-color:#ffffff;padding-left:120px;padding-right:120px;padding-bottom:16px;">
+                  <div style="display:inline-block;vertical-align:top;width:100%;max-width:632px;">
+                    <div style="padding-left:0px;padding-right:0px;">
+                      <table width="100%" role="presentation" cellspacing="0" cellpadding="0" border="0">
+                        <tbody>
+                          <tr>
+                            <td align="left" style="background-color:#253858;padding-left:24px;padding-right:24px;padding-top:20px;padding-bottom:20px;">
+                              <table width="100%" role="presentation" cellspacing="0" cellpadding="0" border="0">
+                                <tbody>
+                                  <tr>
+                                    <td width="25%" align="left" style="padding-top:6px;"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#ffffff;"><strong>SKU</strong></p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#ffffff;">&nbsp;</p></td>
+                                    <td width="65%" align="right" style="padding-top:6px;"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#ffffff;word-break:break-all;">${sku}</p></td>
+                                  </tr>
+                                  <tr>
+                                    <td width="25%" align="left" style="padding-top:6px;"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#ffffff;"><strong>Entitlement ID</strong></p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#ffffff;">&nbsp;</p></td>
+                                    <td width="65%" align="right" style="padding-top:6px;"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#ffffff;word-break:break-all;">${agmtId}</p></td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Registration Header -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td align="Center" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:22px;background-color:#ffffff;color:#505f79;padding-left:60px;padding-right:60px;padding-top:40px;padding-bottom:0px;">
+                  <h4 style="font-family:Helvetica,Arial,sans-serif;font-weight:bold;margin-top:0px;margin-bottom:0px;color:#242b3d;font-size:20px;line-height:26px;">Registration Details</h4>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Registration Values -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td align="center" style="font-size:0;vertical-align:top;background-color:#ffffff;padding-left:120px;padding-right:58px;padding-top:24px;padding-bottom:40px;">
+                  <div style="display:inline-block;vertical-align:top;width:100%;max-width:100%;">
+                    <div style="padding-left:0px;padding-right:0px;">
+                      <table width="100%" role="presentation" cellspacing="0" cellpadding="0" border="0">
+                        <tbody>
+                          <tr>
+                            <td width="45%" align="left">
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;"><strong>Company</strong></p>
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;">${company}</p>
+                            </td>
+                          </tr>
+                          <tr><td style="font-size:12px;line-height:12px;height:12px;background-color:#ffffff;">&nbsp;</td></tr>
+                          <tr>
+                            <td width="45%" align="left">
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;"><strong>Full Name</strong></p>
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;">${fullName}</p>
+                            </td>
+                          </tr>
+                          <tr><td style="font-size:12px;line-height:12px;height:12px;background-color:#ffffff;">&nbsp;</td></tr>
+                          <tr>
+                            <td width="45%" align="left">
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;"><strong>Email Address</strong></p>
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;">${gcpEmail}</p>
+                            </td>
+                          </tr>
+                          <tr><td style="font-size:12px;line-height:12px;height:12px;background-color:#ffffff;">&nbsp;</td></tr>
+                          <tr>
+                            <td width="45%" align="left">
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;"><strong>Contact Phone Number</strong></p>
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;">${gcpPhone}</p>
+                            </td>
+                          </tr>
+                          <tr><td style="font-size:12px;line-height:12px;height:12px;background-color:#ffffff;">&nbsp;</td></tr>
+                          <tr>
+                            <td width="45%" align="left">
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;"><strong>Company Website</strong></p>
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;">${gcpWeb}</p>
+                            </td>
+                          </tr>
+                          <tr><td style="font-size:12px;line-height:12px;height:12px;background-color:#ffffff;">&nbsp;</td></tr>
+                          <tr>
+                            <td width="45%" align="left">
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;"><strong>Billing Address (Include Full Address)</strong></p>
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;">${gcpBill}</p>
+                            </td>
+                          </tr>
+                          <tr><td style="font-size:12px;line-height:12px;height:12px;background-color:#ffffff;">&nbsp;</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Footer Paragraph -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td align="left" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:22px;background-color:#ffffff;color:#505f79;padding-left:60px;padding-right:60px;padding-top:0px;padding-bottom:0px;">
+                  <p style="margin-top:0px;margin-bottom:0px;">Please contact them directly to confirm the purchase and gather any additional information. It&#8217;s time to deploy some software!</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="font-size:24px;line-height:24px;height:24px;background-color:#ffffff;">&nbsp;</td>
+              </tr>
+              <tr>
+                <td align="left" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:22px;background-color:#ffffff;color:#505f79;padding-left:60px;padding-right:60px;padding-top:0px;padding-bottom:0px;">
+                  <p style="margin-top:0px;margin-bottom:0px;"><strong>Cheers!</strong></p>
+                </td>
+              </tr>
+              <tr>
+                <td align="left" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:22px;background-color:#ffffff;color:#505f79;padding-left:60px;padding-right:60px;padding-top:0px;padding-bottom:0px;">
+                  <p style="margin-top:0px;margin-bottom:0px;">Team Tackle</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- 60px Spacer -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td style="font-size:60px;line-height:60px;height:60px;background-color:#ffffff;">&nbsp;</td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Footer -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;padding-bottom:32px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td style="font-size:8px;line-height:12px;height:8px;font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;background-color:#ffffff;border-radius:0px 0px 12px 12px;">&nbsp;</td>
+              </tr>
+              <tr>
+                <td align="center" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#82899a;border-radius:0px 0px 4px 4px;padding-left:24px;padding-right:24px;padding-top:32px;padding-bottom:32px;">
+                  <p style="margin-top:0px;margin-bottom:16px;"><a href="https://tackle.io/" style="text-decoration:none;outline:none;color:#126DE5;"><img src="https://s3.amazonaws.com/tackle.io-misc/tackle-logo.png" width="80" height="24" alt="Tackle.io" style="max-width:80px;vertical-align:middle;border:0;line-height:100%;height:auto;outline:none;text-decoration:none;"></a></p>
+                  <p style="margin-top:0px;margin-bottom:16px;">&#169;2025 Tackle.io</p>
+                  <p style="margin-top:0px;margin-bottom:8px;">218 N Capitol Blvd.<br>Boise, ID 83702</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="font-size:40px;line-height:40px;height:40px;">&nbsp;</div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+</div>`;
+  }
+  function buildGcpPartnerBody(company, accId, prodName, prodId, offId, agmtId, start, end, sku, isFutureDated, serviceStartDate, resellerPlanId) {
+    const fullName = v('gcpFullName');
+    const gcpEmail = v('gcpEmail');
+    const gcpPhone = v('gcpPhone');
+    const gcpWeb   = v('gcpWebsite');
+    const gcpBill  = v('gcpBilling');
+
+    return `<div style="background-color:#dfe1e6;font-family:Helvetica,Arial,sans-serif;padding:0;font-size:0;line-height:0;">
+
+  <!-- Tackle Header -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;padding-top:32px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td align="center" style="font-size:0;vertical-align:top;background-color:#253858;border-radius:12px 12px 0px 0px;padding-left:16px;padding-right:16px;padding-bottom:24px;">
+                  <div style="display:inline-block;vertical-align:top;width:100%;max-width:200px;">
+                    <div style="font-size:24px;line-height:24px;height:24px;">&nbsp;</div>
+                    <div style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:24px;text-align:center;padding-left:8px;padding-right:8px;">
+                      <p style="margin-top:0px;margin-bottom:0px;"><a href="https://tackle.io/" style="text-decoration:none;outline:none;color:#FFFFFF;"><img src="https://s3.amazonaws.com/tackle.io-misc/tackle-logo-light.png" width="80" height="24" alt="Tackle.io" style="max-width:80px;vertical-align:middle;border:0;line-height:100%;height:auto;outline:none;text-decoration:none;"></a></p>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- GCP Blue Banner -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td align="center" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:19px;line-height:28px;background-color:#0052cc;color:#ffffff;padding-left:24px;padding-right:24px;padding-top:50px;padding-bottom:60px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                    <tbody>
+                      <tr>
+                        <td height="28" width="30" style="border-bottom:2px solid #ffffff;">&nbsp;</td>
+                        <td rowspan="2" align="center" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:24px;color:#ffffff;">
+                          <img src="https://s3.amazonaws.com/tackle.io-misc/gcp_marketplace_logo_wht.png" width="80" height="80" alt="GCP Marketplace" style="max-width:60px;vertical-align:middle;border:0;line-height:100%;height:auto;outline:none;text-decoration:none;">
+                        </td>
+                        <td height="28" width="30" style="border-bottom:2px solid #ffffff;">&nbsp;</td>
+                      </tr>
+                      <tr>
+                        <td height="30">&nbsp;</td>
+                        <td height="30">&nbsp;</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <p style="margin-top:0px;margin-bottom:0px;font-size:10px;line-height:10px;">&nbsp;</p>
+                  <h2 style="font-family:Helvetica,Arial,sans-serif;font-weight:bold;margin-top:0px;margin-bottom:8px;font-size:32px;line-height:40px;">New GCP Order</h2>
+                  <p style="margin-top:0px;margin-bottom:0px;font-size:18px;">${prodName}</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Congratulations -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td align="left" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:22px;background-color:#ffffff;color:#505f79;padding-left:60px;padding-right:60px;padding-top:20px;padding-bottom:16px;">
+                  <p style="margin-top:0px;margin-bottom:0px;">Congratulations on the new order from <strong>${company}</strong>. The details of this order are:</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Buyer ID -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td align="center" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:22px;background-color:#ffffff;color:#505f79;padding-left:60px;padding-right:60px;padding-top:16px;padding-bottom:8px;">
+                  <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+                    <tbody>
+                      <tr>
+                        <td align="center" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:22px;background-color:#ebecf0;color:#505f79;padding-left:60px;padding-right:60px;padding-top:16px;padding-bottom:16px;">
+                          <h4 style="font-family:Helvetica,Arial,sans-serif;font-weight:bold;margin-top:0px;margin-bottom:8px;color:#505f79;font-size:18px;line-height:23px;">Buyer ID (External Account ID)</h4>
+                          <p style="margin-top:0px;margin-bottom:0px;">${accId}</p>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Key Values Block -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td align="center" style="font-size:0;vertical-align:top;background-color:#ffffff;padding-left:60px;padding-right:60px;padding-bottom:16px;">
+                  <div style="display:inline-block;vertical-align:top;width:100%;max-width:632px;">
+                    <div style="padding-left:0px;padding-right:0px;">
+                      <table width="100%" role="presentation" cellspacing="0" cellpadding="0" border="0">
+                        <tbody>
+                          <tr>
+                            <td align="center" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:22px;background-color:#ebecf0;color:#505f79;padding-left:24px;padding-right:24px;padding-top:20px;padding-bottom:20px;">
+                              <table width="100%" role="presentation" cellspacing="0" cellpadding="0" border="0">
+                                <tbody>
+                                  <tr>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;"><strong>Order Date/Time</strong></p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;"><strong>Offer ID (Quote External Name)</strong></p></td>
+                                  </tr>
+                                  <tr>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">${start}</p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">${offId}</p></td>
+                                  </tr>
+                                  <tr>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:10px;line-height:10px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:10px;line-height:10px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:10px;line-height:10px;color:#505f79;">&nbsp;</p></td>
+                                  </tr>
+                                  <tr>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;"><strong>Product ID (Solution ID)</strong></p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="45%" align="left"></td>
+                                  </tr>
+                                  <tr>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">${prodId}</p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="45%" align="left"></td>
+                                  </tr>
+                                  <tr>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:10px;line-height:10px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:10px;line-height:10px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:10px;line-height:10px;color:#505f79;">&nbsp;</p></td>
+                                  </tr>
+                                  <tr>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;"><strong>Is it future dated offer</strong></p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;"><strong>Service Start Date</strong></p></td>
+                                  </tr>
+                                  <tr>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">${isFutureDated}</p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">${serviceStartDate}</p></td>
+                                  </tr>
+                                  <tr>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:10px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;"><strong>Service End Date</strong></p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:10px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;"><strong>Reseller Private Offer Plan ID</strong></p></td>
+                                  </tr>
+                                  <tr>
+                                    <td align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">${end}</p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">&nbsp;</p></td>
+                                    <td width="45%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#505f79;">${resellerPlanId}</p></td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Entitlements Header -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td align="Center" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:22px;background-color:#ffffff;color:#505f79;padding-left:60px;padding-right:60px;padding-top:16px;padding-bottom:0px;">
+                  <h4 style="font-family:Helvetica,Arial,sans-serif;font-weight:bold;margin-top:0px;margin-bottom:12px;color:#242b3d;font-size:20px;line-height:26px;">Entitlements</h4>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Entitlement Values -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td align="center" style="font-size:0;vertical-align:top;background-color:#ffffff;padding-left:120px;padding-right:120px;padding-bottom:16px;">
+                  <div style="display:inline-block;vertical-align:top;width:100%;max-width:632px;">
+                    <div style="padding-left:0px;padding-right:0px;">
+                      <table width="100%" role="presentation" cellspacing="0" cellpadding="0" border="0">
+                        <tbody>
+                          <tr>
+                            <td align="left" style="background-color:#253858;padding-left:24px;padding-right:24px;padding-top:20px;padding-bottom:20px;">
+                              <table width="100%" role="presentation" cellspacing="0" cellpadding="0" border="0">
+                                <tbody>
+                                  <tr>
+                                    <td width="25%" align="left" style="padding-top:6px;"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#ffffff;"><strong>SKU</strong></p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#ffffff;">&nbsp;</p></td>
+                                    <td width="65%" align="right" style="padding-top:6px;"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#ffffff;word-break:break-all;">${sku}</p></td>
+                                  </tr>
+                                  <tr>
+                                    <td width="25%" align="left" style="padding-top:6px;"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#ffffff;"><strong>Entitlement ID</strong></p></td>
+                                    <td width="10%" align="left"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#ffffff;">&nbsp;</p></td>
+                                    <td width="65%" align="right" style="padding-top:6px;"><p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#ffffff;word-break:break-all;">${agmtId}</p></td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Registration Header -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td align="Center" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:22px;background-color:#ffffff;color:#505f79;padding-left:60px;padding-right:60px;padding-top:40px;padding-bottom:0px;">
+                  <h4 style="font-family:Helvetica,Arial,sans-serif;font-weight:bold;margin-top:0px;margin-bottom:0px;color:#242b3d;font-size:20px;line-height:26px;">Registration Details</h4>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Registration Values -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td align="center" style="font-size:0;vertical-align:top;background-color:#ffffff;padding-left:120px;padding-right:58px;padding-top:24px;padding-bottom:40px;">
+                  <div style="display:inline-block;vertical-align:top;width:100%;max-width:100%;">
+                    <div style="padding-left:0px;padding-right:0px;">
+                      <table width="100%" role="presentation" cellspacing="0" cellpadding="0" border="0">
+                        <tbody>
+                          <tr>
+                            <td width="45%" align="left">
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;"><strong>Company Website</strong></p>
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;">${gcpWeb}</p>
+                            </td>
+                          </tr>
+                          <tr><td style="font-size:12px;line-height:12px;height:12px;background-color:#ffffff;">&nbsp;</td></tr>
+                          <tr>
+                            <td width="45%" align="left">
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;"><strong>Billing Address (Include Full Address)</strong></p>
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;">${gcpBill}</p>
+                            </td>
+                          </tr>
+                          <tr><td style="font-size:12px;line-height:12px;height:12px;background-color:#ffffff;">&nbsp;</td></tr>
+                          <tr>
+                            <td width="45%" align="left">
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;"><strong>Company</strong></p>
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;">${company}</p>
+                            </td>
+                          </tr>
+                          <tr><td style="font-size:12px;line-height:12px;height:12px;background-color:#ffffff;">&nbsp;</td></tr>
+                          <tr>
+                            <td width="45%" align="left">
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;"><strong>Full Name</strong></p>
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;">${fullName}</p>
+                            </td>
+                          </tr>
+                          <tr><td style="font-size:12px;line-height:12px;height:12px;background-color:#ffffff;">&nbsp;</td></tr>
+                          <tr>
+                            <td width="45%" align="left">
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;"><strong>Email Address</strong></p>
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;">${gcpEmail}</p>
+                            </td>
+                          </tr>
+                          <tr><td style="font-size:12px;line-height:12px;height:12px;background-color:#ffffff;">&nbsp;</td></tr>
+                          <tr>
+                            <td width="45%" align="left">
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;"><strong>Contact Phone Number</strong></p>
+                              <p style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:22px;color:#505f79;word-break:break-all;">${gcpPhone}</p>
+                            </td>
+                          </tr>
+                          <tr><td style="font-size:12px;line-height:12px;height:12px;background-color:#ffffff;">&nbsp;</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Footer Paragraph -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td align="left" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:22px;background-color:#ffffff;color:#505f79;padding-left:60px;padding-right:60px;padding-top:0px;padding-bottom:0px;">
+                  <p style="margin-top:0px;margin-bottom:0px;">Please contact them directly to confirm the purchase and gather any additional information. It&#8217;s time to deploy some software!</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="font-size:24px;line-height:24px;height:24px;background-color:#ffffff;">&nbsp;</td>
+              </tr>
+              <tr>
+                <td align="left" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:22px;background-color:#ffffff;color:#505f79;padding-left:60px;padding-right:60px;padding-top:0px;padding-bottom:0px;">
+                  <p style="margin-top:0px;margin-bottom:0px;"><strong>Cheers!</strong></p>
+                </td>
+              </tr>
+              <tr>
+                <td align="left" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:16px;line-height:22px;background-color:#ffffff;color:#505f79;padding-left:60px;padding-right:60px;padding-top:0px;padding-bottom:0px;">
+                  <p style="margin-top:0px;margin-bottom:0px;">Team Tackle</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- 60px Spacer -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td style="font-size:60px;line-height:60px;height:60px;background-color:#ffffff;">&nbsp;</td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Footer -->
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation">
+    <tbody>
+      <tr>
+        <td align="center" style="background-color:#dfe1e6;padding-left:8px;padding-right:8px;padding-bottom:32px;">
+          <table class="o_block" width="100%" cellspacing="0" cellpadding="0" border="0" role="presentation" style="max-width:632px;margin:0 auto;">
+            <tbody>
+              <tr>
+                <td style="font-size:8px;line-height:12px;height:8px;font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;background-color:#ffffff;border-radius:0px 0px 12px 12px;">&nbsp;</td>
+              </tr>
+              <tr>
+                <td align="center" style="font-family:Helvetica,Arial,sans-serif;margin-top:0px;margin-bottom:0px;font-size:14px;line-height:21px;color:#82899a;border-radius:0px 0px 4px 4px;padding-left:24px;padding-right:24px;padding-top:32px;padding-bottom:32px;">
+                  <p style="margin-top:0px;margin-bottom:16px;"><a href="https://tackle.io/" style="text-decoration:none;outline:none;color:#126DE5;"><img src="https://s3.amazonaws.com/tackle.io-misc/tackle-logo.png" width="80" height="24" alt="Tackle.io" style="max-width:80px;vertical-align:middle;border:0;line-height:100%;height:auto;outline:none;text-decoration:none;"></a></p>
+                  <p style="margin-top:0px;margin-bottom:16px;">&#169;2025 Tackle.io</p>
+                  <p style="margin-top:0px;margin-bottom:8px;">218 N Capitol Blvd.<br>Boise, ID 83702</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="font-size:40px;line-height:40px;height:40px;">&nbsp;</div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+</div>`;
+  }
+  function buildAzureFlexBody(privateOfferName, privateOfferId, product, plan, productType, tenantId, assetId, contractStart, contractEnd) {
+    return `<div style="font-family:Segoe UI,SegoeUI,Roboto,'Helvetica Neue',Arial,sans-serif;background-color:#ffffff;max-width:640px;margin:auto;border:1px solid #e0e0e0;">
+  <div style="padding:20px 24px;border-bottom:1px solid #f0f0f5;">
+    <img height="21" src="https://images.ecomm.microsoft.com/cdn/mediahandler/azure-emails-templates/production/shared/images/templates/shared/images/logos/microsoft-logo-2x.png" alt="Microsoft header logo" style="height:21px;width:auto;display:block;border:0;">
+  </div>
+  <div style="padding:24px;background-color:#ffffff;font-size:14px;line-height:22px;color:#323130;border-bottom:1px solid rgba(201,201,207,.35);">
+    <h1 style="margin-top:0;line-height:36px;margin-bottom:16px;color:#11100F;font-size:28px;font-weight:600;font-family:Segoe UI Semibold,SegoeUISemibold,Segoe UI,SegoeUI,Roboto,'Helvetica Neue',Arial,sans-serif;">Your customer completed a purchase in your private offer</h1>
+    <p style="margin-top:0;font-weight:400;line-height:20px;font-size:14px;margin-bottom:12px;">Your customer has purchased products with your private offer. It can take up to <b style="font-weight:600;">five hours</b> for the purchase status to be updated in Partner Center on the Private Offers dashboard.</p>
+    <table style="color:#323130;border-collapse:collapse;margin-bottom:16px;width:100%;font-size:14px;">
+      <tbody style="border-top:1px solid #c9c9c9;border-bottom:1px solid #c9c9c9;">
+        <tr>
+          <th style="font-family:Segoe UI Semibold,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif;font-weight:400;white-space:nowrap;text-align:left;padding:8px 8px 8px 0;vertical-align:top;">Private offer:</th>
+          <td style="padding:8px 8px 8px 0;width:100%;vertical-align:top;font-weight:400;"><a href="https://partner.microsoft.com/en-us/dashboard/commercial-marketplace/private-offers/${privateOfferId}" style="color:#0078D4;text-decoration:none;word-break:keep-all;">${privateOfferName}</a></td>
+        </tr>
+        <tr>
+          <th style="font-family:Segoe UI Semibold,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif;font-weight:400;white-space:nowrap;border-top:1px solid #c9c9c9;text-align:left;padding:8px 8px 8px 0;vertical-align:top;">Private offer ID:</th>
+          <td style="border-top:1px solid #c9c9c9;padding:8px 8px 8px 0;width:100%;vertical-align:top;font-weight:400;">${privateOfferId}</td>
+        </tr>
+      </tbody>
+    </table>
+    <h3 style="font-weight:600;margin:12px 0;font-family:Segoe UI Semibold,SegoeUISemibold,Segoe UI,SegoeUI,Roboto,'Helvetica Neue',Arial,sans-serif;line-height:28px;font-size:20px;">Products bought</h3>
+    <table style="color:#323130;border-collapse:collapse;width:100%;margin-bottom:16px;font-size:14px;">
+      <thead>
+        <tr>
+          <th style="font-family:Segoe UI Semibold,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif;font-weight:400;border-bottom:2px solid #c9c9c9;text-align:left;padding:8px 8px 8px 0;vertical-align:top;">Product</th>
+          <th style="font-family:Segoe UI Semibold,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif;font-weight:400;border-bottom:2px solid #c9c9c9;text-align:left;padding:8px 8px 8px 0;vertical-align:top;">Plan</th>
+          <th style="font-family:Segoe UI Semibold,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif;font-weight:400;border-bottom:2px solid #c9c9c9;text-align:left;padding:8px 8px 8px 0;vertical-align:top;">Product type</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="border-bottom:1px solid #c9c9c9;padding:8px 8px 8px 0;vertical-align:top;font-weight:400;">${product}</td>
+          <td style="border-bottom:1px solid #c9c9c9;padding:8px 8px 8px 0;vertical-align:top;font-weight:400;">${plan}</td>
+          <td style="border-bottom:1px solid #c9c9c9;padding:8px 8px 8px 0;vertical-align:top;font-weight:400;">${productType}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="margin-top:0;font-weight:400;line-height:20px;font-size:14px;margin-bottom:12px;">You don't need to take any action. If you have questions, please <a href="https://aka.ms/marketplacepublishersupport" style="color:#0078D4;text-decoration:none;">contact us</a>.</p>
+    <h3 style="font-weight:600;margin:12px 0;font-family:Segoe UI Semibold,SegoeUISemibold,Segoe UI,SegoeUI,Roboto,'Helvetica Neue',Arial,sans-serif;line-height:28px;font-size:20px;">Subscription details</h3>
+    <table style="color:#323130;border-collapse:collapse;width:100%;margin-bottom:16px;font-size:14px;">
+      <thead>
+        <tr>
+          <th style="font-family:Segoe UI Semibold,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif;font-weight:400;border-bottom:2px solid #c9c9c9;text-align:left;padding:8px 8px 8px 0;vertical-align:top;">Tenant ID</th>
+          <th style="font-family:Segoe UI Semibold,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif;font-weight:400;border-bottom:2px solid #c9c9c9;text-align:left;padding:8px 8px 8px 0;vertical-align:top;">Asset ID</th>
+          <th style="font-family:Segoe UI Semibold,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif;font-weight:400;border-bottom:2px solid #c9c9c9;text-align:left;padding:8px 8px 8px 0;vertical-align:top;">Contract start dates</th>
+          <th style="font-family:Segoe UI Semibold,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif;font-weight:400;border-bottom:2px solid #c9c9c9;text-align:left;padding:8px 8px 8px 0;vertical-align:top;">Contract end date</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="border-bottom:1px solid #c9c9c9;padding:8px 8px 8px 0;vertical-align:top;font-weight:400;">${tenantId}</td>
+          <td style="border-bottom:1px solid #c9c9c9;padding:8px 8px 8px 0;vertical-align:top;font-weight:400;">${assetId}</td>
+          <td style="border-bottom:1px solid #c9c9c9;padding:8px 8px 8px 0;vertical-align:top;font-weight:400;">${contractStart}</td>
+          <td style="border-bottom:1px solid #c9c9c9;padding:8px 8px 8px 0;vertical-align:top;font-weight:400;">${contractEnd}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="padding:23px 24px 24px;font-size:12px;background-color:#F0F0F0;color:#484644;line-height:16px;">
+    <p style="color:#484644;font-weight:400;font-size:12px;line-height:16px;margin:0 0 12px;"><a href="https://go.microsoft.com/fwlink/?LinkId=521839" style="color:#484644;text-decoration:underline;">Privacy Statement</a></p>
+    <p style="color:#484644;font-weight:400;margin:8px 0 12px;font-size:12px;line-height:16px;">Microsoft Corporation, One Microsoft Way, Redmond, WA 98052</p>
+    <img height="21" src="https://images.ecomm.microsoft.com/cdn/mediahandler/azure-emails-templates/production/shared/images/templates/shared/images/logos/microsoft-logo-2x.png" alt="Microsoft footer logo" style="height:21px;display:block;border:0;">
+  </div>
+</div>`;
+  }
+
+  function buildAzureDirectBody(privateOfferName, privateOfferId, product, plan, productType) {
+    return `<div style="font-family:Segoe UI,SegoeUI,Roboto,'Helvetica Neue',Arial,sans-serif;background-color:#ffffff;max-width:640px;margin:auto;border:1px solid #e0e0e0;">
+  <div style="padding:20px 24px;border-bottom:1px solid #f0f0f5;">
+    <img height="21" src="https://images.ecomm.microsoft.com/cdn/mediahandler/azure-emails-templates/production/shared/images/templates/shared/images/logos/microsoft-logo-2x.png" alt="Microsoft header logo" style="height:21px;width:auto;display:block;border:0;">
+  </div>
+  <div style="padding:24px;background-color:#ffffff;font-size:14px;line-height:22px;color:#323130;border-bottom:1px solid rgba(201,201,207,.35);">
+    <h1 style="margin-top:0;line-height:36px;margin-bottom:16px;color:#11100F;font-size:28px;font-weight:600;font-family:Segoe UI Semibold,SegoeUISemibold,Segoe UI,SegoeUI,Roboto,'Helvetica Neue',Arial,sans-serif;">Your customer completed a purchase in your private offer</h1>
+    <p style="margin-top:0;font-weight:400;line-height:20px;font-size:14px;margin-bottom:12px;">Your customer has purchased products with your private offer. It can take up to <b style="font-weight:600;">five hours</b> for the purchase status to be updated in Partner Center on the Private Offers dashboard.</p>
+    <table style="color:#323130;border-collapse:collapse;margin-bottom:16px;width:100%;font-size:14px;">
+      <tbody style="border-top:1px solid #c9c9c9;border-bottom:1px solid #c9c9c9;">
+        <tr>
+          <th style="font-family:Segoe UI Semibold,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif;font-weight:400;white-space:nowrap;text-align:left;padding:8px 8px 8px 0;vertical-align:top;">Private offer:</th>
+          <td style="padding:8px 8px 8px 0;width:100%;vertical-align:top;font-weight:400;"><a href="https://partner.microsoft.com/en-us/dashboard/commercial-marketplace/private-offers/${privateOfferId}" style="color:#0078D4;text-decoration:none;word-break:keep-all;">${privateOfferName}</a></td>
+        </tr>
+        <tr>
+          <th style="font-family:Segoe UI Semibold,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif;font-weight:400;white-space:nowrap;border-top:1px solid #c9c9c9;text-align:left;padding:8px 8px 8px 0;vertical-align:top;">Private offer ID:</th>
+          <td style="border-top:1px solid #c9c9c9;padding:8px 8px 8px 0;width:100%;vertical-align:top;font-weight:400;">${privateOfferId}</td>
+        </tr>
+      </tbody>
+    </table>
+    <h3 style="font-weight:600;margin:12px 0;font-family:Segoe UI Semibold,SegoeUISemibold,Segoe UI,SegoeUI,Roboto,'Helvetica Neue',Arial,sans-serif;line-height:28px;font-size:20px;">Products bought</h3>
+    <table style="color:#323130;border-collapse:collapse;width:100%;margin-bottom:16px;font-size:14px;">
+      <thead>
+        <tr>
+          <th style="font-family:Segoe UI Semibold,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif;font-weight:400;border-bottom:2px solid #c9c9c9;text-align:left;padding:8px 8px 8px 0;vertical-align:top;">Product</th>
+          <th style="font-family:Segoe UI Semibold,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif;font-weight:400;border-bottom:2px solid #c9c9c9;text-align:left;padding:8px 8px 8px 0;vertical-align:top;">Plan</th>
+          <th style="font-family:Segoe UI Semibold,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif;font-weight:400;border-bottom:2px solid #c9c9c9;text-align:left;padding:8px 8px 8px 0;vertical-align:top;">Product type</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="border-bottom:1px solid #c9c9c9;padding:8px 8px 8px 0;vertical-align:top;font-weight:400;">${product}</td>
+          <td style="border-bottom:1px solid #c9c9c9;padding:8px 8px 8px 0;vertical-align:top;font-weight:400;">${plan}</td>
+          <td style="border-bottom:1px solid #c9c9c9;padding:8px 8px 8px 0;vertical-align:top;font-weight:400;">${productType}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="margin-top:0;font-weight:400;line-height:20px;font-size:14px;margin-bottom:12px;">You don't need to take any action. If you have questions, please <a href="https://aka.ms/marketplacepublishersupport" style="color:#0078D4;text-decoration:none;">contact us</a>.</p>
+  </div>
+  <div style="padding:23px 24px 24px;font-size:12px;background-color:#F0F0F0;color:#484644;line-height:16px;">
+    <p style="color:#484644;font-weight:400;font-size:12px;line-height:16px;margin:0 0 12px;"><a href="https://go.microsoft.com/fwlink/?LinkId=521839" style="color:#484644;text-decoration:underline;">Privacy Statement</a></p>
+    <p style="color:#484644;font-weight:400;margin:8px 0 12px;font-size:12px;line-height:16px;">Microsoft Corporation, One Microsoft Way, Redmond, WA 98052</p>
+    <img height="21" src="https://images.ecomm.microsoft.com/cdn/mediahandler/azure-emails-templates/production/shared/images/templates/shared/images/logos/microsoft-logo-2x.png" alt="Microsoft footer logo" style="height:21px;display:block;border:0;">
+  </div>
+</div>`;
+  }
+
+  function updateAll() {
+    const p        = v('provider');
+    const q        = v('quoteNumber') || '{QUOTE_NUMBER}';
+    const company  = v('companyName');
+    const accId    = v('accountId');
+    const prodName = v('productName');
+    const prodId   = v('productId');
+    const offId    = v('offerId');
+    const agmtId   = v('agreementId');
+    const start    = v('startDate');
+    const end      = v('endDate');
+    const amount   = v('amount');
+    const to       = v('toEmail');
+    const cc       = v('ccEmail');
+    const displayName = DISPLAY_NAMES[p] || p;
+
+    if (!offerNameEdited) {
+      document.getElementById('offerName').value = autoOfferName();
+    }
+    if (p === 'Azure_Partner' && !azurePlanEdited) {
+      document.getElementById('azurePlan').value = `${q} Payment Schedule`;
+    }
+    const offerN = v('offerName');
+
+    // Subject
+    let subject;
+    if (p === 'GCP_Direct' || p === 'GCP_Partner') {
+      subject = `[Cloud Marketplace] New GCP Order of ${prodName} from ${company}`;
+    } else if (p === 'Azure' || p === 'Azure_Partner') {
+      subject = `[Cloud Marketplace] Your customer bought products in your private offer`;
+    } else if (p === 'AWS_Partner') {
+      subject = `[Cloud Marketplace] Customer accepted an AWS Marketplace channel partner offer`;
+    } else {
+      subject = `${displayName} Marketplace Offer Accepted - Agreement Created for ${q}`;
+    }
+    document.getElementById('previewSubject').textContent = subject;
+
+    // Recipients
+    const recipBox = document.getElementById('previewRecipients');
+    if (to || cc) {
+      recipBox.style.display = 'flex';
+      document.getElementById('previewTo').innerHTML = to ? `<span>To:</span> ${to}` : '';
+      document.getElementById('previewCc').innerHTML = cc ? `<span>CC:</span> ${cc}` : '';
+    } else {
+      recipBox.style.display = 'none';
+    }
+
+    // Body
+    let bodyHtml;
+    if (p === 'GCP_Direct') {
+      bodyHtml = buildGcpDirectBody(company, accId, prodName, prodId, offId, agmtId, start, end, offerN);
+    } else if (p === 'GCP_Partner') {
+      bodyHtml = buildGcpPartnerBody(
+        company, accId, prodName, prodId, offId, agmtId, start, end, offerN,
+        v('isFutureDated'), v('serviceStartDate'), v('resellerPlanId')
+      );
+    } else if (p === 'Azure') {
+      bodyHtml = buildAzureDirectBody(offerN, offId, prodName, v('azurePlan'), v('azureProductType'));
+    } else if (p === 'Azure_Partner') {
+      bodyHtml = buildAzureFlexBody(offerN, offId, prodName, v('azurePlan'), v('azureProductType'), v('azureTenantId'), v('azureAssetId'), v('azureContractStart'), v('azureContractEnd'));
+    } else if (p === 'AWS_Partner') {
+      const channelPartner   = v('channelPartner');
+      const channelPartnerId = v('channelPartnerId');
+      bodyHtml = `
+        <p>Greetings from AWS Marketplace,</p>
+        <p>An AWS Marketplace offer has been accepted by AWS account: ${accId} on ${start}, and an agreement was created.</p>
+        <p>Review the following details:</p>
+        <p style="margin-left:20px;">
+          <u>Customer details</u><br>
+          <b>Company name</b>: ${company}<br>
+          <b>Customer AWS account ID</b>: ${accId}
+        </p>
+        <p style="margin-left:20px;">
+          <u>Channel partner details</u><br>
+          <b>Channel partner</b>: ${channelPartner}<br>
+          <b>Channel partner AWS account ID</b>: ${channelPartnerId}
+        </p>
+        <p style="margin-left:20px;">
+          <u>Product details</u><br>
+          <b>Product name</b>: ${prodName}<br>
+          <b>Product ID</b>: ${prodId}
+        </p>
+        <p style="margin-left:20px;">
+          <u>Offer details</u><br>
+          <b>Offer name</b>: ${offerN}<br>
+          <b>Offer ID</b>: ${offId}
+        </p>
+        <p style="margin-left:20px;">
+          <u>Agreement details</u><br>
+          <b>Agreement ID</b>: ${agmtId}<br>
+          <b>Agreement start date</b>: ${start}<br>
+          <b>Agreement end date</b>: ${end}<br>
+          <b>Wholesale price</b>: ${amount} (USD)
+        </p>
+        <p>The customer will receive entitlements to the product on the ${start}. If there are processing issues, you will be notified in a separate email.</p>
+        <p>Visit the <a href="https://aws.amazon.com/marketplace/management/agreements" style="color:#0066cc;">AWS Marketplace Management Portal(AMMP)</a> to find additional details. For data products, visit the <a href="https://console.aws.amazon.com/dataexchange" style="color:#0066cc;">AWS Data Exchange console</a>.</p>
+        <p>Regards,<br>The AWS Marketplace Team</p>
+      `;
+    } else {
+      const providerLabel = p.startsWith('Azure') ? 'MFST (Azure)' : p === 'GCP_Partner' ? 'GCP' : p;
+      const article = p === 'AWS' ? 'An AWS' : p.startsWith('GCP') ? 'A Google Cloud' : 'An Azure';
+      bodyHtml = `
+        <p>Greetings from ${GREET[p]},</p>
+        <p>${article} Marketplace offer has been accepted by ${providerLabel} account: ${accId} on ${start}, and an agreement was created.</p>
+        <p>Review the following details:</p>
+        <p>
+          <u>Customer details</u><br>
+          <b>Company name</b>: ${company}<br>
+          <b>Customer ${providerLabel} account ID</b>: ${accId}
+        </p>
+        <p>
+          <u>Product details</u><br>
+          <b>Product name</b>: ${prodName}<br>
+          <b>Product ID</b>: ${prodId}
+        </p>
+        <p>
+          <u>Offer details</u><br>
+          <b>Offer name</b>: ${offerN}<br>
+          <b>Offer ID</b>: ${offId}
+        </p>
+        <p>
+          <u>Agreement details</u><br>
+          <b>Agreement ID</b>: ${agmtId}<br>
+          <b>Agreement start date</b>: ${start}<br>
+          <b>Agreement end date</b>: ${end}<br>
+          <b>Purchase amount</b>: ${amount} (USD)
+        </p>
+        <p>The customer will receive entitlements to the product on ${start}. If there are processing issues, you will be notified in a separate email.</p>
+        <p>Visit the ${PORTALS[p]} to find additional details.</p>
+        <p>Regards,<br>${TEAMS[p]}</p>
+      `;
+    }
+    document.getElementById('previewBody').innerHTML = bodyHtml;
+  }
+
+  function sendEmail() {
+    const to = v('toEmail');
+    if (!to) { alert('Please enter a recipient email in the To field.'); return; }
+    const p    = v('provider');
+    const q    = v('quoteNumber');
+    const cc   = v('ccEmail');
+    const from = v('fromEmail');
+
+    // Encode all current form values so the skill uses what the user typed, not file defaults
+    const formData = {
+      companyName: v('companyName'), accountId: v('accountId'),
+      productName: v('productName'), productId: v('productId'),
+      offerName: v('offerName'),     offerId: v('offerId'),
+      agreementId: v('agreementId'), startDate: v('startDate'),
+      endDate: v('endDate'),         amount: v('amount'),
+      gcpFullName: v('gcpFullName'), gcpEmail: v('gcpEmail'),
+      gcpPhone: v('gcpPhone'),       gcpWebsite: v('gcpWebsite'),
+      gcpBilling: v('gcpBilling'),
+      channelPartner: v('channelPartner'), channelPartnerId: v('channelPartnerId'),
+      isFutureDated: v('isFutureDated'), serviceStartDate: v('serviceStartDate'),
+      resellerPlanId: v('resellerPlanId'),
+      azurePlan: v('azurePlan'), azureProductType: v('azureProductType'),
+      azureTenantId: v('azureTenantId'), azureAssetId: v('azureAssetId'),
+      azureContractStart: v('azureContractStart'), azureContractEnd: v('azureContractEnd')
+    };
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(formData))));
+
+    let cmd = `/MarketPlaceAutomation ${p} ${q} to:${to}`;
+    if (cc) cc.split(',').forEach(e => { if (e.trim()) cmd += ` cc:${e.trim()}`; });
+    if (from) cmd += ` from:${from}`;
+    cmd += ` --data ${encoded}`;
+
+    document.getElementById('claudeCmd').textContent = cmd;
+    document.getElementById('modal').classList.add('open');
+  }
+
+  function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+  function copyCmd() {
+    navigator.clipboard.writeText(document.getElementById('claudeCmd').textContent).then(() => {
+      const btn = document.querySelector('.btn-copy');
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy Command', 2000);
+    });
+  }
+
+  function resetForm() {
+    document.getElementById('provider').value    = 'AWS';
+    document.getElementById('quoteNumber').value = 'Q-800727';
+    document.getElementById('companyName').value = 'Brightseed_AWS';
+    document.getElementById('accountId').value   = '215739188850';
+    document.getElementById('productName').value = 'Rubrik Cloud Cluster';
+    document.getElementById('productId').value   = '716d3d79-b071-46e8-a1ff-2cd3d2caf9ee';
+    document.getElementById('offerId').value     = 'offer-kaazydeptkcok';
+    document.getElementById('agreementId').value = 'agmt-3bsf2zg68bya2uqpzd4leq';
+    document.getElementById('startDate').value   = 'April, 07 2026 10:04 PM UTC';
+    document.getElementById('endDate').value     = 'April, 07 2027 10:04 PM UTC';
+    document.getElementById('amount').value      = '25981.68';
+    document.getElementById('toEmail').value     = '';
+    document.getElementById('ccEmail').value     = '';
+    document.getElementById('fromEmail').value   = '';
+    document.getElementById('gcpFullName').value = 'Rajendra Sanda';
+    document.getElementById('gcpEmail').value    = 'rajendra.sanda@highradius.com';
+    document.getElementById('gcpPhone').value    = '+919391656091';
+    document.getElementById('gcpWebsite').value  = 'highradius.com';
+    document.getElementById('gcpBilling').value      = '2107 CityWest Blvd, Suite 1100, Houston TX 77042 USA';
+    document.getElementById('channelPartner').value   = 'Presidio Network Solutions';
+    document.getElementById('channelPartnerId').value = '113497306513';
+    document.getElementById('serviceStartDate').value  = '';
+    document.getElementById('resellerPlanId').value    = '';
+    document.getElementById('azureTenantId').value     = '6ff60d36-925f-4785-a854-510f909ee561';
+    document.getElementById('azureAssetId').value      = '9ffe3c3b-8816-4d36-db8a-2b1fb9d89b4d';
+    document.getElementById('azureContractStart').value = '2026-04-22';
+    document.getElementById('azureContractEnd').value   = '2029-04-21';
+    offerNameEdited = false;
+    azurePlanEdited = false;
+    onProviderChange();
+  }
+
+  document.getElementById('modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  updateAll();
+</script>
+</body>
+</html>

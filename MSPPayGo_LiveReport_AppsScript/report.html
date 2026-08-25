@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MSP PayGo — Sprint QA Report</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page:            #f9f9f7;
+    --surface-1:       #fcfcfb;
+    --text-primary:    #0b0b0b;
+    --text-secondary:  #52514e;
+    --text-muted:      #898781;
+    --gridline:        #e1e0d9;
+    --baseline:        #c3c2b7;
+    --border:          rgba(11,11,11,0.10);
+    --success-text:    #006300;
+
+    /* categorical — date-wise sprint lines (slots 1,2,3) */
+    --series-1: #2a78d6;   /* Sprint 1 */
+    --series-2: #008300;   /* Sprint 2 */
+    --series-3: #e87ba4;   /* Sprint 3 */
+
+    /* status palette — sprint-wise stage progress (fixed, never themed: same hex in light & dark) */
+    --stage-other:   #d03b3b;   /* critical — not started */
+    --stage-ready:   #ec835a;   /* serious  — ready for QA */
+    --stage-inprog:  #fab219;   /* warning  — QA in progress */
+    --stage-done:    #0ca30c;   /* good     — QA completed */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page:            #0d0d0d;
+      --surface-1:       #1a1a19;
+      --text-primary:    #ffffff;
+      --text-secondary:  #c3c2b7;
+      --text-muted:      #898781;
+      --gridline:        #2c2c2a;
+      --baseline:        #383835;
+      --border:          rgba(255,255,255,0.10);
+      --success-text:    #0ca30c;
+
+      --series-1: #3987e5;
+      --series-2: #008300;
+      --series-3: #d55181;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page:            #0d0d0d;
+    --surface-1:       #1a1a19;
+    --text-primary:    #ffffff;
+    --text-secondary:  #c3c2b7;
+    --text-muted:      #898781;
+    --gridline:        #2c2c2a;
+    --baseline:        #383835;
+    --border:          rgba(255,255,255,0.10);
+    --success-text:    #0ca30c;
+
+    --series-1: #3987e5;
+    --series-2: #008300;
+    --series-3: #d55181;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page);
+    color: var(--text-primary);
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 28px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .subtitle { color: var(--text-secondary); font-size: 13px; margin: 0; }
+  .source-link { color: var(--text-secondary); font-size: 12px; }
+  .source-link a { color: var(--series-1); }
+
+  #theme-toggle {
+    border: 1px solid var(--border);
+    background: var(--surface-1);
+    color: var(--text-primary);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  section { margin-bottom: 44px; }
+  h2 { font-size: 16px; margin: 0 0 4px; }
+  .section-note { color: var(--text-muted); font-size: 12px; margin: 0 0 18px; }
+
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+
+  /* KPI stat tiles */
+  .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 640px) {
+    .kpi-row { grid-template-columns: 1fr; }
+  }
+  .kpi-tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+  .kpi-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+  .kpi-value { font-size: 32px; font-weight: 600; line-height: 1; }
+  .kpi-value.good { color: var(--stage-done); }
+  .kpi-value.warn { color: var(--stage-inprog); }
+  .kpi-value.bad  { color: var(--stage-other); }
+  .kpi-sub { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+
+  /* Stacked bar (sprint-wise) */
+  .bar-row { display: grid; grid-template-columns: 90px 1fr 46px; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .bar-row:last-child { margin-bottom: 0; }
+  .bar-label { font-size: 13px; color: var(--text-secondary); }
+  .bar-track { display: flex; height: 28px; border-radius: 4px; overflow: hidden; background: var(--gridline); }
+  .bar-seg { height: 100%; position: relative; cursor: default; border-right: 2px solid var(--surface-1); }
+  .bar-seg:last-child { border-right: none; }
+  .bar-total { font-size: 12px; color: var(--text-muted); text-align: right; font-variant-numeric: tabular-nums; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 18px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+  .swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+  .th-legend { display: inline-flex; align-items: center; gap: 6px; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--gridline); }
+  th { color: var(--text-muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .status-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; flex: none; vertical-align: middle; }
+
+  /* Sprint-wise detail (collapsible per sprint) */
+  details.sprint-detail { border-bottom: 1px solid var(--gridline); padding: 10px 0; }
+  details.sprint-detail:last-child { border-bottom: none; padding-bottom: 0; }
+  details.sprint-detail:first-child { padding-top: 0; }
+  details.sprint-detail > summary {
+    cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between;
+    font-size: 13px; font-weight: 600; color: var(--text-primary);
+    padding: 6px 10px; border-left: 4px solid var(--row-accent, transparent);
+  }
+  details.sprint-detail > summary::-webkit-details-marker { display: none; }
+  details.sprint-detail > summary .chev { font-size: 11px; color: var(--text-muted); transition: transform 0.15s ease; }
+  details.sprint-detail[open] > summary .chev { transform: rotate(180deg); }
+  details.sprint-detail table { margin-top: 6px; }
+  details.sprint-detail td:first-child { border-left: 4px solid color-mix(in srgb, var(--row-accent, transparent) 35%, transparent); padding-left: 12px; }
+
+  /* Line chart */
+  .chart-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
+  .chart-toggle button {
+    border: 1px solid var(--border); background: transparent; color: var(--text-secondary);
+    border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer;
+  }
+  .chart-toggle button.active { background: var(--series-1); color: #fff; border-color: var(--series-1); }
+  svg.linechart { width: 100%; height: auto; overflow: visible; }
+  .gridline { stroke: var(--gridline); stroke-width: 1; }
+  .baseline { stroke: var(--baseline); stroke-width: 1; }
+  .axis-label { fill: var(--text-muted); font-size: 11px; font-family: inherit; }
+  .series-line { fill: none; stroke-width: 2; }
+  .series-point { stroke: var(--surface-1); stroke-width: 1.5; cursor: pointer; }
+  .end-label { font-size: 12px; font-weight: 600; font-family: inherit; }
+
+  #tooltip {
+    position: fixed; pointer-events: none; z-index: 50;
+    background: var(--text-primary); color: var(--surface-1);
+    font-size: 12px; padding: 6px 10px; border-radius: 6px;
+    transform: translate(-50%, -130%); opacity: 0; transition: opacity 0.08s ease;
+    white-space: nowrap;
+  }
+  #tooltip.show { opacity: 1; }
+  #tooltip .tt-title { font-weight: 600; margin-bottom: 2px; }
+
+  .trend-callout { color: var(--text-secondary); font-size: 12px; margin: 0 0 14px; }
+
+  /* Pie / donut view */
+  .pie-row { display: flex; flex-wrap: wrap; justify-content: space-around; gap: 24px; padding: 8px 0 4px; }
+  .pie-item { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .pie-item.overall { border-left: 1px solid var(--gridline); padding-left: 24px; }
+  @media (max-width: 640px) {
+    .pie-item.overall { border-left: none; padding-left: 0; }
+  }
+  .pie-center-text { font-size: 18px; font-weight: 700; font-family: inherit; }
+  .pie-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+  .pie-sub { font-size: 11px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>MSP PayGo — Sprint QA Report</h1>
+      <p class="subtitle">Sprint-wise story status &amp; date-wise QA completion trend</p>
+      <p class="source-link">Source: <a href="https://docs.google.com/spreadsheets/d/1TZOG-BBBwzRIQxInz91vwMKLVRMB4YOZ6LygmYDLafY/edit" target="_blank" rel="noopener">Internal sheet — MSP_PayGO_NewProject</a> · generated <?= data.generatedAt ?> (live) · <span id="updated-ago"></span></p>
+    </div>
+    <button id="theme-toggle" onclick="toggleTheme()">Light mode</button>
+  </header>
+
+  <!-- KPI ROW -->
+  <section>
+    <div class="kpi-row" id="kpi-row"></div>
+  </section>
+
+  <!-- DATE-WISE -->
+  <section>
+    <h2>Date-wise trend — % QA Completed</h2>
+    <p class="section-note">Daily snapshot from the "Sprint Breakdown" tab's tracking table. Add new dates to that sheet — this report reflects them automatically on next load.</p>
+    <div class="card">
+      <div class="chart-toggle">
+        <button id="btn-chart" onclick="showView('chart')">Chart</button>
+        <button id="btn-table" class="active" onclick="showView('table')">Table</button>
+        <button id="btn-pie" onclick="showView('pie')">Pie</button>
+      </div>
+      <p class="trend-callout">ℹ <?= data.missingDatesNote ?></p>
+      <div id="view-chart" style="display:none"></div>
+      <div id="view-pie" style="display:none"></div>
+      <div id="view-table">
+        <table>
+          <thead><tr>
+            <th>Date</th>
+            <th class="num"><span class="th-legend"><span class="swatch" style="background:var(--series-1)"></span>Sprint 1</span></th>
+            <th class="num"><span class="th-legend"><span class="swatch" style="background:var(--series-2)"></span>Sprint 2</span></th>
+            <th class="num"><span class="th-legend"><span class="swatch" style="background:var(--series-3)"></span>Sprint 3</span></th>
+          </tr></thead>
+          <tbody id="trend-body"></tbody>
+        </table>
+      </div>
+      <div class="legend" id="trend-legend"></div>
+    </div>
+  </section>
+
+  <!-- SPRINT-WISE -->
+  <section>
+    <h2>Sprint-wise breakdown</h2>
+    <p class="section-note">Story status mix per sprint, from the "JIRA - User Stories" tab (<?= data.totalStories ?> stories total). Bars are shown in sprint order (Sprint 1 → Sprint 3); each bar's segments run left-to-right from least to most complete.</p>
+    <div class="card">
+      <div id="stackedbars"></div>
+      <div class="legend" id="stage-legend"></div>
+    </div>
+  </section>
+
+  <!-- SPRINT-WISE DETAIL TABLE -->
+  <section>
+    <h2>Sprint-wise detail (all statuses)</h2>
+    <p class="section-note">Full status breakdown per sprint. Sprints with more than four distinct statuses are expanded by default; others are collapsed since the chart above already covers them — click to expand.</p>
+    <div class="card">
+      <div id="detail-groups"></div>
+    </div>
+  </section>
+
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+  // ---------- Theme toggle ----------
+  function toggleTheme() {
+    const html = document.documentElement;
+    const current = html.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    document.getElementById('theme-toggle').textContent = next === 'dark' ? 'Light mode' : 'Dark mode';
+  }
+
+  // ---------- Tooltip ----------
+  const tt = document.getElementById('tooltip');
+  function showTip(evt, title, body) {
+    tt.innerHTML = '<div class="tt-title">' + title + '</div>' + body;
+    tt.style.left = evt.clientX + 'px';
+    tt.style.top = evt.clientY + 'px';
+    tt.classList.add('show');
+  }
+  function hideTip() { tt.classList.remove('show'); }
+
+  // ---------- Data injected live from the sheet ----------
+  const sprintStages = <?!= JSON.stringify(data.sprintStages) ?>;
+  const detail = <?!= JSON.stringify(data.detail) ?>;
+  const dates = <?!= JSON.stringify(data.dates) ?>;
+  const trend = <?!= JSON.stringify(data.trend) ?>;
+  const generatedAtMillis = <?!= JSON.stringify(data.generatedAtMillis) ?>;
+
+  // ---------- "Updated X ago" ----------
+  function relativeTime(ms) {
+    const diffSec = Math.max(0, Math.round((Date.now() - ms) / 1000));
+    if (diffSec < 60) return 'updated just now';
+    const diffMin = Math.round(diffSec / 60);
+    if (diffMin < 60) return 'updated ' + diffMin + 'm ago';
+    const diffHr = Math.round(diffMin / 60);
+    if (diffHr < 24) return 'updated ' + diffHr + 'h ago';
+    return 'updated ' + Math.round(diffHr / 24) + 'd ago';
+  }
+  function tickUpdatedAgo() {
+    document.getElementById('updated-ago').textContent = relativeTime(generatedAtMillis);
+  }
+  tickUpdatedAgo();
+  setInterval(tickUpdatedAgo, 30000);
+
+  // ---------- KPI tiles ----------
+  const kpiRow = document.getElementById('kpi-row');
+  sprintStages.forEach(s => {
+    const pct = s.total ? (s.done / s.total) * 100 : 0;
+    const tone = pct >= 75 ? 'good' : pct >= 40 ? 'warn' : 'bad';
+    const tile = document.createElement('div');
+    tile.className = 'kpi-tile';
+    tile.innerHTML = '<div class="kpi-label">' + s.name + ' — QA Completed</div>' +
+      '<div class="kpi-value ' + tone + '">' + pct.toFixed(1) + '%</div>' +
+      '<div class="kpi-sub">' + s.done + ' of ' + s.total + ' stories</div>';
+    kpiRow.appendChild(tile);
+  });
+
+  // ---------- Sprint-wise stacked bars ----------
+  // segment order within each bar: least -> most complete (matches ordinal stage ramp)
+  const stages = [
+    { key: 'other',  label: 'Other / Not started', varName: '--stage-other'  },
+    { key: 'ready',  label: 'Ready for QA',         varName: '--stage-ready' },
+    { key: 'inprog', label: 'QA In Progress',       varName: '--stage-inprog'},
+    { key: 'done',   label: 'QA Completed',         varName: '--stage-done'  },
+  ];
+
+  const barsEl = document.getElementById('stackedbars');
+  sprintStages.forEach(s => {
+    const row = document.createElement('div');
+    row.className = 'bar-row';
+
+    const label = document.createElement('div');
+    label.className = 'bar-label';
+    label.textContent = s.name;
+    row.appendChild(label);
+
+    const track = document.createElement('div');
+    track.className = 'bar-track';
+    stages.forEach(st => {
+      const count = s[st.key];
+      if (count === 0) return;
+      const pct = (count / s.total) * 100;
+      const seg = document.createElement('div');
+      seg.className = 'bar-seg';
+      seg.style.width = pct.toFixed(2) + '%';
+      seg.style.background = 'var(' + st.varName + ')';
+      seg.addEventListener('mousemove', (e) => showTip(e, s.name, st.label + ': ' + count + ' (' + pct.toFixed(1) + '%)'));
+      seg.addEventListener('mouseleave', hideTip);
+      track.appendChild(seg);
+    });
+    row.appendChild(track);
+
+    const total = document.createElement('div');
+    total.className = 'bar-total';
+    total.textContent = s.total;
+    row.appendChild(total);
+
+    barsEl.appendChild(row);
+  });
+
+  const stageLegend = document.getElementById('stage-legend');
+  stages.forEach(st => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = '<span class="swatch" style="background:var(' + st.varName + ')"></span>' + st.label;
+    stageLegend.appendChild(item);
+  });
+
+  // ---------- Detail table (all statuses per sprint) ----------
+  // Sprints with more than 4 statuses (harder to read off the stacked bar) are
+  // expanded by default; simpler sprints collapse since the bar already covers them.
+  const detailGroups = document.getElementById('detail-groups');
+  const sprintAccent = { 'Sprint 1': 'var(--series-1)', 'Sprint 2': 'var(--series-2)', 'Sprint 3': 'var(--series-3)' };
+  const stageVarFor = status => {
+    if (status === 'QA Completed') return 'var(--stage-done)';
+    if (status === 'QA In Progress') return 'var(--stage-inprog)';
+    if (status === 'Ready for QA') return 'var(--stage-ready)';
+    return 'var(--stage-other)';
+  };
+  detail.forEach(d => {
+    const accent = sprintAccent[d.sprint] || 'var(--stage-other)';
+
+    const group = document.createElement('details');
+    group.className = 'sprint-detail';
+    group.open = d.rows.length > 4;
+    group.style.setProperty('--row-accent', accent);
+
+    const summary = document.createElement('summary');
+    summary.innerHTML = '<span>' + d.sprint + ' — ' + d.total + ' stories across ' + d.rows.length + ' statuses</span><span class="chev">▾</span>';
+    group.appendChild(summary);
+
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    thead.innerHTML = '<tr><th>Status</th><th class="num">Count</th><th class="num">% of sprint</th></tr>';
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    d.rows.forEach(([status, count]) => {
+      const pct = (count / d.total) * 100;
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td><span class="status-dot" style="background:' + stageVarFor(status) + '"></span>' + status + '</td><td class="num">' + count + '</td><td class="num">' + pct.toFixed(2) + '%</td>';
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    group.appendChild(table);
+
+    detailGroups.appendChild(group);
+  });
+
+  // ---------- Date-wise trend ----------
+  const trendColors = { 'Sprint 1': 'var(--series-1)', 'Sprint 2': 'var(--series-2)', 'Sprint 3': 'var(--series-3)' };
+
+  if (dates.length > 1) {
+    // geometry
+    const padL = 40, padR = 60, padT = 20, padB = 30;
+    const chartW = 640, chartH = 300;
+    const plotW = chartW - padL - padR, plotH = chartH - padT - padB;
+    const xFor = i => padL + (i / (dates.length - 1)) * plotW;
+    const yFor = v => padT + plotH - (v / 100) * plotH;
+
+    let svg = '<svg class="linechart" viewBox="0 0 ' + chartW + ' ' + chartH + '">';
+    // gridlines + y labels
+    [0, 25, 50, 75, 100].forEach(v => {
+      const y = yFor(v);
+      svg += '<line class="' + (v === 0 ? 'baseline' : 'gridline') + '" x1="' + padL + '" x2="' + (chartW - padR) + '" y1="' + y + '" y2="' + y + '" />';
+      svg += '<text class="axis-label" x="' + (padL - 8) + '" y="' + (y + 3) + '" text-anchor="end">' + v + '%</text>';
+    });
+    // x labels
+    dates.forEach((d, i) => {
+      svg += '<text class="axis-label" x="' + xFor(i) + '" y="' + (chartH - 6) + '" text-anchor="middle">' + d + '</text>';
+    });
+    // lines + points + end labels
+    Object.keys(trend).forEach(name => {
+      const vals = trend[name];
+      const color = trendColors[name];
+      const pts = vals.map((v, i) => xFor(i) + ',' + yFor(v)).join(' ');
+      svg += '<polyline class="series-line" points="' + pts + '" style="stroke:' + color + '" />';
+      vals.forEach((v, i) => {
+        svg += '<circle class="series-point" data-name="' + name + '" data-date="' + dates[i] + '" data-val="' + v + '" cx="' + xFor(i) + '" cy="' + yFor(v) + '" r="4" style="fill:' + color + '" />';
+      });
+      const lastI = vals.length - 1;
+      svg += '<text class="end-label" x="' + (xFor(lastI) + 8) + '" y="' + (yFor(vals[lastI]) + 4) + '" style="fill:' + color + '">' + name.replace('Sprint ', 'S') + ' ' + vals[lastI].toFixed(1) + '%</text>';
+    });
+    svg += '</svg>';
+    document.getElementById('view-chart').innerHTML = svg;
+
+    document.querySelectorAll('.series-point').forEach(pt => {
+      pt.addEventListener('mousemove', (e) => {
+        showTip(e, pt.dataset.name, pt.dataset.date + ': ' + pt.dataset.val + '% QA Completed');
+      });
+      pt.addEventListener('mouseleave', hideTip);
+    });
+  } else {
+    document.getElementById('view-chart').innerHTML = '<p class="section-note" style="margin:0;">Not enough fully-recorded dates yet to draw a trend line.</p>';
+  }
+
+  const trendLegend = document.getElementById('trend-legend');
+  Object.keys(trend).forEach(name => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = '<span class="swatch" style="background:' + trendColors[name] + '"></span>' + name;
+    trendLegend.appendChild(item);
+  });
+
+  // table fallback
+  const trendBody = document.getElementById('trend-body');
+  dates.forEach((d, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + d + '</td><td class="num">' + trend['Sprint 1'][i].toFixed(2) + '%</td>'
+      + '<td class="num">' + trend['Sprint 2'][i].toFixed(2) + '%</td><td class="num">' + trend['Sprint 3'][i].toFixed(2) + '%</td>';
+    trendBody.appendChild(tr);
+  });
+
+  function showView(which) {
+    document.getElementById('view-chart').style.display = which === 'chart' ? '' : 'none';
+    document.getElementById('view-table').style.display = which === 'table' ? '' : 'none';
+    document.getElementById('view-pie').style.display = which === 'pie' ? '' : 'none';
+    document.getElementById('btn-chart').classList.toggle('active', which === 'chart');
+    document.getElementById('btn-table').classList.toggle('active', which === 'table');
+    document.getElementById('btn-pie').classList.toggle('active', which === 'pie');
+  }
+
+  // ---------- Date-wise trend as donuts ----------
+  // One donut per sprint for the latest fully-recorded date, plus one more
+  // donut for the overall QA% across all sprints combined (from current
+  // live totals in sprintStages, same figures the KPI tiles use).
+  function donutSVG(pct, color, size) {
+    size = size || 120;
+    const r = size / 2 - 10;
+    const c = 2 * Math.PI * r;
+    const clamped = Math.max(0, Math.min(100, pct));
+    const offset = c * (1 - clamped / 100);
+    const cx = size / 2, cy = size / 2;
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">' +
+      '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="var(--gridline)" stroke-width="12" />' +
+      '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="12" ' +
+        'stroke-linecap="round" stroke-dasharray="' + c.toFixed(2) + '" stroke-dashoffset="' + offset.toFixed(2) + '" ' +
+        'transform="rotate(-90 ' + cx + ' ' + cy + ')" />' +
+      '<text x="' + cx + '" y="' + (cy + 6) + '" text-anchor="middle" class="pie-center-text" style="fill:' + color + '">' +
+        clamped.toFixed(1) + '%</text>' +
+      '</svg>';
+  }
+
+  const viewPie = document.getElementById('view-pie');
+  if (dates.length > 0) {
+    const latestDate = dates[dates.length - 1];
+    let pieHtml = '<div class="pie-row">';
+    Object.keys(trend).forEach(name => {
+      const vals = trend[name];
+      const pct = vals[vals.length - 1];
+      pieHtml += '<div class="pie-item">' + donutSVG(pct, trendColors[name]) +
+        '<div class="pie-name">' + name + '</div><div class="pie-sub">as of ' + latestDate + '</div></div>';
+    });
+
+    const totalDone = sprintStages.reduce((sum, s) => sum + s.done, 0);
+    const totalAll = sprintStages.reduce((sum, s) => sum + s.total, 0);
+    const overallPct = totalAll ? (totalDone / totalAll) * 100 : 0;
+    pieHtml += '<div class="pie-item overall">' + donutSVG(overallPct, 'var(--stage-done)') +
+      '<div class="pie-name">Overall</div><div class="pie-sub">' + totalDone + ' of ' + totalAll + ' stories (live)</div></div>';
+
+    pieHtml += '</div>';
+    viewPie.innerHTML = pieHtml;
+  } else {
+    viewPie.innerHTML = '<p class="section-note" style="margin:0;">No fully-recorded dates yet to summarize.</p>';
+  }
+</script>
+
+</body>
+</html>

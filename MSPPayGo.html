@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MSP Pay Go Fulfillment</title>
+  <style>
+    :root {
+      --primary: #0f6cbd;
+      --primary-dark: #0a4d8c;
+      --primary-light: #e8f1fb;
+      --accent: #107c10;
+      --accent-light: #e5f2e5;
+      --warning: #c4710e;
+      --warning-light: #fdf4e7;
+      --danger: #c42b1c;
+      --surface: #ffffff;
+      --bg: #f0f2f5;
+      --text: #242424;
+      --text-secondary: #616161;
+      --border: #e0e0e0;
+      --border-light: #f0f0f0;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .page-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #0f6cbd 0%, #0a4d8c 60%, #063b6e 100%);
+      color: #fff;
+      padding: 16px 24px;
+      border-radius: var(--radius) var(--radius) 0 0;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .header-icon {
+      width: 36px; height: 36px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; }
+
+    /* ── Main content ── */
+    .main-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 var(--radius) var(--radius);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    /* ── Sections ── */
+    .section {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .section:last-child { border-bottom: none; }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .section-icon {
+      width: 26px; height: 26px;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .section-icon.blue { background: var(--primary-light); color: var(--primary); }
+    .section-icon.green { background: var(--accent-light); color: var(--accent); }
+    .section-icon.amber { background: var(--warning-light); color: var(--warning); }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.2px;
+    }
+    .section-subtitle {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 1px;
+    }
+
+    /* ── Form grid ── */
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px 16px;
+      margin-bottom: 10px;
+    }
+    .form-row:last-child { margin-bottom: 0; }
+
+    .field { display: flex; flex-direction: column; }
+    .field label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .field input, .field select {
+      height: 34px;
+      padding: 0 10px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--surface);
+      transition: all 0.2s ease;
+    }
+    .field input:focus, .field select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(15,108,189,0.12);
+    }
+    .field input[readonly] {
+      background: #fafafa;
+      border-color: var(--border-light);
+      color: var(--text-secondary);
+    }
+    .field select {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23616161' d='M2.5 4.5L6 8l3.5-3.5z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+
+    .input-highlight {
+      border-color: var(--primary) !important;
+      background: var(--primary-light) !important;
+      font-weight: 600;
+    }
+    .input-auto {
+      background: var(--accent-light) !important;
+      border-color: var(--accent) !important;
+      font-weight: 600;
+      color: var(--text) !important;
+    }
+
+    .required { color: var(--danger); font-weight: 700; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .badge-green { background: var(--accent-light); color: #0b5e0b; }
+    .badge-orange { background: #fff3e0; color: #8a4b01; }
+
+    /* ── Info strip ── */
+    .info-strip {
+      font-size: 11px;
+      margin-top: 4px;
+      padding: 4px 8px;
+      border-radius: 5px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      line-height: 1.4;
+    }
+    .info-strip.green { background: var(--accent-light); color: #0b5e0b; }
+    .info-strip.orange { background: #fff3e0; color: #8a4b01; }
+    .info-strip svg { flex-shrink: 0; }
+
+    /* ── Flow arrow ── */
+    .flow-connector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 0;
+      color: var(--text-secondary);
+    }
+
+    /* ── Result cards ── */
+    .results-row {
+      display: grid;
+      grid-template-columns: 1fr 32px 1fr;
+      gap: 0;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .result-card {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    .result-card.active {
+      border-color: var(--primary);
+      box-shadow: var(--shadow-sm);
+    }
+    .result-card .result-icon {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 6px;
+    }
+    .result-card .result-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .result-card .result-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.5px;
+    }
+    .result-card .result-value.empty {
+      color: #bbb;
+      font-size: 12px;
+      font-weight: 400;
+    }
+    .result-card .result-sub {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 3px;
+    }
+    .result-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+    }
+
+    /* ── Logic box ── */
+    .logic-box {
+      background: var(--warning-light);
+      border: 1px solid #f0d060;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #5c4300;
+      margin-bottom: 12px;
+    }
+    .logic-box strong { color: #3d2c00; }
+    .logic-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #edc240;
+      color: #3d2c00;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 6px;
+    }
+
+    /* ── Buttons ── */
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      height: 32px;
+      padding: 0 14px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-primary:disabled { background: #c0c0c0; cursor: not-allowed; }
+    .btn-outline { background: transparent; color: var(--text); border: 1.5px solid var(--border); }
+    .btn-outline:hover { background: #f5f5f5; border-color: #bbb; }
+    .btn-danger-outline { background: transparent; color: var(--danger); border: 1.5px solid var(--danger); }
+    .btn-danger-outline:hover { background: #fef1f0; }
+
+    /* ── History ── */
+    .history-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+    }
+    .history-toggle .count-badge {
+      background: var(--primary-light);
+      color: var(--primary);
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    table.history-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 11px;
+      margin-top: 10px;
+    }
+    table.history-table th {
+      background: #f8f9fa;
+      text-align: left;
+      padding: 6px 8px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid var(--border);
+      position: sticky;
+      top: 0;
+    }
+    table.history-table td {
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border-light);
+      color: var(--text);
+      vertical-align: middle;
+    }
+    table.history-table tbody tr { transition: background 0.15s; }
+    table.history-table tbody tr:hover td { background: #f8fafc; }
+    .history-scroll {
+      max-height: 240px;
+      overflow-y: auto;
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+    }
+    .no-history {
+      color: #aaa;
+      font-size: 12px;
+      padding: 20px 0;
+      text-align: center;
+    }
+
+    /* ── Copy button ── */
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: var(--primary-light);
+      border: none;
+      border-radius: 5px;
+      width: 26px; height: 26px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      transition: all 0.15s;
+    }
+    .copy-btn:hover { background: var(--primary); color: #fff; }
+    .result-card.active .copy-btn { display: flex; }
+    .copy-toast {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 5px;
+      pointer-events: none;
+      animation: fadeOut 1.2s forwards;
+    }
+    @keyframes fadeOut { 0%{opacity:1} 70%{opacity:1} 100%{opacity:0} }
+
+    /* ── Delete row btn ── */
+    .del-row-btn {
+      background: none;
+      border: none;
+      color: #ccc;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+    .del-row-btn:hover { color: var(--danger); background: #fef1f0; }
+
+    /* ── Print styles ── */
+    @media print {
+      body { background: #fff; padding: 0; }
+      .page-wrapper { max-width: 100%; }
+      .header { border-radius: 0; }
+      .main-card { box-shadow: none; border: 1px solid #ddd; border-radius: 0; }
+      .btn-row, .history-toggle svg, .copy-btn, .del-row-btn,
+      #clearHistoryBtn, #saveBtn, .no-print { display: none !important; }
+      .section { break-inside: avoid; }
+      .result-card { border: 1px solid #ccc; }
+      .history-scroll { max-height: none; overflow: visible; }
+      #historyContainer { display: block !important; }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      body { padding: 10px; }
+      .section { padding: 14px; }
+      .header { padding: 14px 18px; }
+      .form-row { grid-template-columns: 1fr; }
+      .results-row { grid-template-columns: 1fr; gap: 6px; }
+      .result-arrow { transform: rotate(90deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="16" rx="2"/>
+          <path d="M3 10h18"/>
+          <path d="M8 4v3M16 4v3"/>
+          <circle cx="12" cy="15" r="1.5" fill="#fff" stroke="none"/>
+        </svg>
+      </div>
+      <div>
+        <h1>MSP Pay Go Fulfillment</h1>
+      </div>
+    </div>
+
+    <div class="main-card">
+
+      <!-- Order Details -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-icon blue">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
+          <div>
+            <div class="section-title">Order Details</div>
+            <div class="section-subtitle">Order configuration and program type</div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>Order Type</label>
+            <input type="text" value="Revenue Order" readonly>
+          </div>
+          <div class="field">
+            <label>Order Sub Type</label>
+            <input type="text" value="GC Offer" readonly>
+          </div>
+          <div class="field">
+            <label>SSP Program Type</label>
+            <select id="sspProgramType">
+              <option value="PayGoNoCommit">Pay Go No Commit</option>
+              <option value="PayGoCommit">Pay Go Commit</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>SKU Type</label>
+            <select id="skuType">
+              <option value="PayGo">PayGo SKU</option>
+              <option value="Other">Other SKU (PayGo + Other)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fulfillment -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-icon green">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M10 16l2 2 4-4"/></svg>
+          </div>
+          <div>
+            <div class="section-title">Fulfillment</div>
+            <div class="section-subtitle">Enter date to auto-populate fulfillment and calculate support dates</div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>Date <span class="required">*</span></label>
+            <input type="date" id="orderDate" class="input-highlight">
+            <div class="info-strip" id="dateInfo" style="display:none;"></div>
+          </div>
+          <div class="field">
+            <label>Fulfillment Date <span class="badge" id="fulfillmentBadge" style="display:none;"></span></label>
+            <input type="text" id="fulfillmentDateDisplay" class="input-auto" readonly placeholder="Auto-populated from Date">
+            <input type="hidden" id="fulfillmentDate">
+          </div>
+          <div class="field">
+            <label>Term (Months)</label>
+            <select id="termMonths">
+              <option value="1">1 Month</option>
+              <option value="3">3 Months</option>
+              <option value="6">6 Months</option>
+              <option value="12" selected>12 Months</option>
+              <option value="24">24 Months</option>
+              <option value="36">36 Months</option>
+            </select>
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top:12px;">
+          <button class="btn btn-primary" id="saveBtn" disabled onclick="saveToHistory()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Save to History
+          </button>
+          <button class="btn btn-outline" onclick="resetForm()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            Reset
+          </button>
+          <button class="btn btn-danger-outline" id="clearHistoryBtn" style="display:none" onclick="clearHistory()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            Clear History
+          </button>
+          <button class="btn btn-outline no-print" id="exportCsvBtn" style="display:none" onclick="exportToCSV()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+          </button>
+          <button class="btn btn-outline no-print" onclick="printResults()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print
+          </button>
+        </div>
+      </div>
+
+      <!-- Support Dates -->
+      <div class="section" style="background:#f8fafc;">
+        <div class="section-header">
+          <div class="section-icon amber">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div>
+            <div class="section-title">Support Dates</div>
+            <div class="section-subtitle">Auto-calculated based on fulfillment date and program type</div>
+          </div>
+        </div>
+
+        <div class="results-row">
+          <div class="result-card" id="startBox">
+            <button class="copy-btn" onclick="copyDate('start')" title="Copy date">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+            <div class="result-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+            <div class="result-label">Support Start Date</div>
+            <div class="result-value empty" id="supportStartDate">Awaiting input</div>
+            <div class="result-sub" id="startSub"></div>
+          </div>
+
+          <div class="result-arrow">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </div>
+
+          <div class="result-card" id="endBox">
+            <button class="copy-btn" onclick="copyDate('end')" title="Copy date">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+            <div class="result-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div class="result-label">Support End Date</div>
+            <div class="result-value empty" id="supportEndDate">Awaiting input</div>
+            <div class="result-sub" id="endSub"></div>
+          </div>
+        </div>
+
+        <!-- Logic explanation -->
+        <div class="logic-box" id="logicBox" style="display:none;">
+          <div class="logic-tag" id="scenarioTag"></div><br>
+          <span id="logicText"></span>
+        </div>
+      </div>
+
+      <!-- History -->
+      <div class="section">
+        <div class="section-header history-toggle" onclick="toggleHistory()">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="section-icon blue">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div>
+              <div class="section-title">Update History</div>
+              <div class="section-subtitle">Track all fulfillment date changes</div>
+            </div>
+          </div>
+          <div>
+            <span class="count-badge" id="historyCount">0</span>
+            <svg id="historyChevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-left:6px;transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
+        <div id="historyContainer" style="display:none;">
+          <div class="no-history">No updates yet. Change the fulfillment date to get started.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div style="text-align:center;padding:10px 0 0;font-size:10px;color:#999;">
+      MSP Pay Go Fulfillment &bull; SSP Program Type: Pay Go Commit / Pay Go No Commit
+    </div>
+  </div>
+
+  <script>
+    const orderDateInput = document.getElementById('orderDate');
+    const fulfillmentInput = document.getElementById('fulfillmentDate');
+    const fulfillmentDisplay = document.getElementById('fulfillmentDateDisplay');
+    const fulfillmentBadge = document.getElementById('fulfillmentBadge');
+    const dateInfo = document.getElementById('dateInfo');
+    const termSelect = document.getElementById('termMonths');
+    const skuSelect = document.getElementById('skuType');
+    const sspSelect = document.getElementById('sspProgramType');
+    const startEl = document.getElementById('supportStartDate');
+    const endEl = document.getElementById('supportEndDate');
+    const startSub = document.getElementById('startSub');
+    const endSub = document.getElementById('endSub');
+    const startBox = document.getElementById('startBox');
+    const endBox = document.getElementById('endBox');
+    const logicBox = document.getElementById('logicBox');
+    const scenarioTag = document.getElementById('scenarioTag');
+    const logicText = document.getElementById('logicText');
+    const saveBtn = document.getElementById('saveBtn');
+    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+    const historyCount = document.getElementById('historyCount');
+    const historyChevron = document.getElementById('historyChevron');
+
+    var historyData = JSON.parse(localStorage.getItem('orderFulfillmentHistory') || '[]');
+    var historyOpen = historyData.length > 0;
+
+    orderDateInput.addEventListener('change', handleDateInput);
+    orderDateInput.addEventListener('input', handleDateInput);
+    termSelect.addEventListener('change', calculate);
+    skuSelect.addEventListener('change', calculate);
+    sspSelect.addEventListener('change', function() {
+      var label = sspSelect.options[sspSelect.selectedIndex].text;
+      calculate();
+    });
+
+    function getSSPLabel() {
+      return sspSelect.options[sspSelect.selectedIndex].text;
+    }
+
+    function getSkuLabel() {
+      return skuSelect.value === 'PayGo' ? 'Pay Go SKU' : 'PayGo + Other SKUs';
+    }
+
+    function toMMDDYYYY(date) {
+      var mm = String(date.getMonth() + 1).padStart(2, '0');
+      var dd = String(date.getDate()).padStart(2, '0');
+      return mm + '/' + dd + '/' + date.getFullYear();
+    }
+
+    function toYYYYMMDD(date) {
+      var yyyy = date.getFullYear();
+      var mm = String(date.getMonth() + 1).padStart(2, '0');
+      var dd = String(date.getDate()).padStart(2, '0');
+      return yyyy + '-' + mm + '-' + dd;
+    }
+
+    function parseDateInput() {
+      var val = orderDateInput.value;
+      if (!val) return null;
+      var parts = val.split('-');
+      if (parts.length !== 3) return null;
+      var y = parseInt(parts[0], 10);
+      var m = parseInt(parts[1], 10);
+      var d = parseInt(parts[2], 10);
+      if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
+      return new Date(y, m - 1, d);
+    }
+
+    function handleDateInput() {
+      var parsed = parseDateInput();
+      if (!parsed) {
+        fulfillmentInput.value = '';
+        fulfillmentDisplay.value = '';
+        fulfillmentBadge.style.display = 'none';
+        dateInfo.style.display = 'none';
+        calculate();
+        return;
+      }
+      var isFirst = parsed.getDate() === 1;
+      fulfillmentInput.value = formatDate(parsed);
+      fulfillmentDisplay.value = toMMDDYYYY(parsed);
+
+      fulfillmentBadge.style.display = 'inline-flex';
+      if (isFirst) {
+        fulfillmentBadge.textContent = '1st of Month';
+        fulfillmentBadge.className = 'badge badge-green';
+        dateInfo.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Date falls on the 1st of the month';
+        dateInfo.className = 'info-strip green';
+      } else {
+        fulfillmentBadge.textContent = 'Other than 1st';
+        fulfillmentBadge.className = 'badge badge-orange';
+        dateInfo.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Date falls on day ' + parsed.getDate() + ' (not 1st) — support end will be extended to month end';
+        dateInfo.className = 'info-strip orange';
+      }
+      dateInfo.style.display = 'flex';
+      calculate();
+    }
+
+    function initToday() {
+      orderDateInput.value = toYYYYMMDD(new Date());
+      handleDateInput();
+    }
+
+    function getLastDayOfMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
+
+    function addMonths(date, months) {
+      const d = new Date(date);
+      const tm = d.getMonth() + months;
+      const ty = d.getFullYear() + Math.floor(tm / 12);
+      const tmo = ((tm % 12) + 12) % 12;
+      d.setFullYear(ty);
+      d.setMonth(tmo);
+      d.setDate(Math.min(d.getDate(), getLastDayOfMonth(ty, tmo)));
+      return d;
+    }
+
+    function endOfMonth(date) {
+      return new Date(date.getFullYear(), date.getMonth(), getLastDayOfMonth(date.getFullYear(), date.getMonth()));
+    }
+
+    function formatDate(date) {
+      return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    }
+
+    function formatDisplay(date) {
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' });
+    }
+
+    function daysBetween(a, b) {
+      return Math.round((b - a) / (1000 * 60 * 60 * 24));
+    }
+
+    function calculate() {
+      const dateVal = fulfillmentInput.value;
+      if (!dateVal) {
+        startEl.textContent = 'Awaiting input';
+        endEl.textContent = 'Awaiting input';
+        startEl.classList.add('empty'); endEl.classList.add('empty');
+        startBox.classList.remove('active'); endBox.classList.remove('active');
+        startSub.textContent = ''; endSub.textContent = '';
+        logicBox.style.display = 'none';
+        saveBtn.disabled = true;
+        return;
+      }
+
+      const parts = dateVal.split('-');
+      const fulfillment = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      const termMonths = parseInt(termSelect.value);
+      const sku = skuSelect.value;
+      const ssp = sspSelect.value;
+      const sspLabel = getSSPLabel();
+      const isFirstOfMonth = fulfillment.getDate() === 1;
+
+      const supportStart = new Date(fulfillment);
+      let supportEnd;
+
+      if (isFirstOfMonth) {
+        supportEnd = addMonths(fulfillment, termMonths);
+        supportEnd.setDate(supportEnd.getDate() - 1);
+      } else {
+        supportEnd = endOfMonth(addMonths(fulfillment, termMonths));
+      }
+
+      const totalDays = daysBetween(supportStart, supportEnd);
+
+      startEl.textContent = formatDisplay(supportStart);
+      endEl.textContent = formatDisplay(supportEnd);
+      startSub.textContent = toMMDDYYYY(supportStart);
+      endSub.textContent = `${toMMDDYYYY(supportEnd)} (${totalDays} days)`;
+      startEl.classList.remove('empty'); endEl.classList.remove('empty');
+      startBox.classList.add('active'); endBox.classList.add('active');
+      saveBtn.disabled = false;
+
+      var skuLabel = getSkuLabel();
+
+      if (isFirstOfMonth) {
+        scenarioTag.textContent = sspLabel + ' — ' + skuLabel + ' — 1st of the Month';
+        logicText.innerHTML =
+          `<strong>Support Start</strong> = Fulfillment Date → <strong>${formatDisplay(supportStart)}</strong><br>` +
+          `<strong>Support End</strong> = Fulfillment Date + ${termMonths} months − 1 day → <strong>${formatDisplay(supportEnd)}</strong>`;
+      } else {
+        const rawEnd = addMonths(fulfillment, termMonths);
+        const remainingDays = supportEnd.getDate() - rawEnd.getDate();
+        scenarioTag.textContent = sspLabel + ' — ' + skuLabel + ' — Other than 1st of the Month';
+
+        if (ssp === 'PayGoCommit') {
+          logicText.innerHTML =
+            `<strong>Support Start</strong> = Fulfillment Date → <strong>${formatDisplay(supportStart)}</strong><br>` +
+            `<strong>Support End</strong> = Fulfillment Date + ${termMonths}m + Remaining Days to end of month<br>` +
+            `    ${formatDisplay(fulfillment)} + ${termMonths}m = ${formatDisplay(rawEnd)}<br>` +
+            `    Remaining days to end of ${rawEnd.toLocaleDateString('en-US',{month:'long',year:'numeric'})} = <strong>${remainingDays} days</strong><br>` +
+            `    ${formatDisplay(rawEnd)} + ${remainingDays} days → <strong>${formatDisplay(supportEnd)}</strong>`;
+        } else {
+          logicText.innerHTML =
+            `<strong>Support Start</strong> = Fulfillment Date → <strong>${formatDisplay(supportStart)}</strong><br>` +
+            `<strong>Support End</strong> = Fulfillment Date + ${termMonths}m = ${formatDisplay(rawEnd)} → ` +
+            `extended to end of ${rawEnd.toLocaleDateString('en-US',{month:'long',year:'numeric'})} → <strong>${formatDisplay(supportEnd)}</strong>`;
+        }
+      }
+      logicBox.style.display = 'block';
+    }
+
+    function saveToHistory() {
+      const dateVal = fulfillmentInput.value;
+      if (!dateVal) return;
+
+      const parts = dateVal.split('-');
+      const fulfillment = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      const termMonths = parseInt(termSelect.value);
+      const sku = skuSelect.value;
+      const sspLabel = getSSPLabel();
+      const isFirst = fulfillment.getDate() === 1;
+
+      const supportStart = new Date(fulfillment);
+      let supportEnd;
+      if (isFirst) {
+        supportEnd = addMonths(fulfillment, termMonths);
+        supportEnd.setDate(supportEnd.getDate() - 1);
+      } else {
+        supportEnd = endOfMonth(addMonths(fulfillment, termMonths));
+      }
+
+      var skuLabel = getSkuLabel();
+      var dateScenario = isFirst ? '1st of the Month' : 'Other than 1st of the Month';
+
+      historyData.unshift({
+        timestamp: new Date().toISOString(),
+        fulfillmentDate: formatDate(fulfillment),
+        term: termMonths,
+        sku: skuLabel,
+        ssp: sspLabel,
+        scenario: dateScenario,
+        supportStart: formatDate(supportStart),
+        supportEnd: formatDate(supportEnd),
+      });
+
+      localStorage.setItem('orderFulfillmentHistory', JSON.stringify(historyData));
+      renderHistory();
+      if (!historyOpen) toggleHistory();
+    }
+
+    function resetForm() {
+      termSelect.value = '12';
+      skuSelect.value = 'PayGo';
+      sspSelect.value = 'PayGoNoCommit';
+      orderDateInput.value = '';
+      fulfillmentInput.value = '';
+      fulfillmentDisplay.value = '';
+      fulfillmentBadge.style.display = 'none';
+      dateInfo.style.display = 'none';
+      startEl.textContent = 'Awaiting input';
+      startEl.classList.add('empty');
+      endEl.textContent = 'Awaiting input';
+      endEl.classList.add('empty');
+      startBox.classList.remove('active');
+      endBox.classList.remove('active');
+      startSub.textContent = '';
+      endSub.textContent = '';
+      logicBox.style.display = 'none';
+      saveBtn.disabled = true;
+    }
+
+    function copyDate(type) {
+      var el = type === 'start' ? startSub : endSub;
+      var box = type === 'start' ? startBox : endBox;
+      var text = el.textContent.split('(')[0].trim();
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(function() {
+        var btn = box.querySelector('.copy-btn');
+        btn.style.display = 'none';
+        var toast = document.createElement('div');
+        toast.className = 'copy-toast';
+        toast.textContent = 'Copied!';
+        box.appendChild(toast);
+        setTimeout(function() { toast.remove(); btn.style.display = 'flex'; }, 1200);
+      });
+    }
+
+    function exportToCSV() {
+      if (historyData.length === 0) return;
+      var headers = ['#','Updated At','SSP Type','Fulfillment Date','Term','SKU','Scenario','Support Start','Support End'];
+      var rows = historyData.map(function(h, i) {
+        var ts = new Date(h.timestamp);
+        return [
+          i + 1,
+          ts.toLocaleDateString('en-US') + ' ' + ts.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),
+          h.ssp || 'Pay Go No Commit',
+          h.fulfillmentDate,
+          h.term + 'm',
+          h.sku,
+          h.scenario,
+          h.supportStart,
+          h.supportEnd
+        ].map(function(v) { return '"' + String(v).replace(/"/g,'""') + '"'; }).join(',');
+      });
+      var csv = headers.join(',') + '\n' + rows.join('\n');
+      var blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+      var link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'fulfillment_history_' + new Date().toISOString().slice(0,10) + '.csv';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function deleteHistoryItem(index) {
+      historyData.splice(index, 1);
+      localStorage.setItem('orderFulfillmentHistory', JSON.stringify(historyData));
+      renderHistory();
+    }
+
+    function printResults() {
+      window.print();
+    }
+
+    function clearHistory() {
+      if (!confirm('Clear all saved history?')) return;
+      historyData = [];
+      localStorage.removeItem('orderFulfillmentHistory');
+      renderHistory();
+    }
+
+    function toggleHistory() {
+      historyOpen = !historyOpen;
+      document.getElementById('historyContainer').style.display = historyOpen ? 'block' : 'none';
+      historyChevron.style.transform = historyOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+    }
+
+    function renderHistory() {
+      var container = document.getElementById('historyContainer');
+      var exportCsvBtn = document.getElementById('exportCsvBtn');
+      historyCount.textContent = historyData.length;
+
+      if (historyData.length === 0) {
+        container.innerHTML = '<div class="no-history">No updates yet. Change the fulfillment date to get started.</div>';
+        clearHistoryBtn.style.display = 'none';
+        exportCsvBtn.style.display = 'none';
+        return;
+      }
+
+      clearHistoryBtn.style.display = 'inline-flex';
+      exportCsvBtn.style.display = 'inline-flex';
+      var html = '<div class="history-scroll"><table class="history-table"><thead><tr>' +
+        '<th>#</th><th>Updated At</th><th>SSP Type</th><th>Fulfillment</th><th>Term</th><th>SKU</th><th>Scenario</th><th>Start</th><th>End</th><th class="no-print"></th>' +
+        '</tr></thead><tbody>';
+
+      historyData.forEach(function(h, i) {
+        var ts = new Date(h.timestamp);
+        html += '<tr>' +
+          '<td>' + (i + 1) + '</td>' +
+          '<td>' + ts.toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'}) + ' ' + ts.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) + '</td>' +
+          '<td>' + (h.ssp || 'Pay Go No Commit') + '</td>' +
+          '<td><strong>' + h.fulfillmentDate + '</strong></td>' +
+          '<td>' + h.term + 'm</td>' +
+          '<td>' + h.sku + '</td>' +
+          '<td>' + h.scenario + '</td>' +
+          '<td>' + h.supportStart + '</td>' +
+          '<td>' + h.supportEnd + '</td>' +
+          '<td class="no-print"><button class="del-row-btn" onclick="deleteHistoryItem(' + i + ')" title="Delete this entry">&times;</button></td>' +
+        '</tr>';
+      });
+
+      html += '</tbody></table></div>';
+      container.innerHTML = html;
+    }
+
+    renderHistory();
+    if (historyOpen) {
+      document.getElementById('historyContainer').style.display = 'block';
+      historyChevron.style.transform = 'rotate(180deg)';
+    }
+    initToday();
+  </script>
+</body>
+</html>

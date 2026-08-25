@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 /Users/Amara.Maheshkumar/Documents/ClaudeCodeProjects/.claude/commands/render_marketplace_email.py*)",
+      "Bash(echo*base64*)",
+      "mcp__gmail__send_email",
+      "mcp__gmail__read_email",
+      "mcp__gmail__search_emails",
+      "mcp__jira__get_jira_issues_by_jql",
+      "mcp__jira__get_jira_issue_details",
+      "mcp__google-drive__download_file_from_url",
+      "mcp__google-drive__search_file",
+      "mcp__google-drive__list_sheet_tabs",
+      "mcp__google-drive__get_file_info",
+      "mcp__slack__post_message",
+      "mcp__slack__search_messages"
+    ]
+  }
+}

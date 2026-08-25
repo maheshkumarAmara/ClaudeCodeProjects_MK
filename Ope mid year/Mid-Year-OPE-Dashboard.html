@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mid-Year OPE Self-Assessment Prep</title>
+<style>
+  :root{
+    --navy:#050550;
+    --teal:#00C7C7;
+    --teal-text:#006d6d;
+    --teal-tint:#f0fdfd;
+    --ramp1:#050550;
+    --ramp2:#04366e;
+    --ramp3:#03668c;
+    --ramp4:#0197a9;
+    --ramp5:#00c7c7;
+    --src-slack:#050550;
+    --src-drive:#00C7C7;
+    --src-gmail:#16217a;
+    --src-calendar:#006d6d;
+    --src-jira:#0b1f66;
+    --src-confluence:#049a9a;
+    --src-zoom:#0e7490;
+    --bg:#f6f9fb;
+    --card-bg:#ffffff;
+    --border:#dbe7ea;
+    --text:#0b1420;
+    --text-muted:#5b6b73;
+    --radius:14px;
+    --shadow:0 2px 10px rgba(5,5,80,0.08);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.5;
+  }
+  a{color:var(--teal-text);}
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 20px 120px;}
+
+  /* Header */
+  .topbar{
+    background:linear-gradient(120deg,var(--navy),var(--src-confluence));
+    color:#fff;
+    border-radius:var(--radius);
+    padding:22px 26px;
+    margin-bottom:18px;
+    box-shadow:var(--shadow);
+  }
+  .topbar h1{margin:0 0 4px;font-size:22px;}
+  .topbar .sub{opacity:.9;font-size:14px;}
+  .topbar .meta{display:flex;flex-wrap:wrap;gap:18px;margin-top:14px;font-size:13px;}
+  .topbar .meta div b{display:block;font-size:13px;opacity:.75;font-weight:500;}
+  .topbar .meta div span{font-size:14px;font-weight:600;}
+
+  /* Instructions banner */
+  .banner{
+    background:var(--teal-tint);
+    border:1px solid var(--teal);
+    color:var(--teal-text);
+    border-radius:var(--radius);
+    padding:14px 18px;
+    font-size:13.5px;
+    margin-bottom:18px;
+  }
+  .banner b{color:var(--navy);}
+
+  /* Source badges */
+  .badges{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+  .badge{
+    font-size:12px;
+    padding:5px 10px;
+    border-radius:999px;
+    border:1px solid var(--border);
+    background:#fff;
+    display:flex;align-items:center;gap:6px;
+  }
+  .badge .dot{width:8px;height:8px;border-radius:50%;}
+  .badge.disconnected{opacity:.5;text-decoration:line-through;}
+
+  /* Stat cards */
+  .stats{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:12px;
+    margin-bottom:18px;
+  }
+  .stat{
+    background:var(--card-bg);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px;
+    cursor:pointer;
+    transition:transform .15s, box-shadow .15s;
+    position:relative;
+    overflow:hidden;
+  }
+  .stat:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
+  .stat.active{outline:2px solid var(--navy);}
+  .stat .num{font-size:26px;font-weight:700;color:var(--navy);}
+  .stat .label{font-size:12.5px;color:var(--text-muted);margin-top:2px;}
+  .stat .blob{
+    position:absolute;top:-20px;right:-20px;width:70px;height:70px;border-radius:50%;
+    opacity:.15;
+  }
+
+  /* Legend */
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+  .legend-item{
+    font-size:12px;padding:5px 10px;border-radius:999px;border:1px solid var(--border);
+    background:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none;
+  }
+  .legend-item .dot{width:8px;height:8px;border-radius:50%;}
+  .legend-item.active{border-color:var(--navy);background:var(--teal-tint);}
+
+  /* Filters row */
+  .filterbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:8px;}
+  .filterbar select{
+    padding:7px 10px;border-radius:8px;border:1px solid var(--border);font-size:13px;background:#fff;
+  }
+  .filterbar button{
+    padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:#fff;
+    font-size:13px;cursor:pointer;
+  }
+  .filterbar button.link{border:none;background:none;color:var(--teal-text);text-decoration:underline;}
+  .active-filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;min-height:20px;}
+  .chip{
+    font-size:12px;background:var(--navy);color:#fff;padding:4px 10px;border-radius:999px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .chip button{background:none;border:none;color:#fff;cursor:pointer;font-size:13px;line-height:1;padding:0;}
+
+  /* Directory button row */
+  .toolrow{display:flex;justify-content:flex-end;gap:10px;margin-bottom:14px;}
+  .btn{
+    padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:#fff;
+    font-size:13px;cursor:pointer;font-weight:600;color:var(--navy);
+  }
+  .btn.primary{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .btn.teal{background:var(--teal);color:var(--navy);border-color:var(--teal);}
+
+  /* Quarter sections */
+  .qsection{margin-bottom:26px;}
+  .qsection h2{
+    font-size:15px;text-transform:uppercase;letter-spacing:.06em;color:var(--teal-text);
+    border-bottom:2px solid var(--teal);padding-bottom:6px;margin-bottom:14px;
+  }
+  .empty-state{
+    padding:20px;text-align:center;color:var(--text-muted);font-size:13.5px;
+    border:1px dashed var(--border);border-radius:var(--radius);background:#fff;
+  }
+
+  /* Project card */
+  .project-card{
+    background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius);
+    padding:18px 20px;margin-bottom:14px;border-left:6px solid var(--navy);box-shadow:var(--shadow);
+  }
+  .project-card .phead{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:flex-start;}
+  .project-card h3{margin:0;font-size:16.5px;color:var(--navy);}
+  .project-card .ptags{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+  .tag{font-size:11px;padding:3px 8px;border-radius:999px;background:var(--teal-tint);color:var(--teal-text);border:1px solid var(--teal);}
+  .tag.ai{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .qselect{font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);}
+
+  .field-label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin:12px 0 4px;}
+  .editable{
+    width:100%;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13.5px;
+    font-family:inherit;color:var(--text);background:#fbfdfd;resize:none;overflow:hidden;min-height:38px;
+  }
+  .editable:focus{outline:2px solid var(--teal);border-color:var(--teal);}
+
+  .mixbar{display:flex;height:6px;border-radius:4px;overflow:hidden;margin-top:10px;background:var(--border);}
+  .mixbar span{height:100%;}
+
+  .stakeholders{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+  .avatar-item{display:flex;align-items:center;gap:6px;font-size:12.5px;background:#fbfdfd;border:1px solid var(--border);padding:4px 8px 4px 4px;border-radius:999px;cursor:pointer;}
+  .avatar-circle{width:22px;height:22px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;}
+
+  .sources-list{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
+  .source-item{display:flex;align-items:center;gap:8px;font-size:12.5px;}
+  .source-item .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .source-item .stype{color:var(--text-muted);min-width:76px;font-size:11px;text-transform:uppercase;letter-spacing:.03em;}
+
+  /* Other note */
+  .other-note{background:#fff;border:1px dashed var(--border);border-radius:var(--radius);padding:14px 18px;font-size:13px;color:var(--text-muted);margin-top:8px;}
+
+  /* Floating button */
+  .fab{
+    position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;border:none;
+    padding:14px 20px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;
+    box-shadow:0 4px 16px rgba(5,5,80,.35);z-index:50;
+  }
+  .fab:hover{background:var(--teal-text);}
+
+  /* Modal */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(5,5,80,.45);display:none;align-items:center;justify-content:center;
+    z-index:100;padding:20px;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal{
+    background:#fff;border-radius:var(--radius);max-width:680px;width:100%;max-height:86vh;overflow-y:auto;
+    padding:22px 24px;position:relative;
+  }
+  .modal h2{margin-top:0;color:var(--navy);font-size:18px;}
+  .modal .close{position:absolute;top:14px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;color:var(--text-muted);}
+  .draft-label{
+    display:inline-block;background:#fff3cd;color:#7a5b00;border:1px solid #ffe08a;
+    font-size:11.5px;padding:3px 9px;border-radius:999px;margin-bottom:12px;font-weight:600;
+  }
+  .modal textarea{
+    width:100%;min-height:130px;border:1px solid var(--border);border-radius:8px;padding:10px;
+    font-family:inherit;font-size:13.5px;margin-bottom:14px;
+  }
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px;}
+
+  .stakeholder-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13.5px;}
+  .stakeholder-row:last-child{border-bottom:none;}
+  .stakeholder-row .name{font-weight:600;flex:1;}
+  .stakeholder-row .projects{font-size:11.5px;color:var(--text-muted);}
+
+  .fb-list{max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:12px;}
+  .fb-check{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;}
+
+  footer{text-align:center;font-size:12px;color:var(--text-muted);margin-top:30px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <h1 id="cycleTitle">Mid-Year OPE Self-Assessment Prep</h1>
+    <div class="sub" id="cycleWindow"></div>
+    <div class="meta">
+      <div><b>Employee</b><span id="metaEmployee"></span></div>
+      <div><b>Review window</b><span id="metaWindow"></span></div>
+      <div><b>Self-assessment open</b><span id="metaOpen"></span></div>
+      <div><b>Due</b><span id="metaDue"></span></div>
+      <div><b>Generated</b><span id="metaGenerated"></span></div>
+    </div>
+  </div>
+
+  <div class="banner">
+    <b>How to use this page:</b> Everything below was pulled from your own Jira, Confluence, Slack, Google Drive, Gmail, and Google Calendar activity between the review window dates above. Nothing here has been submitted anywhere — it's a private, local file. Edit any role/summary/impact/quarter field directly (click into the text), review the draft self-assessment answers via the button in the bottom-right corner, and copy whatever you want into Workday yourself. Your edits are saved to this browser's local storage so they persist if you reopen the file, but nothing leaves this page.
+  </div>
+
+  <div class="badges" id="sourceBadges"></div>
+
+  <div class="stats" id="statCards"></div>
+
+  <div class="legend" id="legendRow"></div>
+
+  <div class="filterbar">
+    <select id="quarterFilter"><option value="">All quarters</option></select>
+    <button class="link" id="clearFiltersBtn">Clear all filters</button>
+    <div class="toolrow" style="margin-left:auto;">
+      <button class="btn" id="openDirectoryBtn">Stakeholder Directory</button>
+      <button class="btn" id="openFeedbackBtn">Request Feedback</button>
+    </div>
+  </div>
+  <div class="active-filters" id="activeFilters"></div>
+
+  <div id="projectSections"></div>
+
+  <div class="other-note" id="otherNote"></div>
+
+  <footer>Generated locally by the mid-year-project-collator skill. Not connected to any live model — the draft answers below were written during generation and are not regenerated by this page.</footer>
+</div>
+
+<button class="fab" id="openDraftBtn">📝 View Self-Assessment Draft</button>
+
+<!-- Draft modal -->
+<div class="modal-overlay" id="draftModal">
+  <div class="modal">
+    <button class="close" data-close="draftModal">&times;</button>
+    <span class="draft-label">DRAFT — review and edit before submitting to Workday</span>
+    <h2>Self-Assessment Draft</h2>
+    <div class="field-label" id="q1Label"></div>
+    <textarea id="draftQ1"></textarea>
+    <div class="field-label" id="q2Label"></div>
+    <textarea id="draftQ2"></textarea>
+    <div class="modal-actions">
+      <button class="btn" id="copyDraftBtn">Copy both answers</button>
+      <button class="btn primary" data-close="draftModal">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Stakeholder directory modal -->
+<div class="modal-overlay" id="directoryModal">
+  <div class="modal">
+    <button class="close" data-close="directoryModal">&times;</button>
+    <h2>Stakeholder Directory</h2>
+    <div id="directoryList"></div>
+  </div>
+</div>
+
+<!-- Feedback request modal -->
+<div class="modal-overlay" id="feedbackModal">
+  <div class="modal">
+    <button class="close" data-close="feedbackModal">&times;</button>
+    <h2>Request Feedback</h2>
+    <p style="font-size:13px;color:var(--text-muted);">Select stakeholders below, then generate a draft message. This is only text for you to copy — nothing is sent from this page.</p>
+    <div class="fb-list" id="fbList"></div>
+    <div class="modal-actions" style="justify-content:flex-start;">
+      <button class="btn" id="generateFbBtn">Generate draft</button>
+    </div>
+    <textarea id="fbOutput" style="margin-top:12px;display:none;"></textarea>
+    <div class="modal-actions">
+      <button class="btn" id="copyFbBtn" style="display:none;">Copy draft</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  var CYCLE = {
+    employeeName: "Amara Maheshkumar",
+    cycleName: "Mid-Year OPE FY27",
+    windowLabel: "Feb 1 – Jul 31, 2026",
+    generatedDate: "August 24, 2026",
+    assessmentWindow: "Aug 17 – Sep 3, 2026",
+    assessmentDue: "Sep 3, 2026, 11:59pm PT",
+    q1: "Based on goals for the past quarter/half year, describe top achievements, their impact, and how AI was used to influence outcomes.",
+    q2: "What are the most important areas of focus for success in the quarter/half year ahead — in performance, development, and ways of working?"
+  };
+
+  var INITIAL_DRAFT = {
+    q1: "Over the past half, my QA work centered on the MSP PayGo quote-to-cash validation, NPI order provisioning sign-off, and PRDOPS test case design/execution, alongside supporting the Willow multi-account provisioning launch and the Pay Monthly FY27 billing rollout.\n\nTop achievements:\n- Owned end-to-end QA for MSP PayGo across CPQ quoting, rate cards, entitlements, NetSuite invoicing, Snowflake sync, and Mulesoft billing calculations, and authored a complete set of 7 E2E Process Flow & Testing Guides that are now the team's reference documentation for validating PayGo billing behavior.\n- Acted as both sign-off gate and hands-on executor for NPI order provisioning, keeping P1 tickets moving without missed SLAs while surfacing UAT findings back into the automation implementation work.\n- Authored the Willow RSC Multi-Account E2E Process Flow & Testing Guide from the BRD and FY26WL sprint stories, and supported UAT kickoff, go/no-go, and hypercare for the Willow launch.\n- Maintained QA throughput across 25+ PRDOPS tickets spanning test case design, execution, and sign-off, tracked through a weekly PRDOPS QA sync.\n\nAI's role in these outcomes: I authored the Willow E2E testing guide using an internal Claude-based documentation skill, which sped up turning BRD and Jira story detail into a structured, review-ready guide. I also spent time this half evaluating Claude Code and Claude Cowork directly (an IT AIducate session and the Q2 Development Day workshop) and took part in the team's daily AI Test Acceleration and Test Hub Agent QA syncs — that hands-on exposure is what let me actually apply AI-assisted documentation to the Willow guide rather than just hearing about it.",
+    q2: "For the second half, I want to focus on:\n- Performance: extending the E2E testing guide pattern I built for PayGo and Willow to the remaining NPI and PRDOPS workstreams, so test coverage documentation stops depending on tribal knowledge and Jira-ticket archaeology.\n- Development: going deeper on AI-assisted QA tooling — building on the Test Hub Agent QA and AI Test Acceleration work this half to actually apply Claude Code/Cowork to repetitive parts of test case design and validation, not just evaluate them.\n- Ways of working: tightening the NPI sign-off loop (CPQ/Revenue/ProdOps) so P1 provisioning tickets have less hand-off latency, and making the recurring QA syncs (NPI, PRDOPS, Pay Monthly hypercare) more clearly tied to specific coverage gaps rather than general status updates."
+  };
+
+  var DATA = {
+    sources: [
+      { name: "Jira", connected: true, note: "" },
+      { name: "Confluence", connected: true, note: "" },
+      { name: "Slack", connected: true, note: "weak signal — recency-skewed search results" },
+      { name: "Google Drive", connected: true, note: "" },
+      { name: "Gmail", connected: true, note: "weak signal — subject lines only" },
+      { name: "Google Calendar", connected: true, note: "" },
+      { name: "Zoom", connected: false, note: "not connected" }
+    ],
+    other: "Also touched a handful of smaller items outside the main workstreams: a GitHub Desktop/VS Code setup reference doc, an ITD26-2189 tracking sheet, an internal 'RSC on AWS' reference sheet, and attendance at IT All-Hands and Change Advisory Board sessions.",
+    projects: [
+      {
+        name: "MSP PayGo — Quote-to-Cash E2E Validation",
+        color: "var(--ramp1)",
+        quarter: "both",
+        role: "QA lead — designed and executed end-to-end test coverage across the PayGo quote-to-cash lifecycle and authored the E2E process/testing guides used by the wider team.",
+        summary: "Owned QA for the MSP PayGo product line across its full quote-to-cash chain — CPQ quoting and quote generation, rate card & discount governance, entitlements & asset management, NetSuite invoicing/billing output, Snowflake data modeling & sync, and Mulesoft integration & billing calculations. Authored a matched set of 7 E2E Process Flow & Testing Guides (one per sub-system) plus targeted QA coverage-gap reviews and test case spreadsheets for individual defects.",
+        impact: "The 7 sub-system testing guides became the reference documentation the broader GTM IT team uses to validate PayGo billing behavior end-to-end; the coverage-gap reviews and dedicated test case sheets closed specific validation blind spots (billing schedule start-date/amount checks, rate card line accuracy, quote-PO-order consistency) before they reached production.",
+        ai: false,
+        stakeholders: [
+          { name: "Harmandeep Chahal", rel: "frequent test-case collaborator" },
+          { name: "Karthik Surada", rel: "frequent test-execution collaborator" },
+          { name: "Ajay Kumar Gaddam", rel: "collaborator" },
+          { name: "Naveen Kumar", rel: "collaborator" }
+        ],
+        sources: [
+          { type: "jira", label: "GTMIT-1151 — Test Execution", url: "https://rubrik.atlassian.net/browse/GTMIT-1151" },
+          { type: "jira", label: "GTMIT-1150 — Test Case Design", url: "https://rubrik.atlassian.net/browse/GTMIT-1150" },
+          { type: "jira", label: "GTMIT-1060", url: "https://rubrik.atlassian.net/browse/GTMIT-1060" },
+          { type: "jira", label: "GTMIT-1059", url: "https://rubrik.atlassian.net/browse/GTMIT-1059" },
+          { type: "jira", label: "GTMIT-954", url: "https://rubrik.atlassian.net/browse/GTMIT-954" },
+          { type: "drive", label: "MSP PayGo — CPQ Quoting — E2E Process Flow & Testing Guide", url: "https://docs.google.com/document/d/15juirzy3AMI5iOtNf_e9nemEIN1Qpn8aZKclsQDj9Vk/edit" },
+          { type: "drive", label: "MSP PayGo — CPQ Quote Generation & Lifecycle — E2E Guide", url: "https://docs.google.com/document/d/1w1hS02BCKIlSp3nYSMowhDaBt-ceeHrso_Og9_QAAl4/edit" },
+          { type: "drive", label: "MSP PayGo — Rate Card & Discount Governance — E2E Guide", url: "https://docs.google.com/document/d/1CQ6GUKAS0ugGuywcJAMh8JzOa1FkVD35sl7z_Xkpmok/edit" },
+          { type: "drive", label: "MSP PayGo — Entitlements & Asset Management — E2E Guide", url: "https://docs.google.com/document/d/14ZqYnD2pGY6qkGkxCyBC63LRw2DZfDh3AVhg9eEoLOY/edit" },
+          { type: "drive", label: "MSP PayGo — NetSuite Invoicing & Billing Output — E2E Guide", url: "https://docs.google.com/document/d/17bvFzL594z4yk58J9TVu-4uUYaiK0wIW3Jq0cCtMP4Y/edit" },
+          { type: "drive", label: "MSP PayGo — Snowflake Data Modeling & Sync — E2E Guide", url: "https://docs.google.com/document/d/14YZggGjAC_fYTi70YPpzOYNvnUEubytdczS_3YKNZ3Q/edit" },
+          { type: "drive", label: "MSP PayGo — Mulesoft Integration & Billing Calculations — E2E Guide", url: "https://docs.google.com/document/d/1YH7Pa_eRVl-2Cb1EHqECdoauuZ95RgYjBuFXAZ_LE4Q/edit" },
+          { type: "drive", label: "QA Coverage Review — GTMIT-697 (2026-07-27)", url: "https://docs.google.com/document/d/1Ly7AVlPgzWC1kR6GPdMso3CteclXyAj3bDBgfBx6EHo/edit" },
+          { type: "drive", label: "GTMIT-746 & 905 — Billing Schedule & Invoice Validation Template", url: "https://docs.google.com/spreadsheets/d/13_NJf0oDEVHNI42BxPLhhk3MvVAQvsPfuX14oLJ9MNY/edit" },
+          { type: "drive", label: "GTMIT-685 — Polaris Rate Card Line QA Test Cases", url: "https://docs.google.com/spreadsheets/d/1bm95uyQQtYubTAt11eWfAyeDxJThDALX5AasJPP0Kjk/edit" },
+          { type: "drive", label: "GTMIT-680 — Quote-PO-Order Validation Data", url: "https://docs.google.com/spreadsheets/d/1Pa0WgS9R7NhQ7C-2hjiFFHf5c3z80BvJqlXWDBFysa8/edit" }
+        ]
+      },
+      {
+        name: "NPI QA Sign-off & Provisioning",
+        color: "var(--ramp2)",
+        quarter: "both",
+        role: "QA sign-off owner and hands-on provisioning executor for New Product Introduction (NPI) order flows.",
+        summary: "Ran QA sign-off across the NPI order pipeline (CPQ, Revenue, ProdOps checkpoints) for a steady stream of order-provisioning tickets, and was personally assigned as executor on multiple P1 provisioning tasks. Participated in the recurring NPI Automation Implementation, NPI Scrum, and NPI UAT Testing sync-ups.",
+        impact: "Kept P1 provisioning tickets moving without missed SLAs by acting as both a sign-off gate and a direct executor, and surfaced UAT findings in the recurring NPI syncs that fed back into the automation implementation work.",
+        ai: false,
+        stakeholders: [
+          { name: "Sreeveena Chowdary", rel: "CPQ sign-off" },
+          { name: "Neethu Krishnan", rel: "Revenue sign-off" },
+          { name: "Ashwini Koppad", rel: "ProdOps sign-off" },
+          { name: "Balteshwar Singh", rel: "test case validation" }
+        ],
+        sources: [
+          { type: "jira", label: "ITNPI-4569 — QA Sign-off", url: "https://rubrik.atlassian.net/browse/ITNPI-4569" },
+          { type: "jira", label: "ITNPI-4515 — Please send order for provisioning (P1)", url: "https://rubrik.atlassian.net/browse/ITNPI-4515" },
+          { type: "jira", label: "ITNPI-4414 — Please send order for provisioning (P1)", url: "https://rubrik.atlassian.net/browse/ITNPI-4414" },
+          { type: "jira", label: "ITNPI-4386 — Please send order for provisioning (P1)", url: "https://rubrik.atlassian.net/browse/ITNPI-4386" },
+          { type: "jira", label: "ITNPI-4341 — QA Sign-off", url: "https://rubrik.atlassian.net/browse/ITNPI-4341" },
+          { type: "jira", label: "ITNPI-4316 — Please send order for provisioning (P1)", url: "https://rubrik.atlassian.net/browse/ITNPI-4316" },
+          { type: "calendar", label: "NPI Automation Implementation (recurring)", url: "" },
+          { type: "calendar", label: "NPI Scrum Call (recurring)", url: "" },
+          { type: "calendar", label: "NPI - UAT Testing Syncup (recurring)", url: "" }
+        ]
+      },
+      {
+        name: "PRDOPS Test Case Design & Execution",
+        color: "var(--ramp3)",
+        quarter: "both",
+        role: "Designed and executed test cases across a large volume of PRDOPS tickets, and reviewed teammates' test case design/execution subtasks.",
+        summary: "Handled both hands-on test case design/execution and reporter-side QA sign-off across 25+ PRDOPS tickets, with a weekly PRDOPS QA sync-up cadence to track coverage and defect status across the team.",
+        impact: "Maintained consistent QA throughput across the PRDOPS backlog and kept the team's test case design/execution work visible and reviewed through the weekly sync-up.",
+        ai: false,
+        stakeholders: [
+          { name: "Shashi Kumar", rel: "collaborator" },
+          { name: "US Mahesh Reddy", rel: "collaborator" },
+          { name: "Urati Sai Krishna", rel: "collaborator" }
+        ],
+        sources: [
+          { type: "jira", label: "PRDOPS-1278", url: "https://rubrik.atlassian.net/browse/PRDOPS-1278" },
+          { type: "jira", label: "PRDOPS-1235", url: "https://rubrik.atlassian.net/browse/PRDOPS-1235" },
+          { type: "jira", label: "PRDOPS-1220", url: "https://rubrik.atlassian.net/browse/PRDOPS-1220" },
+          { type: "jira", label: "PRDOPS-1206", url: "https://rubrik.atlassian.net/browse/PRDOPS-1206" },
+          { type: "jira", label: "PRDOPS-1192", url: "https://rubrik.atlassian.net/browse/PRDOPS-1192" },
+          { type: "jira", label: "PRDOPS-1184", url: "https://rubrik.atlassian.net/browse/PRDOPS-1184" },
+          { type: "calendar", label: "PRDOPS QA Sync up call (recurring)", url: "" }
+        ]
+      },
+      {
+        name: "Pay Monthly Billing (FY27 GTM)",
+        color: "var(--ramp4)",
+        quarter: "q1",
+        role: "QA support for the Pay Monthly FY27 GTM billing workstream — hypercare/office-hours participation and defect reporting.",
+        summary: "Supported the Pay Monthly FY27 go-to-market billing rollout through its hypercare/office-hours period and sprint grooming calls, and reported a billing-field validation defect found during QA.",
+        impact: "Defect reporting during hypercare helped catch a billing field validation issue before it affected downstream reporting.",
+        ai: false,
+        stakeholders: [
+          { name: "Praveen Kumar", rel: "collaborator" }
+        ],
+        sources: [
+          { type: "jira", label: "SPH-4308 — Global_Commit_ID__c validation bug", url: "https://rubrik.atlassian.net/browse/SPH-4308" },
+          { type: "calendar", label: "Pay Monthly — Hypercare / Office Hours (recurring)", url: "" },
+          { type: "calendar", label: "SFDC FY27 Sprint Grooming Calls (recurring)", url: "" }
+        ]
+      },
+      {
+        name: "Marketplace / Multi-Account Provisioning — Project Willow",
+        color: "var(--ramp5)",
+        quarter: "q2",
+        role: "Authored the E2E process flow and testing guide for Willow RSC Multi-Account provisioning, and supported UAT through go-live and hypercare.",
+        summary: "Authored the 'Willow RSC Multi Account — E2E Process Flow & Testing Guide' (Confluence, MK space) covering the multi-account provisioning flow validated across FY26WL Multi-Account Sprints 1-3, and supported the design sync-ups, UAT kickoff, go/no-go, and hypercare period for the Willow launch.",
+        impact: "The E2E guide became the documented reference for how multi-account provisioning is validated, used by the team through UAT and into hypercare.",
+        ai: true,
+        stakeholders: [],
+        sources: [
+          { type: "confluence", label: "Willow RSC Multi Account — E2E Process Flow & Testing Guide", url: "https://rubrik.atlassian.net/wiki/pages/5442307026" },
+          { type: "calendar", label: "Willow design sync-ups, UAT kickoff, go/no-go & hypercare (recurring, Feb–Jun)", url: "" }
+        ]
+      },
+      {
+        name: "RBOB IT Mid-term Solution UAT",
+        color: "var(--ramp1)",
+        quarter: "q2",
+        role: "QA participant in the RBOB Mid-term Solution UAT — attended status checkpoints and war-room bridges during the testing period.",
+        summary: "Participated in the RBOB IT Mid-term Solution UAT cycle, joining recurring status checkpoints and war-room bridge sessions during the testing window.",
+        impact: "Contributed QA presence during a high-visibility UAT cycle, helping keep testing status visible in real time during war-room sessions.",
+        ai: false,
+        stakeholders: [],
+        sources: [
+          { type: "calendar", label: "RBOB Mid-term Solution UAT status checkpoints & war-room bridges", url: "" }
+        ]
+      },
+      {
+        name: "QA/QE Automation & AI Test Acceleration",
+        color: "var(--ramp2)",
+        quarter: "both",
+        role: "Contributor to the team's AI-assisted test acceleration initiative — daily syncs, demo sessions, and hands-on evaluation of Claude Code and Claude Cowork for QA workflows.",
+        summary: "Took part in the daily 'AI Test Acceleration' and 'Test Hub Agent QA' syncs, attended TestHub demo sessions, and completed hands-on AI tooling sessions (IT AIducate: Claude Code; Q2 Development Day Workshop: Claude Cowork) — including saving outputs from Claude-assisted work to a dedicated Drive folder.",
+        impact: "Built direct familiarity with AI-assisted QA tooling that is now informing how test case design and documentation work gets done, including the E2E guides authored this half.",
+        ai: true,
+        stakeholders: [],
+        sources: [
+          { type: "calendar", label: "Daily Connect: AI Test Acceleration team (recurring)", url: "" },
+          { type: "calendar", label: "Daily Sync on Test Hub Agent QA (recurring)", url: "" },
+          { type: "calendar", label: "TestHub Demo Sessions", url: "" },
+          { type: "calendar", label: "IT AIducate Session: Claude Code", url: "" },
+          { type: "calendar", label: "Q2 Development Day Workshop: Claude Cowork", url: "" },
+          { type: "drive", label: "claude_outputs (Drive folder)", url: "https://drive.google.com/drive/folders/17Soymq3Bp9-x24gymCL2y-VEwqvq7Qx2" }
+        ]
+      }
+    ]
+  };
+
+  var SRC_COLORS = {
+    slack: "var(--src-slack)", drive: "var(--src-drive)", gmail: "var(--src-gmail)",
+    calendar: "var(--src-calendar)", jira: "var(--src-jira)", confluence: "var(--src-confluence)", zoom: "var(--src-zoom)"
+  };
+  function resolveVar(v){
+    if (typeof v === "string" && v.indexOf("var(") === 0) {
+      var name = v.slice(4, -1);
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+    return v;
+  }
+
+  var state = { quarter: "", sourceType: "", statFilter: "", stakeholder: "" };
+  var LS_KEY = "mid_year_ope_dashboard_v1";
+
+  function loadPrefs(){
+    try{
+      var raw = localStorage.getItem(LS_KEY);
+      return raw ? JSON.parse(raw) : {};
+    }catch(e){ return {}; }
+  }
+  function savePrefs(obj){
+    try{ localStorage.setItem(LS_KEY, JSON.stringify(obj)); }catch(e){ /* storage unavailable */ }
+  }
+  function getEdits(){
+    var p = loadPrefs();
+    return p.edits || {};
+  }
+  function saveEdit(projectName, field, value){
+    var p = loadPrefs();
+    p.edits = p.edits || {};
+    p.edits[projectName] = p.edits[projectName] || {};
+    p.edits[projectName][field] = value;
+    savePrefs(p);
+  }
+  function getDraftEdits(){
+    var p = loadPrefs();
+    return p.draft || null;
+  }
+  function saveDraftEdits(q1, q2){
+    var p = loadPrefs();
+    p.draft = { q1: q1, q2: q2 };
+    savePrefs(p);
+  }
+
+  function initials(name){
+    if(!name) return "?";
+    var parts = name.trim().split(/\s+/);
+    var s = parts[0].charAt(0);
+    if(parts.length > 1) s += parts[parts.length-1].charAt(0);
+    return s.toUpperCase();
+  }
+  function nameColor(name){
+    var hash = 0;
+    for(var i=0;i<name.length;i++){ hash = name.charCodeAt(i) + ((hash<<5)-hash); }
+    var hue = 175 + (Math.abs(hash) % 90); // 175-265
+    return "hsl(" + hue + ", 55%, 38%)";
+  }
+
+  function renderCycleText(){
+    document.getElementById("cycleTitle").textContent = CYCLE.cycleName + " — Self-Assessment Prep";
+    document.getElementById("cycleWindow").textContent = "Reviewing activity from " + CYCLE.windowLabel;
+    document.getElementById("metaEmployee").textContent = CYCLE.employeeName;
+    document.getElementById("metaWindow").textContent = CYCLE.windowLabel;
+    document.getElementById("metaOpen").textContent = CYCLE.assessmentWindow;
+    document.getElementById("metaDue").textContent = CYCLE.assessmentDue;
+    document.getElementById("metaGenerated").textContent = CYCLE.generatedDate;
+    document.getElementById("q1Label").textContent = "Q1. " + CYCLE.q1;
+    document.getElementById("q2Label").textContent = "Q2. " + CYCLE.q2;
+    document.getElementById("otherNote").textContent = "Other contributions: " + DATA.other;
+  }
+
+  function renderBadges(){
+    var el = document.getElementById("sourceBadges");
+    el.innerHTML = "";
+    DATA.sources.forEach(function(s){
+      var d = document.createElement("div");
+      d.className = "badge" + (s.connected ? "" : " disconnected");
+      var dotColor = s.connected ? "var(--teal)" : "#999";
+      d.innerHTML = '<span class="dot" style="background:' + dotColor + '"></span>' +
+        s.name + (s.note ? ' <span style="color:var(--text-muted)">(' + s.note + ')</span>' : '');
+      el.appendChild(d);
+    });
+  }
+
+  function normalizeQuarters(){
+    DATA.projects.forEach(function(p){
+      if(["q1","q2","both"].indexOf(p.quarter) === -1) p.quarter = "both";
+    });
+  }
+
+  function computeByType(){
+    var counts = {};
+    DATA.projects.forEach(function(p){
+      p.sources.forEach(function(s){
+        counts[s.type] = (counts[s.type]||0) + 1;
+      });
+    });
+    return counts;
+  }
+
+  function distinctStakeholders(){
+    var map = {};
+    DATA.projects.forEach(function(p){
+      p.stakeholders.forEach(function(sh){
+        if(!map[sh.name]) map[sh.name] = [];
+        map[sh.name].push(p.name);
+      });
+    });
+    return map;
+  }
+
+  function renderStats(){
+    var el = document.getElementById("statCards");
+    el.innerHTML = "";
+    var jiraCount = 0, docCount = 0;
+    DATA.projects.forEach(function(p){
+      p.sources.forEach(function(s){
+        if(s.type === "jira") jiraCount++;
+        if(s.type === "drive" || s.type === "confluence") docCount++;
+      });
+    });
+    var stakeCount = Object.keys(distinctStakeholders()).length;
+    var aiCount = DATA.projects.filter(function(p){ return p.ai; }).length;
+
+    var stats = [
+      { key: "all", num: DATA.projects.length, label: "Projects this half" },
+      { key: "jira", num: jiraCount, label: "Jira tickets touched" },
+      { key: "docs", num: docCount, label: "Docs & guides authored" },
+      { key: "stake", num: stakeCount, label: "Stakeholders engaged" },
+      { key: "ai", num: aiCount, label: "AI-assisted projects" }
+    ];
+    stats.forEach(function(s, i){
+      var d = document.createElement("div");
+      d.className = "stat";
+      d.dataset.key = s.key;
+      var rampColor = resolveVar("var(--ramp" + ((i%5)+1) + ")");
+      d.innerHTML = '<div class="blob" style="background:' + rampColor + '"></div>' +
+        '<div class="num">' + s.num + '</div><div class="label">' + s.label + '</div>';
+      el.appendChild(d);
+    });
+  }
+
+  function bindStatClicks(){
+    document.querySelectorAll(".stat").forEach(function(card){
+      card.addEventListener("click", function(){
+        var key = card.dataset.key;
+        if(state.statFilter === key){ state.statFilter = ""; }
+        else { state.statFilter = key; }
+        applyFilters();
+      });
+    });
+  }
+
+  function renderLegend(){
+    var el = document.getElementById("legendRow");
+    el.innerHTML = "";
+    var counts = computeByType();
+    Object.keys(SRC_COLORS).forEach(function(type){
+      if(!counts[type]) return;
+      var d = document.createElement("div");
+      d.className = "legend-item";
+      d.dataset.type = type;
+      d.innerHTML = '<span class="dot" style="background:' + resolveVar(SRC_COLORS[type]) + '"></span>' +
+        type.charAt(0).toUpperCase() + type.slice(1) + ' (' + counts[type] + ')';
+      el.appendChild(d);
+    });
+  }
+
+  function bindLegendClicks(){
+    document.querySelectorAll(".legend-item").forEach(function(item){
+      item.addEventListener("click", function(){
+        var type = item.dataset.type;
+        state.sourceType = (state.sourceType === type) ? "" : type;
+        applyFilters();
+      });
+    });
+  }
+
+  function mixBar(project){
+    var counts = {};
+    project.sources.forEach(function(s){ counts[s.type] = (counts[s.type]||0)+1; });
+    var total = project.sources.length || 1;
+    var html = '<div class="mixbar">';
+    Object.keys(counts).forEach(function(type){
+      var pct = (counts[type]/total*100).toFixed(1);
+      html += '<span style="width:' + pct + '%;background:' + resolveVar(SRC_COLORS[type] || "#ccc") + '"></span>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function avatarItem(sh){
+    var color = nameColor(sh.name);
+    return '<div class="avatar-item" data-stakeholder="' + sh.name.replace(/"/g,'&quot;') + '">' +
+      '<span class="avatar-circle" style="background:' + color + '">' + initials(sh.name) + '</span>' +
+      '<span>' + sh.name + (sh.rel ? ' <span style="color:var(--text-muted)">— ' + sh.rel + '</span>' : '') + '</span>' +
+      '</div>';
+  }
+
+  function sourceItem(s){
+    var dotColor = resolveVar(SRC_COLORS[s.type] || "#ccc");
+    var content = s.url ? '<a href="' + s.url + '" target="_blank" rel="noopener">' + s.label + '</a>' : s.label;
+    return '<div class="source-item"><span class="dot" style="background:' + dotColor + '"></span>' +
+      '<span class="stype">' + s.type + '</span><span>' + content + '</span></div>';
+  }
+
+  function projectCard(p){
+    var edits = getEdits()[p.name] || {};
+    var role = edits.role !== undefined ? edits.role : p.role;
+    var summary = edits.summary !== undefined ? edits.summary : p.summary;
+    var impact = edits.impact !== undefined ? edits.impact : p.impact;
+    var quarter = edits.quarter !== undefined ? edits.quarter : p.quarter;
+
+    var div = document.createElement("div");
+    div.className = "project-card";
+    div.style.borderLeftColor = resolveVar(p.color);
+    div.dataset.project = p.name;
+    div.dataset.quarter = quarter;
+
+    var qLabel = { q1: "Q1 (Feb–Apr)", q2: "Q2 (May–Jul)", both: "Spans both quarters" };
+
+    div.innerHTML =
+      '<div class="phead">' +
+        '<h3>' + p.name + '</h3>' +
+        '<div class="ptags">' +
+          (p.ai ? '<span class="tag ai">AI-assisted</span>' : '') +
+          '<select class="qselect" data-field="quarter">' +
+            '<option value="q1"' + (quarter==="q1"?" selected":"") + '>' + qLabel.q1 + '</option>' +
+            '<option value="q2"' + (quarter==="q2"?" selected":"") + '>' + qLabel.q2 + '</option>' +
+            '<option value="both"' + (quarter==="both"?" selected":"") + '>' + qLabel.both + '</option>' +
+          '</select>' +
+        '</div>' +
+      '</div>' +
+      mixBar(p) +
+      '<div class="field-label">Role</div>' +
+      '<textarea class="editable" data-field="role">' + role + '</textarea>' +
+      '<div class="field-label">Summary</div>' +
+      '<textarea class="editable" data-field="summary">' + summary + '</textarea>' +
+      '<div class="field-label">Impact</div>' +
+      '<textarea class="editable" data-field="impact">' + impact + '</textarea>' +
+      (p.stakeholders.length ? '<div class="field-label">Stakeholders</div><div class="stakeholders">' + p.stakeholders.map(avatarItem).join("") + '</div>' : '') +
+      '<div class="field-label">Sources</div>' +
+      '<div class="sources-list">' + p.sources.map(sourceItem).join("") + '</div>';
+
+    div.querySelectorAll(".editable").forEach(function(ta){
+      autoGrow(ta);
+      ta.addEventListener("input", function(){
+        autoGrow(ta);
+        saveEdit(p.name, ta.dataset.field, ta.value);
+      });
+    });
+    div.querySelector(".qselect").addEventListener("change", function(e){
+      saveEdit(p.name, "quarter", e.target.value);
+      div.dataset.quarter = e.target.value;
+      renderActiveGrouping();
+    });
+    div.querySelectorAll(".avatar-item").forEach(function(av){
+      av.addEventListener("click", function(){
+        var name = av.dataset.stakeholder;
+        state.stakeholder = (state.stakeholder === name) ? "" : name;
+        applyFilters();
+      });
+    });
+
+    return div;
+  }
+
+  function autoGrow(ta){
+    ta.style.height = "auto";
+    ta.style.height = (ta.scrollHeight + 2) + "px";
+  }
+
+  function restoreProjectEdits(){
+    // edits are read live in projectCard() via getEdits(); nothing to pre-mutate.
+  }
+
+  function projectPassesFilters(p){
+    var edits = getEdits()[p.name] || {};
+    var quarter = edits.quarter !== undefined ? edits.quarter : p.quarter;
+
+    if(state.quarter && quarter !== state.quarter) return false;
+    if(state.sourceType && !p.sources.some(function(s){ return s.type === state.sourceType; })) return false;
+    if(state.stakeholder && !p.stakeholders.some(function(sh){ return sh.name === state.stakeholder; })) return false;
+    if(state.statFilter === "jira" && !p.sources.some(function(s){ return s.type === "jira"; })) return false;
+    if(state.statFilter === "docs" && !p.sources.some(function(s){ return s.type === "drive" || s.type === "confluence"; })) return false;
+    if(state.statFilter === "stake" && p.stakeholders.length === 0) return false;
+    if(state.statFilter === "ai" && !p.ai) return false;
+    return true;
+  }
+
+  function renderActiveGrouping(){
+    // re-run applyFilters to keep grouping consistent with any quarter edits
+    applyFilters();
+  }
+
+  function renderActiveFilters(){
+    var el = document.getElementById("activeFilters");
+    el.innerHTML = "";
+    var chips = [];
+    if(state.quarter) chips.push({ label: "Quarter: " + state.quarter.toUpperCase(), clear: function(){ state.quarter = ""; } });
+    if(state.sourceType) chips.push({ label: "Source: " + state.sourceType, clear: function(){ state.sourceType = ""; } });
+    if(state.stakeholder) chips.push({ label: "Stakeholder: " + state.stakeholder, clear: function(){ state.stakeholder = ""; } });
+    if(state.statFilter) chips.push({ label: "Stat filter: " + state.statFilter, clear: function(){ state.statFilter = ""; } });
+    chips.forEach(function(c){
+      var chip = document.createElement("div");
+      chip.className = "chip";
+      chip.innerHTML = c.label + ' <button>&times;</button>';
+      chip.querySelector("button").addEventListener("click", function(){ c.clear(); applyFilters(); });
+      el.appendChild(chip);
+    });
+  }
+
+  function applyFilters(){
+    document.querySelectorAll(".stat").forEach(function(card){
+      card.classList.toggle("active", card.dataset.key === state.statFilter);
+    });
+    document.querySelectorAll(".legend-item").forEach(function(item){
+      item.classList.toggle("active", item.dataset.type === state.sourceType);
+    });
+    document.getElementById("quarterFilter").value = state.quarter;
+
+    renderActiveFilters();
+    renderProjects();
+  }
+
+  function clearAllFilters(){
+    state = { quarter: "", sourceType: "", statFilter: "", stakeholder: "" };
+    applyFilters();
+  }
+
+  function renderProjects(){
+    var container = document.getElementById("projectSections");
+    container.innerHTML = "";
+    var groups = { q1: [], q2: [], both: [] };
+    DATA.projects.forEach(function(p){
+      var edits = getEdits()[p.name] || {};
+      var quarter = edits.quarter !== undefined ? edits.quarter : p.quarter;
+      if(projectPassesFilters(p)) groups[quarter].push(p);
+    });
+
+    var labels = { q1: "Q1 — Feb to Apr 2026", q2: "Q2 — May to Jul 2026", both: "Spanning Both Quarters" };
+    var any = false;
+    ["q1","q2","both"].forEach(function(key){
+      if(groups[key].length === 0) return;
+      any = true;
+      var section = document.createElement("div");
+      section.className = "qsection";
+      var h2 = document.createElement("h2");
+      h2.textContent = labels[key];
+      section.appendChild(h2);
+      groups[key].forEach(function(p){ section.appendChild(projectCard(p)); });
+      container.appendChild(section);
+    });
+    if(!any){
+      var empty = document.createElement("div");
+      empty.className = "empty-state";
+      empty.textContent = "No projects match the selected filters.";
+      container.appendChild(empty);
+    }
+  }
+
+  function populateQuarterFilter(){
+    var sel = document.getElementById("quarterFilter");
+    var opts = [["q1","Q1 (Feb–Apr)"],["q2","Q2 (May–Jul)"],["both","Spans both"]];
+    opts.forEach(function(o){
+      var opt = document.createElement("option");
+      opt.value = o[0]; opt.textContent = o[1];
+      sel.appendChild(opt);
+    });
+    sel.addEventListener("change", function(){
+      state.quarter = sel.value;
+      applyFilters();
+    });
+    document.getElementById("clearFiltersBtn").addEventListener("click", clearAllFilters);
+  }
+
+  function restorePrefs(){
+    // handled inline via getEdits()/getDraftEdits() at render time
+  }
+
+  /* Modals */
+  function openModal(id){ document.getElementById(id).classList.add("open"); }
+  function closeModal(id){ document.getElementById(id).classList.remove("open"); }
+  function initModal(){
+    document.querySelectorAll("[data-close]").forEach(function(btn){
+      btn.addEventListener("click", function(){ closeModal(btn.dataset.close); });
+    });
+    document.querySelectorAll(".modal-overlay").forEach(function(ov){
+      ov.addEventListener("click", function(e){ if(e.target === ov) ov.classList.remove("open"); });
+    });
+  }
+
+  function initDraftModal(){
+    var saved = getDraftEdits();
+    document.getElementById("draftQ1").value = saved ? saved.q1 : INITIAL_DRAFT.q1;
+    document.getElementById("draftQ2").value = saved ? saved.q2 : INITIAL_DRAFT.q2;
+    document.getElementById("openDraftBtn").addEventListener("click", function(){ openModal("draftModal"); });
+    ["draftQ1","draftQ2"].forEach(function(id){
+      document.getElementById(id).addEventListener("input", function(){
+        saveDraftEdits(document.getElementById("draftQ1").value, document.getElementById("draftQ2").value);
+      });
+    });
+    document.getElementById("copyDraftBtn").addEventListener("click", function(){
+      var text = "Q1. " + CYCLE.q1 + "\n\n" + document.getElementById("draftQ1").value +
+        "\n\n---\n\nQ2. " + CYCLE.q2 + "\n\n" + document.getElementById("draftQ2").value;
+      copyText(text);
+    });
+  }
+
+  function copyText(text){
+    try{
+      navigator.clipboard.writeText(text);
+    }catch(e){
+      window.prompt("Copy this text:", text);
+    }
+  }
+
+  function buildStakeholderDirectory(){
+    return distinctStakeholders();
+  }
+
+  function stakeholderProjects(name){
+    return DATA.projects.filter(function(p){
+      return p.stakeholders.some(function(sh){ return sh.name === name; });
+    }).map(function(p){ return p.name; });
+  }
+
+  function openStakeholderDirectory(){
+    var el = document.getElementById("directoryList");
+    el.innerHTML = "";
+    var map = buildStakeholderDirectory();
+    var names = Object.keys(map).sort();
+    if(names.length === 0){
+      el.innerHTML = '<div class="empty-state">No named stakeholders were identified from the pulled activity.</div>';
+    } else {
+      names.forEach(function(name){
+        var row = document.createElement("div");
+        row.className = "stakeholder-row";
+        var color = nameColor(name);
+        row.innerHTML = '<span class="avatar-circle" style="background:' + color + '">' + initials(name) + '</span>' +
+          '<span class="name">' + name + '</span>' +
+          '<span class="projects">' + map[name].join(", ") + '</span>';
+        row.addEventListener("click", function(){
+          state.stakeholder = (state.stakeholder === name) ? "" : name;
+          applyFilters();
+          closeModal("directoryModal");
+        });
+        el.appendChild(row);
+      });
+    }
+    openModal("directoryModal");
+  }
+
+  function buildFeedbackTemplate(names){
+    return names.map(function(name){
+      var projects = stakeholderProjects(name);
+      return "Hi " + name.split(" ")[0] + ",\n\n" +
+        "I'm working on my Mid-Year OPE self-assessment and would love a few lines of feedback on our work together on " +
+        (projects.length ? projects.join(" and ") : "our recent projects") +
+        ". If you have 5-10 minutes sometime this week, it would really help. Feel free to reply here or over Slack.\n\n" +
+        "Thanks so much!\n" + CYCLE.employeeName;
+    }).join("\n\n----------\n\n");
+  }
+
+  function openFeedbackModal(){
+    var el = document.getElementById("fbList");
+    el.innerHTML = "";
+    var map = buildStakeholderDirectory();
+    var names = Object.keys(map).sort();
+    if(names.length === 0){
+      el.innerHTML = '<div class="empty-state">No named stakeholders were identified from the pulled activity.</div>';
+    } else {
+      names.forEach(function(name){
+        var row = document.createElement("div");
+        row.className = "fb-check";
+        row.innerHTML = '<input type="checkbox" value="' + name.replace(/"/g,'&quot;') + '" id="fbchk-' + name.replace(/\s+/g,'_') + '"> ' +
+          '<label for="fbchk-' + name.replace(/\s+/g,'_') + '">' + name + '</label>';
+        el.appendChild(row);
+      });
+    }
+    document.getElementById("fbOutput").style.display = "none";
+    document.getElementById("copyFbBtn").style.display = "none";
+    openModal("feedbackModal");
+  }
+
+  function initFeedbackModal(){
+    document.getElementById("openFeedbackBtn").addEventListener("click", openFeedbackModal);
+    document.getElementById("generateFbBtn").addEventListener("click", function(){
+      var checked = Array.prototype.slice.call(document.querySelectorAll("#fbList input:checked")).map(function(c){ return c.value; });
+      var out = document.getElementById("fbOutput");
+      if(checked.length === 0){
+        out.value = "Select at least one stakeholder above.";
+      } else {
+        out.value = buildFeedbackTemplate(checked);
+      }
+      out.style.display = "block";
+      document.getElementById("copyFbBtn").style.display = "inline-block";
+    });
+    document.getElementById("copyFbBtn").addEventListener("click", function(){
+      copyText(document.getElementById("fbOutput").value);
+    });
+  }
+
+  function initDirectoryModal(){
+    document.getElementById("openDirectoryBtn").addEventListener("click", openStakeholderDirectory);
+  }
+
+  /* Init sequence */
+  populateQuarterFilter();
+  renderCycleText();
+  normalizeQuarters();
+  restoreProjectEdits();
+  renderBadges();
+  renderStats();
+  bindStatClicks();
+  renderLegend();
+  bindLegendClicks();
+  initModal();
+  initDraftModal();
+  initDirectoryModal();
+  initFeedbackModal();
+  restorePrefs();
+  applyFilters();
+
+})();
+</script>
+</body>
+</html>

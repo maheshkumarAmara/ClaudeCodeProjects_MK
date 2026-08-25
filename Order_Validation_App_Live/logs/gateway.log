@@ -1,0 +1,46 @@
+[2026-08-13T06:29:20.868Z] Gateway listening on http://localhost:8501 (backend port 8510, idle timeout 15m)
+[2026-08-13T06:29:33.320Z] Starting backend (streamlit on 8510, bridge on 3001)...
+[2026-08-13T06:29:36.048Z] Backend is up on port 8510.
+[2026-08-17T06:56:56.744Z] Gateway listening on http://localhost:8501 (backend port 8510, idle timeout 15m)
+[2026-08-17T06:57:03.808Z] Starting backend (streamlit on 8510, bridge on 3001)...
+[2026-08-17T06:57:28.889Z] Backend failed to come up: Timed out waiting for port 8510
+[2026-08-17T06:57:29.198Z] Starting backend (streamlit on 8510, bridge on 3001)...
+[2026-08-17T06:57:34.959Z] Proxy error: connect ECONNREFUSED 127.0.0.1:8510
+[2026-08-17T06:57:35.011Z] Proxy error: connect ECONNREFUSED 127.0.0.1:8510
+[2026-08-17T06:57:40.709Z] Proxy error: connect ECONNREFUSED 127.0.0.1:8510
+[2026-08-17T06:57:41.007Z] Proxy error: connect ECONNREFUSED 127.0.0.1:8510
+[2026-08-17T06:57:52.293Z] Backend process exited (code=127, signal=null).
+[2026-08-17T06:57:54.073Z] Backend process exited (code=127, signal=null).
+[2026-08-17T06:57:54.233Z] Backend failed to come up: Timed out waiting for port 8510
+[2026-08-17T06:58:20.858Z] Starting backend (streamlit on 8510, bridge on 3001)...
+[2026-08-17T06:58:22.831Z] Backend process exited (code=127, signal=null).
+[2026-08-17T06:58:45.941Z] Backend failed to come up: Timed out waiting for port 8510
+[2026-08-17T06:58:46.023Z] Starting backend (streamlit on 8510, bridge on 3001)...
+[2026-08-17T06:58:47.983Z] Backend process exited (code=127, signal=null).
+[2026-08-17T06:58:50.595Z] Gateway listening on http://localhost:8501 (backend port 8510, idle timeout 15m)
+[2026-08-17T06:59:39.368Z] Starting backend (streamlit on 8510, bridge on 3001)...
+[2026-08-17T06:59:42.707Z] Backend is up on port 8510.
+[2026-08-17T13:45:08.320Z] Idle for 15 min with no open connections — stopping backend.
+[2026-08-17T13:45:08.466Z] Backend stopped (idle timeout).
+[2026-08-17T13:45:08.466Z] Backend process exited (code=null, signal=SIGTERM).
+[2026-08-18T02:24:25.840Z] Gateway listening on http://localhost:8501 (backend port 8510, idle timeout 15m)
+[2026-08-18T13:40:21.442Z] Gateway listening on http://localhost:8501 (backend port 8510, idle timeout 15m)
+[2026-08-19T01:58:18.948Z] Gateway listening on http://localhost:8501 (backend port 8510, idle timeout 15m)
+[2026-08-21T03:33:53.310Z] Gateway listening on http://localhost:8501 (backend port 8510, idle timeout 15m)
+[2026-08-21T12:28:59.921Z] Starting backend (streamlit on 8510, bridge on 3001)...
+[2026-08-21T12:29:03.341Z] Backend is up on port 8510.
+[2026-08-21T13:10:14.470Z] Idle for 16 min with no open connections — stopping backend.
+[2026-08-21T13:10:14.688Z] Backend stopped (idle timeout).
+[2026-08-21T13:10:14.688Z] Backend process exited (code=null, signal=SIGTERM).
+[2026-08-24T02:17:28.012Z] Gateway listening on http://localhost:8501 (backend port 8510, idle timeout 15m)
+[2026-08-24T11:09:54.688Z] Starting backend (streamlit on 8510, bridge on 3001)...
+[2026-08-24T11:09:57.778Z] Backend is up on port 8510.
+[2026-08-24T14:07:09.044Z] Idle for 15 min with no open connections — stopping backend.
+[2026-08-24T14:07:09.278Z] Backend stopped (idle timeout).
+[2026-08-24T14:07:09.278Z] Backend process exited (code=null, signal=SIGTERM).
+[2026-08-24T14:28:18.824Z] Starting backend (streamlit on 8510, bridge on 3001)...
+[2026-08-24T14:28:21.918Z] Backend is up on port 8510.
+[2026-08-24T15:27:31.127Z] Idle for 16 min with no open connections — stopping backend.
+[2026-08-24T15:27:31.361Z] Backend stopped (idle timeout).
+[2026-08-24T15:27:31.361Z] Backend process exited (code=null, signal=SIGTERM).
+[2026-08-25T03:17:24.942Z] Gateway listening on http://localhost:8501 (backend port 8510, idle timeout 15m)
