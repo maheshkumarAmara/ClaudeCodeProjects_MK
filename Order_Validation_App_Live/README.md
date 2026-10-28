@@ -103,7 +103,12 @@ Run history is kept in `data/history.json`. An uploaded scenario matrix is saved
 ## Repository layout
 
 ```
-Order_Validation_App.py   Main app (Order Validation page)
+Order_Validation_App.py   Main app (Order Validation page): sidebar, inputs and the validation/results UI
+ov/                       Helpers moved out of the main app, none of which call Streamlit:
+                            sf_client (sf CLI queries), calc (dates, expected metrics),
+                            booking_compare (booking header / line item checks),
+                            storage (run history, scenario matrix), parsing, report (HTML export)
+theme.py                  Shared dark-theme CSS; each page calls apply_theme("<page>") after set_page_config
 streamlit_app.py          Older copy of the main app. NOT launched by launch.sh; kept for reference
 pages/                    Extra Streamlit pages (one file = one sidebar entry)
 po-processing-engine/     FastAPI app for the PO Processing Engine (own README)
