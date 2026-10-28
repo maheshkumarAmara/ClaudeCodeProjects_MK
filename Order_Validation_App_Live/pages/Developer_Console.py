@@ -2,12 +2,14 @@
 
 Everything goes through the Salesforce CLI (`sf`), so it uses the same logged-in
 sessions as the rest of the app. No credentials are stored. Purely additive:
-does not import anything from Order_Validation_App.py or the other pages.
+does not import anything from Order_Validation_App.py or the other pages (it
+only imports the shared stylesheet from theme.py).
 """
 
 import json
 import re
 import subprocess
+import sys
 import tempfile
 import time
 from datetime import datetime
@@ -16,7 +18,12 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+# theme.py lives in the project root, one level above pages/.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from theme import apply_theme  # noqa: E402
+
 st.set_page_config(page_title="Developer Console · Rubrik", page_icon="🛠️", layout="wide")
+apply_theme("devconsole")
 
 # Candidate CLI aliases per environment, first one that resolves wins.
 # (README documents qa-org, but some machines have the QA org saved as rbkqa.)
@@ -126,7 +133,14 @@ def load_into_editor(kind: str, body: str):
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### 🛠️ Developer Console")
+    st.markdown("""
+    <div class="sidebar-brand">
+        <div class="sidebar-brand-title">🛠️ Developer Console</div>
+        <div class="sidebar-brand-sub">Rubrik ProdOps · Salesforce CLI</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="sidebar-section-label">Salesforce Connection</div>', unsafe_allow_html=True)
     env = st.selectbox("Environment", list(ORG_ALIASES.keys()), key="devconsole_env")
     org = resolve_org(env)
     if org["alias"]:
@@ -152,8 +166,21 @@ with st.sidebar:
                       key=f"hist_{i}", use_container_width=True,
                       on_click=load_into_editor, args=(h["kind"], h["body"]))
 
-st.title("Developer Console")
-st.caption(f"Running against **{env}** · every run uses your own Salesforce CLI session")
+st.markdown(f"""
+<div class="app-header">
+    <div class="app-header-icon">🛠️</div>
+    <div class="app-header-text">
+        <h1>Developer Console</h1>
+        <p>Run Anonymous Apex and SOQL against Salesforce &nbsp;·&nbsp; Rubrik ProdOps</p>
+    </div>
+    <div class="app-header-tags">
+        <span class="app-tag">⚡ Salesforce CLI</span>
+        <span class="app-tag">🔒 QA &amp; UAT</span>
+        <span class="app-tag">🎯 {env}</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+st.caption("Every run uses your own Salesforce CLI session")
 
 if not org["alias"]:
     st.warning("Connect to the selected org first (see sidebar), then click **Re-check connection**.")

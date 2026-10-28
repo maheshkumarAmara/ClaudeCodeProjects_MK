@@ -10,7 +10,8 @@ The CSS for each page is the same as it was when it was inlined in that page:
     below plus a few page-specific rules.
 css_for(page) returns the stylesheet text without touching Streamlit.
 
-Developer_Console.py has never been themed and does not use this module.
+  - "devconsole" : the Developer Console page: the "main" stylesheet plus a few
+    rules for main-area secondary/download buttons.
 """
 
 import streamlit as st
@@ -581,11 +582,40 @@ code {
 """
 )
 
+# ── Developer Console page ────────────────────────────────────────────────────
+# The main stylesheet plus styling for the main-area buttons it doesn't cover
+# (the Order Validation page only has a primary button there). Matches the
+# sidebar buttons: translucent fill, light text, 8px radius.
+
+DEVCONSOLE_EXTRA_CSS = """
+/* ── Secondary + download buttons in the main area ── */
+.main .stDownloadButton > button,
+.main .stButton > button[kind="secondary"] {
+    background: rgba(255,255,255,0.07);
+    color: #d4e8f4 !important;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    font-size: 0.83rem;
+    font-weight: 500;
+    transition: all 0.18s;
+}
+.main .stDownloadButton > button:hover,
+.main .stButton > button[kind="secondary"]:hover {
+    background: rgba(255,255,255,0.13);
+    border-color: rgba(255,255,255,0.22);
+}
+.main .stDownloadButton > button p,
+.main .stButton > button[kind="secondary"] p { color: #d4e8f4 !important; }
+"""
+
+DEVCONSOLE_CSS = MAIN_CSS + DEVCONSOLE_EXTRA_CSS
+
 _PAGE_CSS = {
     "main": MAIN_CSS,
     "po": PO_CSS,
     "edi": EDI_CSS,
     "soql": SOQL_CSS,
+    "devconsole": DEVCONSOLE_CSS,
 }
 
 
