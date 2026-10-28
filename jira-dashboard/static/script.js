@@ -729,14 +729,6 @@ function checkQuality(issue) {
             for (const t of openSignoffs) {
                 failures.push(`Signoff task still Open: ${t.summary}`);
             }
-            const signoffsNoSprint = (issue.children || []).filter(c => {
-                const s = c.summary.toLowerCase();
-                const isSignoff = EPIC_SIGNOFF_TASK_NAMES.some(n => _itnpiSignoffMatches(s, n)) || s.includes("test case validation") || s.includes("test case preparation");
-                return isSignoff && (!c.sprintNames || c.sprintNames.length === 0);
-            });
-            for (const t of signoffsNoSprint) {
-                failures.push(`Sprint details are missed: ${t.summary}`);
-            }
             const hasUnitTest = (issue.children || []).some(c => c.hasUnitTestSubtask);
             if (!hasUnitTest) {
                 failures.push("Missing: Unit Testing subtask not created");
@@ -938,11 +930,12 @@ async function nudgeSanity(issueKey, qaContactName, qaAccountId, btn) {
                 qaName: qaContactName,
                 accountId: qaAccountId || null,
                 messageSuffix: ", can you please provide the updates for sanity test results?",
+                alertType: "uat_sanity",
             }),
         });
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || "Failed to send comment");
-        btn.textContent = "Sent!";
+        btn.textContent = data.skipped ? "Already sent (cooldown)" : "Sent!";
         setTimeout(() => fetchIssues(), 1500);
     } catch (err) {
         btn.textContent = "Error";
@@ -970,11 +963,12 @@ async function nudgeTestCaseDesign(subtaskKey, assigneeName, assigneeId, hasComm
                 accountId: assigneeId || null,
                 messagePrefix: "Hi ",
                 messageSuffix,
+                alertType: "test_case_design",
             }),
         });
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || "Failed to send comment");
-        btn.textContent = "Sent!";
+        btn.textContent = data.skipped ? "Already sent (cooldown)" : "Sent!";
         setTimeout(() => fetchIssues(), 1500);
     } catch (err) {
         btn.textContent = "Error";
@@ -999,11 +993,12 @@ async function nudgeTestExecution(subtaskKey, assigneeName, assigneeId, btn) {
                 accountId: assigneeId || null,
                 messagePrefix: "Hi ",
                 messageSuffix: ", can you pls update the test execution status?",
+                alertType: "test_execution",
             }),
         });
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || "Failed to send comment");
-        btn.textContent = "Sent!";
+        btn.textContent = data.skipped ? "Already sent (cooldown)" : "Sent!";
         setTimeout(() => fetchIssues(), 1500);
     } catch (err) {
         btn.textContent = "Error";
@@ -1028,11 +1023,12 @@ async function nudgeRca(issueKey, assigneeName, assigneeAccountId, messageSuffix
                 qaName: assigneeName,
                 accountId: assigneeAccountId || null,
                 messageSuffix,
+                alertType: "rca",
             }),
         });
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || "Failed to send comment");
-        btn.textContent = "Sent!";
+        btn.textContent = data.skipped ? "Already sent (cooldown)" : "Sent!";
         setTimeout(() => fetchIssues(), 1500);
     } catch (err) {
         btn.textContent = "Error";
@@ -1055,7 +1051,7 @@ async function nudgeQa(issueKey, qaContactName, qaAccountId, btn) {
         });
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || "Failed to send comment");
-        btn.textContent = "Sent!";
+        btn.textContent = data.skipped ? "Already sent (cooldown)" : "Sent!";
         setTimeout(() => fetchIssues(), 1500);
     } catch (err) {
         btn.textContent = "Error";
@@ -1127,29 +1123,6 @@ async function createEpicSignoffTasks(epicKey, btn) {
         setTimeout(() => {
             btn.disabled = false;
             btn.textContent = "+ Create Subtasks";
-        }, 3000);
-    }
-}
-
-async function assignSprintFromEpic(issueKey, epicKey, btn) {
-    btn.disabled = true;
-    btn.textContent = "Assigning...";
-    try {
-        const resp = await fetch("/api/assign-sprint", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ issueKey, epicKey }),
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Failed to assign sprint");
-        btn.textContent = "Assigned!";
-        setTimeout(() => fetchIssues(), 1200);
-    } catch (err) {
-        btn.textContent = "Error";
-        btn.title = err.message;
-        setTimeout(() => {
-            btn.disabled = false;
-            btn.textContent = "Assign Sprint from Epic";
         }, 3000);
     }
 }
@@ -1447,28 +1420,6 @@ function createIssueRow(issue) {
             epicSignoffHtml = showComplete
                 ? '<div class="epic-signoff-action"><span class="signoff-complete-badge">Subtasks complete</span></div>'
                 : '<div class="epic-signoff-action"><span class="signoff-pending-badge">Sign-offs Open</span></div>';
-        }
-
-        // Sprint-missing check for ITNPI signoff tasks (appended after signoff status)
-        if (isITNPI) {
-            const signoffsNoSprint = (issue.children || []).filter(c => {
-                const s = c.summary.toLowerCase();
-                const isSignoff = EPIC_SIGNOFF_TASK_NAMES.some(n => _itnpiSignoffMatches(s, n)) || s.includes("test case validation") || s.includes("test case preparation");
-                return isSignoff && (!c.sprintNames || c.sprintNames.length === 0);
-            });
-            if (signoffsNoSprint.length > 0) {
-                const rows = signoffsNoSprint.map(t => `
-                    <div class="sprint-missing-row">
-                        <span class="sprint-missing-label">Sprint details are missed: ${esc(t.summary)}</span>
-                        <button class="btn-assign-sprint"
-                                data-action="assign-sprint"
-                                data-issue-key="${esc(t.key)}"
-                                data-epic-key="${esc(issue.key)}">
-                            Assign Sprint from Epic
-                        </button>
-                    </div>`).join("");
-                epicSignoffHtml += `<div class="sprint-missing-section">${rows}</div>`;
-            }
         }
     }
 
@@ -2188,7 +2139,7 @@ async function nudgeAll(alertKey, btn) {
     const originalText = btn.textContent;
     btn.disabled = true;
     const isRca = alertKey === "bugsNoRca";
-    let sent = 0, failed = 0;
+    let sent = 0, failed = 0, skipped = 0;
     btn.textContent = `Sending 0/${items.length}…`;
     for (const item of items) {
         const name = isRca ? (item.assignee?.name || "") : (item.qaContact?.name || "");
@@ -2201,14 +2152,22 @@ async function nudgeAll(alertKey, btn) {
             const resp = await fetch("/api/add-comment", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ issueKey: item.key, qaName: name, accountId, messageSuffix: suffix }),
+                body: JSON.stringify({
+                    issueKey: item.key, qaName: name, accountId, messageSuffix: suffix,
+                    alertType: isRca ? "rca" : "qa_update",
+                }),
             });
-            if (!resp.ok) failed++; else sent++;
+            const data = await resp.json();
+            if (!resp.ok) failed++;
+            else if (data.skipped) skipped++;
+            else sent++;
         } catch { failed++; }
-        btn.textContent = `Sending ${sent + failed}/${items.length}…`;
+        btn.textContent = `Sending ${sent + skipped + failed}/${items.length}…`;
         await new Promise(r => setTimeout(r, 250));
     }
-    btn.textContent = failed > 0 ? `Sent ${sent}, ${failed} failed` : `Sent ${sent}!`;
+    btn.textContent = failed > 0 || skipped > 0
+        ? `Sent ${sent}, ${skipped} skipped, ${failed} failed`
+        : `Sent ${sent}!`;
     setTimeout(() => { btn.disabled = false; btn.textContent = originalText; }, 4000);
 }
 
@@ -4073,8 +4032,6 @@ document.addEventListener("click", function(e) {
         createSelectedSubtasks(btn.dataset.key, btn);
     } else if (action === "create-epic-signoff") {
         createEpicSignoffTasks(btn.dataset.epic, btn);
-    } else if (action === "assign-sprint") {
-        assignSprintFromEpic(btn.dataset.issueKey, btn.dataset.epicKey, btn);
     }
 });
 

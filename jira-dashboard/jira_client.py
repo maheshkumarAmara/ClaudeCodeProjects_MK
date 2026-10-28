@@ -1042,6 +1042,7 @@ def create_subtasks(parent_key: str, project_key: str, subtask_summaries: list):
         }
         if qa_account_id:
             fields["assignee"] = {"accountId": qa_account_id}
+            fields["customfield_12726"] = {"accountId": qa_account_id}
         if sprint_id:
             fields["customfield_10020"] = [sprint_id]
 
@@ -1268,19 +1269,6 @@ def assign_qa_contact_by_name(issue_key: str, display_name: str):
     if not account_id:
         raise ValueError(f"Could not find JIRA user: {display_name}")
     assign_qa_contact(issue_key, account_id)
-
-
-def assign_sprint_from_epic(issue_key: str, epic_key: str):
-    """Fetch the active sprint from epic_key and assign it to issue_key (ITNPI only)."""
-    sprint_id = _get_parent_sprint_id(epic_key)
-    if not sprint_id:
-        raise ValueError(f"No sprint found on epic {epic_key}")
-    resp = _session.put(
-        f"{JIRA_URL}/rest/api/3/issue/{issue_key}",
-        json={"fields": {"customfield_10020": [sprint_id]}},
-    )
-    resp.raise_for_status()
-    return {"sprintId": sprint_id}
 
 
 def get_qa_tracking(project_key: str, sprint_id: str = None,

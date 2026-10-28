@@ -1,0 +1,1295 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg: #0c1929;
+  --panel: #0f2337;
+  --border: rgba(255, 255, 255, 0.1);
+  --text: #dceef8;
+  --muted: #6a9abb;
+  --accent: #0984e3;
+  --accent-dark: #0c55a0;
+  --danger: #d63031;
+  --danger-dark: #a72325;
+  --danger-text: #ff8a80;
+  --ok: #00b894;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --kw-color: #4fb3f0;
+  --str-color: #f0a860;
+  --comment-color: #6a9abb;
+  --gutter-bg: #08111e;
+  --gutter-text: #3d6680;
+  --json-object-color: #b98af0;
+  --json-array-color: #3fd1c0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.sb-header {
+  background: linear-gradient(135deg, #091d36 0%, #0d2a50 55%, #0e3868 100%);
+  padding: 1.25rem 1.8rem;
+  margin: 1.2rem 1rem 1.4rem;
+  border-radius: 14px;
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+}
+
+.sb-header-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #0d5fa3 0%, #0984e3 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 16px rgba(9, 132, 227, 0.35);
+}
+
+.sb-header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.sb-header-text h1 {
+  color: #f0f8ff;
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  line-height: 1.2;
+}
+
+.sb-header-text p {
+  color: #6a9abb;
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.sb-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+#mode-badge {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#mode-badge.offline {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+}
+
+#mode-badge.connected {
+  background: rgba(0, 184, 148, 0.15);
+  border-color: rgba(0, 184, 148, 0.35);
+  color: var(--ok);
+}
+
+#org-picker-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+#org-picker-wrap select {
+  padding: 3px 6px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+.section-heading {
+  padding: 0.75rem 1rem 0;
+  margin: 0;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  padding: 0 1rem;
+  background: transparent;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab-btn {
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab-btn:hover {
+  color: var(--text);
+}
+
+.tab-btn.active {
+  background: var(--bg);
+  color: var(--accent);
+  border-color: var(--border);
+  position: relative;
+  top: 1px;
+}
+
+main {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  align-items: start;
+}
+
+.explorer-col-2 {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+}
+
+.panel h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+
+.panel-toggle-header {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
+.panel-toggle-icon {
+  font-size: 10px;
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+#object-search {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  background: #12263e;
+  color: var(--text);
+}
+
+#object-list {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.object-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.object-row:last-child {
+  border-bottom: none;
+}
+
+.object-row:hover {
+  background: rgba(9, 132, 227, 0.12);
+}
+
+.object-row .obj-check {
+  margin-top: 3px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.object-row .obj-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.object-row.selected {
+  background: var(--accent);
+  color: white;
+}
+
+.object-row .api-name {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  display: block;
+}
+
+.object-row.selected .api-name {
+  color: #eaf3fb;
+}
+
+#root-object-label {
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+#root-object-label code {
+  font-family: var(--mono);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.field-select-controls {
+  float: right;
+  text-transform: none;
+  letter-spacing: normal;
+  display: inline-flex;
+  gap: 6px;
+}
+
+.field-select-controls button {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+#field-search {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  background: #12263e;
+  color: var(--text);
+}
+
+.field-tree {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.field-node {
+  font-size: 13px;
+  margin: 2px 0;
+}
+
+.field-node label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 3px 4px;
+  border-radius: 4px;
+}
+
+.field-node label:hover {
+  background: rgba(9, 132, 227, 0.12);
+}
+
+.field-node .field-api-name {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.field-node .field-type {
+  color: var(--muted);
+  font-size: 11px;
+  margin-left: auto;
+}
+
+.field-node .expand-lookup {
+  font-size: 11px;
+  color: var(--accent);
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0 4px;
+}
+
+.field-node .field-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-left: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.field-node .field-badge.required {
+  background: rgba(214, 48, 49, 0.18);
+  color: var(--danger-text);
+}
+
+.field-node .field-badge:empty {
+  display: none;
+}
+
+.field-children {
+  margin-left: 20px;
+  padding-left: 8px;
+  border-left: 1px dashed var(--border);
+}
+
+.related-list-panel {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-top: 6px;
+  padding: 8px;
+}
+
+.related-list-panel > summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.related-list-panel .relationship-name {
+  color: var(--muted);
+  font-weight: 400;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.soql-editor-wrap {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+#soql-line-numbers,
+#soql-highlight,
+textarea#soql-text {
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 20px;
+  margin: 0;
+}
+
+#soql-line-numbers {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 40px;
+  padding: 10px 8px 10px 0;
+  text-align: right;
+  color: var(--gutter-text);
+  background: var(--gutter-bg);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+  user-select: none;
+  pointer-events: none;
+}
+
+#soql-highlight {
+  position: absolute;
+  top: 0;
+  left: 40px;
+  right: 0;
+  bottom: 0;
+  padding: 10px;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: auto;
+  pointer-events: none;
+  color: var(--text);
+}
+
+#soql-highlight code {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  white-space: inherit;
+}
+
+.tok-kw {
+  color: var(--kw-color);
+  font-weight: 600;
+}
+
+.tok-str {
+  color: var(--str-color);
+}
+
+.tok-comment {
+  color: var(--comment-color);
+  font-style: italic;
+}
+
+/* Wraps every nested (SELECT ...) subquery block — including semi-joins in
+   a WHERE ... IN (...) clause — so it reads as visually distinct from the
+   main/outer query. Nested subqueries stack this same translucent tint, so
+   a subquery-inside-a-subquery reads slightly darker with no extra CSS. */
+.tok-subquery {
+  background: rgba(9, 132, 227, 0.12);
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(9, 132, 227, 0.25);
+}
+
+textarea#soql-text {
+  position: relative;
+  width: 100%;
+  min-height: 160px;
+  padding: 10px 10px 10px 50px;
+  border: none;
+  resize: vertical;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+textarea#soql-text:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.button-row {
+  display: flex;
+  gap: 6px;
+  margin: 10px 0;
+  flex-wrap: wrap;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.semi-join-hint {
+  margin: 4px 0 10px;
+  font-size: 12px;
+}
+
+.semi-join-row {
+  flex-direction: row;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.semi-join-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 200px;
+  min-width: 160px;
+}
+
+.semi-join-field select {
+  width: 100%;
+}
+
+.semi-join-role {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+
+.semi-join-connector {
+  align-self: center;
+  margin: 0 2px 6px;
+}
+
+.semi-join-row #insert-semi-join-btn {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+}
+
+/* position: fixed (not absolute) so this can extend past .soql-editor-wrap's
+   overflow: hidden without being clipped; JS sets top/left in viewport coords. */
+.soql-suggest-box {
+  position: fixed;
+  z-index: 50;
+  min-width: 220px;
+  max-width: 420px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.soql-suggest-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 9px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.soql-suggest-item.active,
+.soql-suggest-item:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.soql-suggest-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.soql-suggest-kind {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.soql-suggest-item.active .soql-suggest-kind,
+.soql-suggest-item:hover .soql-suggest-kind {
+  color: #fff;
+  opacity: 0.85;
+}
+
+.inline-checkbox {
+  font-size: 12px;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+#query-history-select {
+  font-size: 12px;
+  max-width: 220px;
+}
+
+button {
+  font-size: 12px;
+  padding: 6px 11px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+button:hover {
+  background: rgba(9, 132, 227, 0.15);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+button.primary {
+  background: linear-gradient(135deg, #0c55a0 0%, #0984e3 100%);
+  border-color: transparent;
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 3px 12px rgba(9, 132, 227, 0.3);
+}
+
+button.primary:hover {
+  background: linear-gradient(135deg, #1065b4 0%, #1a95f5 100%);
+  border-color: transparent;
+  box-shadow: 0 5px 18px rgba(9, 132, 227, 0.42);
+}
+
+button.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: white;
+}
+
+button.danger:hover {
+  background: var(--danger-dark);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#semi-join-template {
+  font-size: 12px;
+  color: var(--muted);
+  background: rgba(9, 132, 227, 0.1);
+  border-radius: 6px;
+  padding: 8px;
+  margin-top: 8px;
+  white-space: pre-wrap;
+  font-family: var(--mono);
+}
+
+#status-line {
+  font-size: 12px;
+  color: var(--muted);
+  min-height: 16px;
+  margin: 4px 0;
+}
+
+#status-line.error {
+  color: var(--danger-text);
+}
+
+#status-line.ok {
+  color: var(--ok);
+}
+
+.query-result-block {
+  margin-bottom: 22px;
+}
+
+.query-result-block h3 {
+  font-size: 13px;
+  font-family: var(--mono);
+  margin: 0 0 6px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 6px 6px 0 0;
+  padding: 7px 10px;
+}
+
+.result-meta {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.export-toolbar {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.export-btn {
+  font-size: 11px;
+  padding: 3px 9px;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.export-btn.download-csv-btn {
+  padding: 3px 8px;
+  line-height: 1;
+}
+
+.selected-count {
+  font-size: 11px;
+  align-self: center;
+  white-space: nowrap;
+}
+
+.open-in-sf-link {
+  font-size: 11px;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.open-in-sf-link:hover {
+  text-decoration: underline;
+}
+
+table.results-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+  margin-top: 0;
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  overflow: hidden;
+}
+
+table.results-table th,
+table.results-table td {
+  border: 1px solid var(--border);
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+table.results-table th {
+  background: #0a1826;
+  position: sticky;
+  top: 0;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
+}
+
+table.results-table th.select-col,
+table.results-table td.select-col {
+  width: 26px;
+  padding: 6px;
+  text-align: center;
+}
+
+.col-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  user-select: none;
+}
+
+.col-resize-handle:hover,
+.col-resize-handle:active {
+  background: var(--accent);
+  opacity: 0.4;
+}
+
+table.results-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+table.results-table tbody tr:hover {
+  background: rgba(9, 132, 227, 0.1);
+}
+
+table.results-table td[contenteditable="true"] {
+  background: rgba(253, 203, 110, 0.08);
+  cursor: text;
+}
+
+table.results-table td.dirty {
+  background: rgba(253, 203, 110, 0.18);
+  outline: 2px solid #e8b93f;
+  outline-offset: -2px;
+}
+
+table.results-table td.subquery-cell {
+  white-space: pre-wrap;
+  max-width: 420px;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 11px;
+}
+
+.row-actions {
+  white-space: nowrap;
+}
+
+.row-actions .cmd-preview {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  max-width: 320px;
+  overflow-x: auto;
+  white-space: pre;
+  margin-bottom: 3px;
+}
+
+.row-error {
+  color: var(--danger-text);
+  font-size: 11px;
+}
+
+#query-plan-section {
+  margin: 10px 0;
+}
+
+#query-plan-section .muted {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+table.query-plan-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+table.query-plan-table th,
+table.query-plan-table td {
+  border: 1px solid var(--border);
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+table.query-plan-table th {
+  background: #0a1826;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
+}
+
+table.query-plan-table td {
+  font-family: var(--mono);
+}
+
+.hidden {
+  display: none !important;
+}
+
+#results-section {
+  margin-top: 16px;
+}
+
+.csv-paste-wrap textarea {
+  width: 100%;
+  min-height: 90px;
+  font-family: var(--mono);
+  font-size: 12px;
+  background: #12263e;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.utilities-heading {
+  margin: 1.4rem 1rem 0;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+#rest-explorer-panel,
+#apex-execute-panel {
+  margin: 0.75rem 1rem 1rem;
+}
+
+#apex-code-input {
+  min-height: 160px;
+}
+
+.warning-banner {
+  font-size: 12px;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 8px 0;
+  background: rgba(253, 203, 110, 0.12);
+  border: 1px solid rgba(253, 203, 110, 0.4);
+  color: var(--text);
+}
+
+.warning-banner.danger-banner {
+  background: rgba(214, 48, 49, 0.14);
+  border-color: var(--danger);
+  color: var(--danger-text);
+}
+
+#rest-status-line,
+#apex-status-line {
+  font-size: 12px;
+  color: var(--muted);
+  min-height: 16px;
+  margin: 4px 0;
+}
+
+#rest-status-line.error,
+#apex-status-line.error {
+  color: var(--danger-text);
+}
+
+#rest-status-line.ok,
+#apex-status-line.ok {
+  color: var(--ok);
+}
+
+.rest-response-pre {
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 400px;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  padding: 10px;
+  margin-top: 8px;
+}
+
+/* ---------- JSON Editor page ---------- */
+
+#json-status-line {
+  font-size: 12px;
+  color: var(--muted);
+  min-height: 16px;
+  margin: 4px 0;
+}
+
+#json-status-line.error {
+  color: var(--danger-text);
+}
+
+#json-status-line.ok {
+  color: var(--ok);
+}
+
+.json-editor-main {
+  display: block;
+  padding: 1rem;
+}
+
+.json-editor-panel {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+}
+
+.json-tree-view {
+  max-height: none;
+  min-height: 120px;
+}
+
+.json-node-label {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+  cursor: default;
+  padding: 3px 4px;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.json-key {
+  flex: 0 0 auto;
+}
+
+.json-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.json-node-label:hover {
+  background: rgba(9, 132, 227, 0.12);
+}
+
+.json-key {
+  color: var(--kw-color);
+}
+
+.json-type {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.json-type-object {
+  color: var(--json-object-color);
+}
+
+.json-type-array {
+  color: var(--json-array-color);
+}
+
+.json-value.json-string {
+  color: var(--str-color);
+}
+
+.json-value.json-number {
+  color: var(--accent);
+}
+
+.json-value.json-boolean {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.json-value.json-null {
+  color: var(--comment-color);
+  font-style: italic;
+}
+
+.json-children {
+  margin-left: 20px;
+  padding-left: 8px;
+  border-left: 1px dashed var(--border);
+  transition: border-color 0.12s ease, border-width 0.12s ease, border-style 0.12s ease;
+}
+
+/* Trace the parent chain: hovering any row darkens/thickens the left
+   border of every ancestor .json-children wrapper, so you can visually
+   follow a deeply nested value back up to the parent it belongs to. */
+.json-children:has(.json-node-label:hover) {
+  border-left: 2px solid var(--accent);
+}
+
+#json-search-input {
+  padding: 6px 8px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  min-width: 200px;
+  background: #12263e;
+  color: var(--text);
+}
+
+#json-text-area {
+  width: 100%;
+  min-height: 420px;
+  font-family: var(--mono);
+  font-size: 12px;
+  background: #12263e;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.json-tree-view mark {
+  background: #f5c518;
+  color: #1c2126;
+  border-radius: 2px;
+}
+
+.json-flowchart-view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.flowchart-zoom-controls {
+  display: flex;
+  gap: 6px;
+  align-self: flex-end;
+}
+
+.flowchart-zoom-controls button {
+  min-width: 32px;
+  padding: 4px 8px;
+}
+
+.json-flowchart-canvas-wrap {
+  max-height: 70vh;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  padding: 8px;
+}
+
+.json-flowchart-canvas-wrap svg {
+  display: block;
+}
+
+.flowchart-node[data-container="true"] {
+  cursor: default;
+}
+
+.flowchart-node[data-container="true"]:hover .flowchart-node-box {
+  stroke-width: 2;
+}
+
+.flowchart-node-box {
+  fill: var(--panel);
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.flowchart-node-box.flowchart-node-object {
+  stroke: var(--json-object-color);
+}
+
+.flowchart-node-box.flowchart-node-array {
+  stroke: var(--json-array-color);
+}
+
+.flowchart-node-box.flowchart-node-match {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.flowchart-node-box.flowchart-node-more {
+  fill: var(--gutter-bg);
+  stroke: var(--border);
+  stroke-dasharray: 3 2;
+}
+
+.flowchart-node-header {
+  fill-opacity: 0.18;
+  stroke: none;
+}
+
+.flowchart-node-header.flowchart-node-object {
+  fill: var(--json-object-color);
+}
+
+.flowchart-node-header.flowchart-node-array {
+  fill: var(--json-array-color);
+}
+
+.flowchart-node-header-text {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--text);
+}
+
+.flowchart-toggle-icon {
+  font-family: var(--mono);
+  font-size: 11px;
+  fill: var(--muted);
+  user-select: none;
+}
+
+.flowchart-field-row {
+  font-family: var(--mono);
+  font-size: 11px;
+  fill: var(--text);
+}
+
+.flowchart-field-row.flowchart-field-row-match {
+  fill: var(--accent);
+  font-weight: 600;
+}
+
+.flowchart-more-row {
+  font-family: var(--mono);
+  font-size: 11px;
+  fill: var(--muted);
+  font-style: italic;
+}
+
+.flowchart-edge {
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+
+@media print {
+  /* The only page that ever calls window.print() is the JSON Editor's Flow
+     Chart "Download PDF" button, so it's safe to unconditionally strip this
+     page down to just the diagram rather than relying on :has()-based
+     hide-everything-then-unhide tricks (which left the hidden siblings'
+     layout space behind, producing blank pages before/after the diagram). */
+  body > header,
+  #json-status-line,
+  #json-empty-state,
+  #json-editor-body > .button-row,
+  #json-tree-view,
+  #json-text-view,
+  .flowchart-zoom-controls {
+    display: none !important;
+  }
+  .json-editor-main,
+  .json-editor-panel,
+  #json-editor-body,
+  .json-flowchart-view,
+  .json-flowchart-canvas-wrap {
+    display: block !important;
+  }
+  body,
+  .json-editor-main,
+  .json-editor-panel {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .json-flowchart-canvas-wrap {
+    max-height: none;
+    overflow: visible;
+    border: none;
+    padding: 0;
+    background: transparent;
+  }
+  .json-flowchart-canvas-wrap svg {
+    transform: none !important;
+  }
+  /* .flowchart-edge normally uses var(--border), a near-white line
+     (rgba(255,255,255,0.1)) meant to sit on the app's dark background.
+     Printed pages are white, so that line is invisible there — override
+     with a solid, dark stroke that shows up on paper. */
+  .flowchart-edge {
+    stroke: #33475b !important;
+    stroke-width: 1.5px !important;
+  }
+}

@@ -15,7 +15,7 @@ import jira_client
 _SETTINGS_PATH = os.path.join(os.path.dirname(__file__), "data", "settings.json")
 _WRITE_ROUTES = {"/api/create-subtasks", "/api/create-epic-signoff-tasks",
                  "/api/assign-qa", "/api/add-comment", "/api/settings",
-                 "/api/sprint-snapshot", "/api/cache", "/api/assign-sprint"}
+                 "/api/sprint-snapshot", "/api/cache"}
 
 startup_error = None
 _ws_clients: set = set()
@@ -183,25 +183,6 @@ async def api_create_epic_signoff_tasks(request: Request):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
-@app.post("/api/assign-sprint")
-async def api_assign_sprint(request: Request):
-    if startup_error:
-        return JSONResponse(status_code=503, content={"error": startup_error})
-    try:
-        body = await request.json()
-        issue_key = body.get("issueKey", "").strip()
-        epic_key = body.get("epicKey", "").strip()
-        if not issue_key or not epic_key:
-            return JSONResponse(status_code=400, content={"error": "issueKey and epicKey are required"})
-        if not issue_key.startswith("ITNPI-") or not epic_key.startswith("ITNPI-"):
-            return JSONResponse(status_code=400, content={"error": "assign-sprint is only allowed for ITNPI issues"})
-        from jira_client import assign_sprint_from_epic
-        result = assign_sprint_from_epic(issue_key, epic_key)
-        return {"success": True, **result}
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
-
-
 @app.post("/api/assign-qa")
 async def api_assign_qa(request: Request):
     if startup_error:
@@ -251,10 +232,11 @@ async def api_add_comment(request: Request):
         account_id = body.get("accountId")
         message_suffix = body.get("messageSuffix", ", can you please update the QA Progress?")
         message_prefix = body.get("messagePrefix", "")
+        alert_type = body.get("alertType", "qa_update")
         force = body.get("force", False)
         from jira_client import add_comment
         result = add_comment(issue_key, qa_name, account_id, message_suffix, message_prefix,
-                             force=force)
+                             alert_type=alert_type, force=force)
         if isinstance(result, dict) and result.get("skipped"):
             return {"success": False, "skipped": True, "reason": result.get("reason", "dedup")}
         return {"success": True, "commentId": result.get("id") if isinstance(result, dict) else None}
