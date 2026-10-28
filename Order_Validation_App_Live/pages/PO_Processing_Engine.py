@@ -20,9 +20,10 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="PO Processing Engine · Rubrik", page_icon="📄", layout="wide")
 
 PO_ENGINE_DIR = Path(__file__).parent.parent / "po-processing-engine"
-# 8010 is where the engine runs when launched standalone, so the embedded copy
-# uses its own port and the two never collide.
-PORT = int(os.environ.get("PO_ENGINE_PORT", "8011"))
+# 8010 is where the engine runs when launched standalone, and 8011 can be held by
+# another checkout's embedded engine, so this copy uses its own port and never
+# reuses an engine serving different code.
+PORT = int(os.environ.get("PO_ENGINE_PORT", "8012"))
 LOG_PATH = "/tmp/po_processing_engine_server.log"
 
 
@@ -78,7 +79,7 @@ st.markdown(
         max-width: 100% !important;
     }
     [data-testid="stElementContainer"]:has(iframe) { margin-bottom: 0 !important; }
-    iframe { border: none !important; background: #ffffff; }
+    iframe { border: none !important; background: #0c1929; }
 
     [data-testid="stHeader"] * { color: #8ab4cc !important; }
     [data-testid="stToolbar"] * { color: #8ab4cc !important; }
