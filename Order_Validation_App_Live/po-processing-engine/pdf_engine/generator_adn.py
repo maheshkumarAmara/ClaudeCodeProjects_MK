@@ -11,21 +11,28 @@ Known limitations:
   - Text is drawn in Helvetica, not the template's Verdana.
   - The list price is printed equal to the unit price, matching the sample
     (whose discount is always 0; the parser does not carry a discount value).
+  - The template's static email addresses (the "E-mail:" in the header block,
+    the licensee's address and the "E-mail:" in every page footer) are not form
+    fields, so sandbox_email.sandbox_fields never sees them. They are removed
+    from each page's content stream and redrawn on the sandbox domain.
 """
 
 import io
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from decimal import ROUND_HALF_UP, Decimal
 
 
 from pypdf import PdfReader, PdfWriter
+from pypdf.generic import ContentStream
 from reportlab.pdfgen import canvas
 
 import config
 from pdf_engine.extractor import find_template_path
 from pdf_engine.generator import _fresh_page, _render_overlay
 from pdf_engine.paginate import _to_decimal, wrap_text
+from sandbox_email import sandbox_text
 
 SLUG = "ADN Distribution GmbH"
 
@@ -60,8 +67,79 @@ ITEMS_AREA = {
 PO_LINE_TOP = {TEMPLATE_FIRST: 302.7, TEMPLATE_CONT: 143.0, TEMPLATE_LAST: 143.0}
 PAGE_LABEL_TOP = {TEMPLATE_FIRST: 308.2, TEMPLATE_CONT: 148.3, TEMPLATE_LAST: 148.3}
 
+# Static email addresses printed in the template: address -> (x, top, font size),
+# in pdfplumber's top-down coordinates. The header and licensee addresses are on
+# the first page only; the footer address is on every page.
+TEMPLATE_EMAILS = {
+    "iuliia.byshkina@adn.de": (434.5, 220.5, 6.75),
+    "f.diroll@asklepios.com": (398.3, 386.8, 7.0),
+    "info@adn.de": (486.7, 791.9, 6.0),
+}
+
 WHITE = (1.0, 1.0, 1.0)
 FOOTER_GREY = (0.82745, 0.82745, 0.82745)
+
+
+_HEX_RE = re.compile(r"<([0-9A-Fa-f]+)>")
+
+
+def _parse_to_unicode(cmap: str) -> dict[int, str]:
+    mapping: dict[int, str] = {}
+
+    def decode(hex_text: str) -> str:
+        return bytes.fromhex(hex_text).decode("utf-16-be")
+
+    for block in re.findall(r"beginbfchar(.*?)endbfchar", cmap, re.S):
+        for src, dst in re.findall(r"<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>", block):
+            mapping[int(src, 16)] = decode(dst)
+    for block in re.findall(r"beginbfrange(.*?)endbfrange", cmap, re.S):
+        for lo, hi, dst in re.findall(r"<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*(<[0-9A-Fa-f]+>|\[[^\]]*\])", block):
+            codes = range(int(lo, 16), int(hi, 16) + 1)
+            if dst.startswith("["):
+                for code, target in zip(codes, _HEX_RE.findall(dst)):
+                    mapping[code] = decode(target)
+            else:
+                first = decode(dst[1:-1])
+                for offset, code in enumerate(codes):
+                    mapping[code] = first[:-1] + chr(ord(first[-1]) + offset)
+    return mapping
+
+
+def _strip_email_text(page) -> set[str]:
+    """Remove every text-show operation containing an "@" from the page.
+
+    The template's addresses are real ones, so painting over them would leave
+    them in the PDF's text layer; dropping the operator removes them outright.
+    Returns the decoded text of what was removed.
+    """
+    fonts = page["/Resources"].get("/Font", {})
+    maps: dict[str, dict[int, str]] = {}
+    for name, ref in fonts.items():
+        font = ref.get_object()
+        if "/ToUnicode" in font:
+            maps[name] = _parse_to_unicode(font["/ToUnicode"].get_object().get_data().decode("latin-1"))
+
+    content = ContentStream(page.get_contents(), page.pdf)
+    removed: set[str] = set()
+    current: dict[int, str] = {}
+    kept = []
+    for operands, operator in content.operations:
+        if operator == b"Tf":
+            current = maps.get(operands[0], {})
+        elif operator in (b"Tj", b"TJ"):
+            parts = [operands[0]] if operator == b"Tj" else [o for o in operands[0] if hasattr(o, "original_bytes")]
+            decoded = "".join(
+                current.get(int.from_bytes(raw[i : i + 2], "big"), "")
+                for raw in (part.original_bytes for part in parts)
+                for i in range(0, len(raw), 2)
+            )
+            if "@" in decoded:
+                removed.add(decoded)
+                continue
+        kept.append((operands, operator))
+    content.operations = kept
+    page.replace_contents(content)
+    return removed
 
 
 @dataclass
@@ -265,6 +343,12 @@ def _draw_totals(c: canvas.Canvas, page_height: float, fields: dict, grand_total
     _text(c, page_height, 56.7, 685.5, fields.get("delivery_terms", ""), 7)
 
 
+def _draw_template_emails(c: canvas.Canvas, page_height: float, emails: set[str]) -> None:
+    for address, (x, top, size) in TEMPLATE_EMAILS.items():
+        if address in emails:
+            _text(c, page_height, x, top, sandbox_text(address), size)
+
+
 def _draw_page(
     c: canvas.Canvas,
     page_height: float,
@@ -274,8 +358,10 @@ def _draw_page(
     fields: dict,
     grand_total: Decimal,
     balance: Decimal | None,
+    emails: set[str],
 ) -> None:
     t = spec.template
+    _draw_template_emails(c, page_height, emails)
     x0, top, x1, bottom = ITEMS_AREA[t]
     _whiteout(c, page_height, x0, top, x1, bottom)
 
@@ -325,11 +411,12 @@ def generate_adn_po(fields: dict, line_items: list[dict]) -> bytes:
         balance = None if spec.template == TEMPLATE_LAST else running
 
         page = _fresh_page(pdf_bytes, spec.template)
+        emails = _strip_email_text(page)
         overlay = _render_overlay(
             page_width,
             page_height,
-            lambda c, s=spec, n=number, b=balance: _draw_page(
-                c, page_height, s, n, len(pages), fields, grand_total, b
+            lambda c, s=spec, n=number, b=balance, e=emails: _draw_page(
+                c, page_height, s, n, len(pages), fields, grand_total, b, e
             ),
         )
         page.merge_page(overlay.pages[0])
