@@ -1,4 +1,4 @@
-"""Template parser for Arrow (Netherlands) purchase orders.
+"""Template parser for Arrow ECS BV (Netherlands) purchase orders.
 
 The sample is a landscape, 16-page document: 15 pages of line items (the last
 one also carries the totals and payment/delivery terms) followed by a

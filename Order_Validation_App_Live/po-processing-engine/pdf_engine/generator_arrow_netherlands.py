@@ -1,4 +1,4 @@
-"""Regenerates Arrow (Netherlands) purchase orders.
+"""Regenerates Arrow ECS BV (Netherlands) purchase orders.
 
 The template is a flowing document: every items page repeats the PO number and
 "Page N of M", the first page carries the header panels, the last items page

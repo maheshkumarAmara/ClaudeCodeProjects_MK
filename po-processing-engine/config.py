@@ -38,7 +38,7 @@ DISTRIBUTORS = {
     "arrow-ecs-sau": "ARROW E.C.S., SAU",
     # Slugs for these match their data/templates/ folder names exactly.
     "ADN Distribution GmbH": "ADN Distribution GmbH",
-    "Arrow (Netherlands)": "Arrow (Netherlands)",
+    "Arrow (Netherlands)": "Arrow ECS BV (Netherlands)",
     "Computer Gross spa": "Computer Gross spa",
     "Exclusive Networks (Norway)": "Exclusive Networks (Norway)",
     "HCL America, Inc.": "HCL America, Inc.",
