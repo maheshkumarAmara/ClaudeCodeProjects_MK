@@ -6,18 +6,24 @@ iframe, mirroring the idempotent auto-start pattern launch.sh already uses
 for bridge/sf-bridge-server.js — except done in Python here so launch.sh
 itself needs no changes. No logic from that file is reimplemented or
 modified. Purely additive: does not touch or import anything from
-streamlit_app.py or the other pages.
+Order_Validation_App.py or the other pages (it only imports the shared
+stylesheet from theme.py).
 """
 
 import os
 import shutil
 import socket
 import subprocess
+import sys
 import time
 from pathlib import Path
 
 import streamlit as st
 import streamlit.components.v1 as components
+
+# theme.py lives in the project root, one level above pages/.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from theme import apply_theme  # noqa: E402
 
 st.set_page_config(page_title="SOQL Builder · Rubrik", page_icon="🔎", layout="wide")
 
@@ -68,140 +74,7 @@ def _log_tail(lines: int = 30) -> str:
         return "(no log yet)"
 
 
-st.markdown(
-    """
-    <style>
-    /* ── Global reset ── */
-    html, body, [class*="css"] {
-        font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-        -webkit-font-smoothing: antialiased;
-    }
-    #MainMenu { visibility: hidden; }
-    footer    { visibility: hidden; }
-    [data-testid="stDeployButton"] { display: none; }
-
-    /* Custom scrollbar */
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); border-radius: 4px; }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.32); }
-
-    /* ── Background ── */
-    .stApp,
-    [data-testid="stAppViewContainer"],
-    [data-testid="stAppViewBlockContainer"],
-    [data-testid="stHeader"],
-    [data-testid="stToolbar"],
-    header[data-testid="stHeader"],
-    .main .block-container {
-        background: #0c1929 !important;
-    }
-    .block-container,
-    [data-testid="stAppViewBlockContainer"] {
-        padding-top: 1.5rem !important;
-        padding-bottom: 0rem !important;
-        padding-left: 0.6rem !important;
-        padding-right: 0.6rem !important;
-        max-width: 100% !important;
-    }
-    [data-testid="stAppViewContainer"],
-    .main .block-container { min-height: 0 !important; }
-    [data-testid="stElementContainer"]:has(iframe) { margin-bottom: 0 !important; }
-    iframe { border: none !important; }
-
-    /* Top toolbar */
-    [data-testid="stHeader"] * { color: #8ab4cc !important; }
-    [data-testid="stToolbar"] * { color: #8ab4cc !important; }
-
-    /* Main content text */
-    .main, .main p, .main span, .main div,
-    .main label, .main .stMarkdown,
-    [data-testid="stMarkdownContainer"] { color: #c4daea !important; }
-    .main a { color: #7dd3fc !important; }
-
-    /* ── Sidebar ── */
-    section[data-testid="stSidebar"] {
-        background: #08111e !important;
-        border-right: 1px solid rgba(255,255,255,0.07) !important;
-        box-shadow: 3px 0 24px rgba(0,0,0,0.4);
-    }
-    section[data-testid="stSidebar"] * { color: #b8d4e8 !important; }
-    section[data-testid="stSidebar"] h1,
-    section[data-testid="stSidebar"] h2,
-    section[data-testid="stSidebar"] h3 {
-        color: #eaf3fb !important;
-        letter-spacing: 0.2px;
-        font-size: 0.95rem !important;
-    }
-    section[data-testid="stSidebar"] p,
-    section[data-testid="stSidebar"] small,
-    section[data-testid="stSidebar"] .stCaption { color: #6a8fa8 !important; font-size: 0.79rem; }
-    section[data-testid="stSidebar"] .stButton > button {
-        background: rgba(255,255,255,0.07);
-        color: #d4e8f4 !important;
-        border: 1px solid rgba(255,255,255,0.12);
-        border-radius: 8px;
-        font-size: 0.83rem;
-        font-weight: 500;
-        transition: all 0.18s;
-    }
-    section[data-testid="stSidebar"] .stButton > button:hover {
-        background: rgba(255,255,255,0.13);
-        border-color: rgba(255,255,255,0.22);
-    }
-
-    /* ── Caption / small text ── */
-    .stCaption, small,
-    [data-testid="stCaptionContainer"],
-    [data-testid="stCaptionContainer"] *,
-    [data-testid="stCaptionContainer"] p {
-        color: #9db9cc !important;
-        opacity: 1 !important;
-        font-size: 0.85rem !important;
-    }
-
-    /* ── Alert boxes ── */
-    [data-testid="stInfo"] {
-        background: rgba(9,132,227,0.09) !important;
-        border-radius: 10px; border-left: 3px solid #0984e3; padding: 0.7rem 1rem;
-    }
-    [data-testid="stSuccess"] {
-        background: rgba(0,184,148,0.09) !important;
-        border-radius: 10px; border-left: 3px solid #00b894; padding: 0.7rem 1rem;
-    }
-    [data-testid="stWarning"] {
-        background: rgba(253,203,110,0.09) !important;
-        border-radius: 10px; border-left: 3px solid #fdcb6e; padding: 0.7rem 1rem;
-    }
-    [data-testid="stError"] {
-        background: rgba(214,48,49,0.09) !important;
-        border-radius: 10px; border-left: 3px solid #d63031; padding: 0.7rem 1rem;
-    }
-
-    /* ── Code blocks ── */
-    [data-testid="stCode"],
-    [data-testid="stCode"] > div {
-        background: #091d36 !important;
-        border-radius: 10px !important;
-        border: 1px solid rgba(255,255,255,0.07) !important;
-    }
-    [data-testid="stCode"] pre {
-        background: #091d36 !important; color: #a8cce0 !important;
-        font-family: 'Fira Code','Cascadia Code',Consolas,monospace !important;
-        font-size: 0.82rem !important; line-height: 1.65 !important;
-    }
-    code {
-        background: rgba(9,132,227,0.12) !important;
-        color: #7dd3fc !important;
-        border-radius: 4px !important; padding: 2px 6px !important; font-size: 0.83em !important;
-    }
-
-    /* ── Spinner ── */
-    [data-testid="stSpinner"] { color: #0984e3 !important; }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+apply_theme("soql")
 
 st.caption(
     "Runs a local Node server that shells out to the already-authenticated `sf` CLI — "
