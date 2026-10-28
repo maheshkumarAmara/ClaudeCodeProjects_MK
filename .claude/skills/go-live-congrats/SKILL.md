@@ -13,7 +13,7 @@ allowed-tools: mcp__slack__post_message(*), mcp__slack__search_messages(*), Read
 
 Check whether the input args contain both `--channel` and `--message`. Example input:
 ```
-/go-live-congrats --channel "#it-prodops-qa" --message "BASE64ENCODEDTEXT"
+/go-live-congrats --channel "#leaves_notification" --message "BASE64ENCODEDTEXT"
 ```
 
 ### Fast mode steps

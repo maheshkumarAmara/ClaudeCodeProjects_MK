@@ -1,8 +1,8 @@
 ---
 name: e2e-test-guide
 description: Generate a self-contained E2E process flow and testing guide from Jira stories, with an optional BRD. BRD is NOT required — the skill works with Jira stories + QA test evidence alone. Creates a Google Doc, local Word file, and optional Confluence page. Pulls acceptance criteria, test evidence, QA comments, and screenshot links from each Jira story. Use when asked to create an E2E guide, project testing document, feature flow doc, test onboarding doc, or E2E process flow — with or without a BRD.
-argument-hint: [BRD_URL] <JIRA_IDs> [project:<name>] [space:<CONFLUENCE_SPACE_KEY>] [confluence:<URL_or_ID>]
-allowed-tools: mcp__google-drive__download_file_from_url(*), mcp__google-drive__download_file(*), mcp__google-drive__download_to_file(*), mcp__google-drive__create_google_doc(*), mcp__google-drive__upload_file(*), mcp__google-drive__list_folder(*), mcp__google-drive__create_folder(*), mcp__jira__get_jira_issue_details(*), mcp__jira__get_jira_issue_description(*), mcp__jira__get_jira_issue_comments(*), mcp__jira__get_jira_issues_by_jql(*), mcp__jira__get_active_sprints(*), mcp__jira__get_jira_issue_dev_info(*), mcp__confluence__create_page(*), mcp__confluence__search_pages_global(*), mcp__confluence__get_page_by_link(*), mcp__confluence__get_page_content(*), Bash(mkdir *), Bash(python3 *), Bash(pip3 *), Bash(pip *), Bash(cat *), Bash(ls *), Bash(find *), Bash(echo *), Bash(python *), Write(*), Read(*)
+argument-hint: [BRD_URL] <JIRA_IDs> [project:<name>] [space:<CONFLUENCE_SPACE_KEY>] [confluence:<URL_or_ID>] [output:all|gdoc-only]
+allowed-tools: mcp__google-drive__download_file_from_url(*), mcp__google-drive__download_file(*), mcp__google-drive__download_to_file(*), mcp__google-drive__create_google_doc(*), mcp__google-drive__create_doc_with_diagrams(*), mcp__google-drive__upload_file(*), mcp__google-drive__list_folder(*), mcp__google-drive__create_folder(*), mcp__jira__get_jira_issue_details(*), mcp__jira__get_jira_issue_description(*), mcp__jira__get_jira_issue_comments(*), mcp__jira__get_jira_issues_by_jql(*), mcp__jira__get_active_sprints(*), mcp__jira__get_jira_issue_dev_info(*), mcp__jira__get_jira_current_user(*), mcp__google-drive__list_mermaid_diagrams(*), mcp__google-drive__replace_doc_diagram(*), mcp__confluence__create_page(*), mcp__confluence__search_pages_global(*), mcp__confluence__get_page_by_link(*), mcp__confluence__get_page_content(*), Bash(mkdir *), Bash(python3 *), Bash(pip3 *), Bash(pip *), Bash(cat *), Bash(ls *), Bash(find *), Bash(echo *), Bash(python *), Bash(rm -rf /Users/Amara.Maheshkumar/Documents/ClaudeCodeProjects/claude_outputs/e2e-test-guide/_scratch*), Agent(*), AskUserQuestion(*), SendMessage(*), Write(*), Read(*)
 ---
 
 ## Auto-Execution Mode — Read First
@@ -14,7 +14,29 @@ allowed-tools: mcp__google-drive__download_file_from_url(*), mcp__google-drive__
 - **Do NOT stop** to confirm before calling any tool — all tool calls listed in `allowed-tools` are pre-approved for this skill.
 - Execute Steps 1 → 2 → 3 → 4 → 5 → 6 in a single continuous run, firing independent calls in parallel wherever possible.
 - **Confluence (Step 5):** If the user provided `confluence:<value>` in the args → create the page automatically. If they did NOT provide `confluence:` → **skip Confluence entirely** (do not ask). Mention it in the Step 6 summary so they know how to add it next time.
-- The **only** time you may pause is if JIRA_IDs are completely absent from the args (ask once for the IDs, then continue automatically).
+- You may pause in exactly two situations: (1) JIRA_IDs are completely absent from the args — ask once for the IDs, then continue automatically; (2) the **Scale Guardrail** below triggers — ask once how to scope, then continue automatically with the chosen scope. No other pauses are permitted.
+
+---
+
+## Output Hygiene — the output folder is Drive-synced, keep it clean
+
+`/Users/Amara.Maheshkumar/Documents/ClaudeCodeProjects/claude_outputs/e2e-test-guide/` is a **deliverables folder**, not a scratch workspace. At the end of a run it must contain **only**, for each project built:
+- `[ProjectName]_E2E_Testing_Guide.docx` (the final Word doc)
+- `[ProjectName]_E2E_Flow.drawio` (the final flow diagram)
+
+Nothing else — no `.py` scripts, no intermediate `.md` files (content staging, per-story fetch dumps, section assemblies), no `raw/` or other subfolders. These accumulate invisibly over repeated runs and clutter a folder the user also browses in Finder/Drive.
+
+**Rule:** any working/staging file you create while building the doc (a python script you save to disk instead of running inline, per-story fetch results, assembled section markdown, etc.) goes under a scratch directory, never directly in the output folder:
+```
+/Users/Amara.Maheshkumar/Documents/ClaudeCodeProjects/claude_outputs/e2e-test-guide/_scratch/
+```
+Before finishing (end of Step 4, right before Step 5/6), delete it:
+```
+rm -rf /Users/Amara.Maheshkumar/Documents/ClaudeCodeProjects/claude_outputs/e2e-test-guide/_scratch
+```
+Then verify with `ls` that only this run's `.docx` and `.drawio` (plus any other run's own `.docx`/`.drawio` pairs from prior invocations) remain.
+
+**Prefer not needing `_scratch` at all:** for a normal-sized run (a handful to ~15 stories), run the Step 4b/4c Python directly via a Bash heredoc (`python3 <<'PYEOF' ... PYEOF`) with the synthesized content inlined in the script — this writes zero files besides the final `.docx`/`.drawio`. Only reach for `_scratch/` when the job is large enough that staging is genuinely necessary (e.g. a multi-story build split across parallel sub-agents that each need to hand off drafted content via disk).
 
 ---
 
@@ -38,6 +60,7 @@ Parse from `$ARGUMENTS`:
 | `project:` | Token prefixed `project:` → custom doc title (e.g. `project:AWS Marketplace`) | Optional — derived from Jira if not given |
 | `space:` | Token prefixed `space:` → Confluence space key (e.g. `space:MK`) | Optional, default `MK` |
 | `confluence:` | Token prefixed `confluence:` → full Confluence page URL or page ID | Optional — if not provided, **skip Confluence automatically** (do not ask) |
+| `output:` | Token prefixed `output:` → `all` (default) or `gdoc-only` | Optional — `gdoc-only` skips the local `.docx` (Step 4b) |
 
 **Mode detection — set before executing:**
 - `HAS_BRD = true` if BRD_URL is present in args
@@ -45,46 +68,65 @@ Parse from `$ARGUMENTS`:
 
 **If no JIRA_IDs provided:** ask — "Please provide the Jira story IDs or sprint board URL."
 
+**`output:`** — optional, default `all`. `output:gdoc-only` skips Step 4b (no local `.docx`); everything else (Google Doc, `.drawio`, optional Confluence) is unaffected. Default stays `all` so existing behavior/expectations don't change unless the user opts out.
+
+---
+
+## Scale Guardrail — large or multi-theme story sets
+
+Immediately after the JQL in Step 1+2a returns, **count the qualifying stories** (issuetype=Story, status not excluded) before fetching any story details.
+
+- **≤ ~15 stories, one coherent feature:** proceed automatically, no pause — this is the common case.
+- **> ~15 stories, OR the stories clearly span multiple unrelated functional themes** (e.g. very different components/labels/epics, or summaries that group into obviously distinct sub-systems): **pause once** with `AskUserQuestion` — summarize the count and the themes you can see, and offer options such as: *(a)* build one mega-doc covering everything, *(b)* split into one focused doc per theme, *(c)* narrow to a single sprint/epic, *(d)* narrow by status (e.g. only QA-ready stories). Then continue fully automatically with whatever the user picks — do not ask again.
+
+**Executing a confirmed large/mega build:** don't fetch 15+ stories serially in one context — it degrades quality and blows up token usage. Instead:
+1. Group the qualifying stories into logical batches of ~5–10 (by theme/epic/component where possible, falling back to even chunks) and order the groups to match the eventual E2E flow (foundational/setup first, closing/reporting last) — this ordering becomes the Section 5 story order.
+2. Launch one `Agent` call per group with `subagent_type: "fork"` **in a single message** (true parallelism). Each fork fetches its group's story details per Step 2b and drafts that group's Section 5.N subsections (using a placeholder number like `5.X` — final numbering happens during assembly), plus a short "group flow role" sentence and any `new_fields` entries it found.
+3. Once a fork reports its draft back, send it one follow-up message asking it to `Write` its own drafted content (verbatim, real unescaped markdown) to two files under `_scratch/` — e.g. `_scratch/g01_<theme>.md` and `_scratch/g01_<theme>_fields.json` — rather than you retyping its output. This keeps large content off your own context/output budget entirely.
+4. Once all groups have written their files, assemble the final document with a local Python script (renumber `5.X` → sequential `5.N` per group order, merge/dedupe `new_fields` JSON, splice in your own Section 1/3/4/6/7 content) — see Output Hygiene for where this script and its intermediate files must live.
+5. Build the `.docx`/`.drawio`/Google Doc from the assembled file as normal (Step 4), then clean up `_scratch/` (Step 4d).
+
 ---
 
 ## Performance Rules — read before executing
 
 | What to parallelise | How |
 |---|---|
-| BRD read + Sprint JQL | Fire both in the **same turn** when BRD is provided; skip BRD call when no BRD |
-| Per-story data | Fire all 3 calls for a story in the **same turn** (details + description + comments) — no attachment download |
-| Multiple stories | Process up to **5 stories at once** in a single turn, then the next batch |
-| Local save + Google Doc | Fire both in the **same turn** (Step 4a + 4b together) |
+| BRD read + Sprint JQL + current-user lookup | Fire all in the **same turn**; skip the BRD call when no BRD |
+| Per-story data | Fire both calls for a story in the **same turn** (description + comments) — no details call (reuse JQL data), no attachment download |
+| Multiple stories | Process up to **8 stories at once** (16 parallel calls) in a single turn, then the next batch — larger batches mean fewer serial rounds, which is the main lever on wall-clock time |
+| Local save + Google Doc + drawio | Fire Step 4a + 4b + 4c **all in the same turn** (all three are independent of each other) |
 
-Never wait for one call to finish before starting an independent call. Sequential calls only when result B depends on result A.
+Never wait for one call to finish before starting an independent call. Sequential calls only when result B depends on result A (e.g. the drawio upload in 4c depends on the script having already printed `DRAWIO_PATH`).
 
 ---
 
 ## Execution Plan (follow exactly, in order)
 
-### STEP 1 + 2a — Read BRD (if provided) and Fetch Story List (parallel)
+### STEP 1 + 2a — Read BRD (if provided), Fetch Story List, and Identify Requester (parallel)
 
-**If HAS_BRD = true — fire both calls in the same turn:**
-- Call 1: `mcp__google-drive__download_file_from_url` with the BRD_URL
-- Call 2: Sprint/Epic JQL (see below)
+**Fire all applicable calls in the same turn:**
+- If HAS_BRD = true: `mcp__google-drive__download_file_from_url` with the BRD_URL
+- Always: the Sprint/Epic JQL (see below)
+- Always: `mcp__jira__get_jira_current_user` — use its `displayName` as `PREPARED_BY` in the Document Overview and docx. If the call fails or returns nothing usable, fall back to `"QA Team"` — never block the run on this.
 
-**If HAS_BRD = false — fire only the JQL call:**
-- Skip the BRD download entirely. Do NOT ask for a BRD.
-- Fire the Sprint/Epic JQL only.
+**If HAS_BRD = false:** skip the BRD download entirely. Do NOT ask for a BRD.
 
-**JQL to use:**
+**JQL to use — only when you are building the query yourself** (sprint ID / epic ID given, no full JQL/filter URL supplied by the user):
 ```
 ("Epic Link" = <EPIC_ID> OR parent = <EPIC_ID>)
-AND issuetype = Story AND status != "No Action"
+AND issuetype = Story AND status NOT IN ("No Action", "Won't Do", "Duplicate", "Cancelled", "Rejected")
 ```
 Or if a sprint ID is known:
 ```
-project = <KEY> AND sprint = <SPRINT_ID> AND issuetype = Story AND status != "No Action"
+project = <KEY> AND sprint = <SPRINT_ID> AND issuetype = Story AND status NOT IN ("No Action", "Won't Do", "Duplicate", "Cancelled", "Rejected")
 ```
+**If the user supplied their own full JQL or a Jira filter URL** (as in a sprint-board/filter link), run it **verbatim** — do not inject or rewrite its status/issuetype filters. Respect whatever scoping the user already encoded.
 
 **If HAS_BRD = true — from the BRD extract:**
 - **Project / feature name** (doc title if `project:` not given)
 - **Business objective**, **Actors**, **High-level flow**, **Business rules**, **Integration points**, **Scope / assumptions**
+- Note in the document: *this skill uses the BRD for narrative context only — it does not perform a rigorous line-by-line BRD-vs-Jira gap check. For that, recommend the user separately run `/brd-jira-validator`.*
 
 **If HAS_BRD = false — derive from Jira stories instead:**
 - **Project / feature name** → from `project:` arg, or from the Jira project name + sprint name, or infer from story summaries
@@ -93,22 +135,25 @@ project = <KEY> AND sprint = <SPRINT_ID> AND issuetype = Story AND status != "No
 - **Scope** → derive from what the stories cover (in scope) and what they don't mention (out of scope)
 - Note in the document: *"Project overview derived from Jira stories — no BRD provided."*
 
-From the JQL result, collect the list of qualifying story keys.
+From the JQL result, collect the list of qualifying story keys. **Apply the Scale Guardrail now**, before fetching any details, using this count.
+
+If the user's own JQL/filter had no `issuetype` restriction and the raw result mixed in non-Story issues (Bugs, Sub-tasks, etc.), note how many of each were present and excluded — mention this count once in the Step 6 summary so nothing silently vanishes unacknowledged. Skip this check (no extra cost) when the query already restricted to Story.
 
 ---
 
 ### STEP 2b — Fetch Story Details (parallel batches)
 
-**Skip** any issue where `issuetype` ≠ Story, OR `status` = "No Action". Do not mention skipped issues in the document.
+**Skip** any issue where `issuetype` ≠ Story, OR `status` is one of the excluded statuses (see JQL above, or whatever the user's own query already encodes). Do not mention skipped issues in the document body (the one-line excluded-count in Step 6 is the only acknowledgment).
 
-For the remaining qualifying stories, fetch in **batches of up to 5** — fire all calls for a batch in one turn, wait for results, then start the next batch.
+For the remaining qualifying stories, fetch in **batches of up to 8** — fire all calls for a batch in one turn, wait for results, then start the next batch. (8 was chosen over a smaller batch to cut the number of serial rounds — each round costs a full turn of latency regardless of how many calls run in parallel inside it, so fewer/larger rounds is the main lever for wall-clock time on big sprints.)
 
-**Per story — fire these 3 calls in the same turn:**
+**Per story — fire these 2 calls in the same turn:**
 1. `mcp__jira__get_jira_issue_description` — full description + acceptance criteria
 2. `mcp__jira__get_jira_issue_comments` with `max_results=30, order_by="-created"` — QA notes, test evidence, sign-off comments
-3. `mcp__jira__get_jira_issue_details` — summary, status, priority, assignee
 
-> `mcp__jira__download_jira_issue_attachments` is **NOT called** — attachments are extracted from comment text instead (see below). This removes 1 round-trip per story, saving significant time on large sprints.
+**Do NOT also call `mcp__jira__get_jira_issue_details`** — the Step 1 JQL result already returned `summary, status, priority, assignee` (and usually labels/story points) for every qualifying story in one shot. Re-fetching the same fields per story is a pure waste of a round-trip; carry those values forward from the Step 1 result set instead. (If the user's own JQL/filter result is missing one of these fields for some reason, it's fine to fall back to `get_jira_issue_details` for just that story — don't skip data to save time.)
+
+> `mcp__jira__download_jira_issue_attachments` is also **NOT called** — attachments are extracted from comment text instead (see below). Between dropping the redundant details call and skipping attachment downloads, each story now costs 2 round-trips instead of the original 4.
 
 **Extracting attachment references from comments (no download needed):**
 
@@ -121,7 +166,7 @@ For the remaining qualifying stories, fetch in **batches of up to 5** — fire a
 Store per story:
 ```
 {
-  key, summary, status, priority, assignee,
+  key, summary, status, priority, assignee,  // carried forward from the Step 1 JQL result, not re-fetched
   description, acceptance_criteria,
   qa_comments: [...],          // comments mentioning: passed/failed/verified/tested/evidence/screenshot/TC
   attachment_images: [...],    // image filenames → linked to Jira issue page
@@ -136,19 +181,23 @@ Store per story:
 
 **Extracting QA results from comments:** Scan for keywords — "passed", "failed", "blocked", "verified", "tested", "evidence", "screenshot", "TC", "test case", "PASS", "FAIL". Quote the relevant comment content verbatim in the document.
 
-**Extracting new custom fields:** While reading each story description and comments, identify any NEW custom fields created as part of this project. Look for:
+**Extracting new custom fields:** While reading each story description and comments, identify fields that are **genuinely new**, created as part of this project. Look for:
 - Field names ending in `__c` (Salesforce custom fields) or `custbody_` / `custrecord_` (NetSuite custom fields)
 - Patterns like "new field", "create field", "field created", "custom field", field mapping tables, or explicit field definitions
 - Object context: which object the field belongs to (e.g., Order, PO_Stage__c, OVF__c, NetSuite Sales Order, etc.)
 
+**Exclusion check (do this before including a field):** if the same story or comment also says the field is "reused", "existing field", "extended an existing field", "repurposed", or similar — e.g. "could not create a new field, custom field limit reached, so we reused X" — that field is **NOT new**. Do not add it to `new_fields`. If it's relevant context (a field was extended/repurposed instead of created), mention it in one sentence inside that story's own Section 5.N.1 description, not in the New Fields table.
+
+If a field's status is genuinely ambiguous after reading all mentions (can't tell if new vs. reused), still exclude it from the table rather than guessing — note it as a one-line caveat under that object's heading instead (e.g. "*GTMIT-1234 also mentions `Foo__c` but it's unclear from the ticket whether this is new or an existing field — verify before relying on it.*").
+
 Store extracted fields as:
 ```
 new_fields: [
-  { object: "Salesforce Object or NetSuite Record", field_api_name: "...", label: "...", type: "...", description: "..." },
+  { object: "Salesforce Object or NetSuite Record", field_api_name: "...", label: "...", type: "...", description: "...", source: "JIRA-ID" },
   ...
 ]
 ```
-Deduplicate across stories (same field may appear in multiple stories).
+**Dedup key:** `(object, field_api_name)` both lowercased/trimmed. When the same key appears from multiple stories, merge into a single entry — keep the most complete `description`/`type`, and list every contributing story in `source` (comma-separated), not just the last one seen.
 
 ---
 
@@ -175,7 +224,7 @@ Using all collected data, synthesize the full document. Follow this structure **
 | **Project** | [project name] |
 | **BRD Reference** | [BRD URL as hyperlink] |
 | **Jira Stories** | [comma-separated linked story keys] |
-| **Prepared by** | QA Team |
+| **Prepared by** | [PREPARED_BY — actual requester's display name from `get_jira_current_user`, falling back to "QA Team" if unavailable] |
 | **Last Updated** | [today's date] |
 
 **Purpose:** This document provides a complete end-to-end process flow and testing guide. Any team member can use this document to understand the feature and execute testing independently without any additional help.
@@ -221,7 +270,7 @@ Using all collected data, synthesize the full document. Follow this structure **
 
 ## 2. 🆕 New Fields
 
-> This section lists all new custom fields introduced by this project, grouped by object. If no new fields were identified from the BRD or Jira stories, omit this section entirely.
+> This section lists fields confirmed as genuinely **new**, introduced by this project, grouped by object — fields that were reused/extended/repurposed instead of created are deliberately excluded (see the extraction rule in Step 2b). If no new fields were identified from the BRD or Jira stories, omit this section entirely.
 
 ### 2.N [Object Name] (e.g., Salesforce Order / PO_Stage__c / NetSuite Sales Order Header)
 
@@ -292,8 +341,8 @@ flowchart TD
     classDef err fill:#f88,stroke:#c00,color:#000
 ```
 
-> **To view:** Paste the Mermaid block into [mermaid.live](https://mermaid.live) — or into a Confluence Mermaid macro (see Step 5c).
-> **Editable diagram:** A `.drawio` file is also created in STEP 4c — open in [diagrams.net](https://app.diagrams.net) or import into Lucidchart.
+> **Viewing:** This diagram renders as an inline image automatically in the Google Doc (via `create_doc_with_diagrams` in Step 4a) — no manual step needed there. It also renders live in Confluence if published (via the Mermaid macro, Step 5c).
+> **Editable diagram:** A separate `.drawio` file is also created in STEP 4c for anyone who wants to *edit* the flow — open in [diagrams.net](https://app.diagrams.net) or import into Lucidchart. The Word doc (.docx) cannot embed Mermaid or drawio, so it carries a text note pointing to the Google Doc/`.drawio` instead.
 
 ---
 
@@ -321,6 +370,8 @@ flowchart TD
 ---
 
 ## 5. 📋 Feature-by-Feature Testing Guide
+
+> 💡 Each story's QA evidence below is a **summary** pulled from Jira comments (sign-off text, linked docs, screenshot filenames) — not an inspected, AC-by-AC gap analysis. For that level of rigor on a specific story, recommend running `/qa-evidence-audit <JIRA-ID>` separately.
 
 ---
 
@@ -433,9 +484,11 @@ Follow these steps before running your first test case:
 
 ### STEP 4 — Create Google Doc, Local Word File, and Flow Diagram (parallel)
 
-Fire Steps 4a and 4b in the **same turn** (all are independent).
+Fire Steps 4a, 4b, and 4c all in the **same turn** — they're fully independent of each other (4c's own internal upload call still has to wait on its own script's output, see Performance Rules).
 
-**4a. Create Google Doc** via `mcp__google-drive__create_google_doc`:
+**4a. Create Google Doc** via `mcp__google-drive__create_doc_with_diagrams` (**not** `create_google_doc`):
+
+> **Why this tool specifically:** Google Docs does not render Mermaid syntax natively. If the synthesized markdown (with its ` ```mermaid ` fence from Section 3.3) were passed to plain `create_google_doc`, the "flow diagram" would show up as a raw code block, not a picture — most readers would never see the diagram at all. `create_doc_with_diagrams` renders every ` ```mermaid ` fenced block to an inline PNG automatically while still formatting all the surrounding markdown (headings, tables, bold, links) exactly the same way. It's a drop-in replacement — same inputs, strictly better output.
 
 First, resolve the output folder:
 1. Call `mcp__google-drive__list_folder` with `folder_id: "root"`, `only_folders: true` — look for a folder named exactly `claude_outputs`.
@@ -443,17 +496,19 @@ First, resolve the output folder:
 3. Call `mcp__google-drive__list_folder` with `folder_id: CLAUDE_OUTPUTS_ID`, `only_folders: true` — look for a subfolder named exactly `e2e-test-guide`.
 4. If not found, call `mcp__google-drive__create_folder` with `name: "e2e-test-guide"`, `parent_folder_id: CLAUDE_OUTPUTS_ID`. Save its `file_id` as `OUTPUT_FOLDER_ID`.
 
-Then call `mcp__google-drive__create_google_doc` with:
+Then call `mcp__google-drive__create_doc_with_diagrams` with:
 - `title`: `"[Project Name] — E2E Process Flow & Testing Guide"`
-- `content`: full synthesized markdown from Step 3
-- `content_format`: `"markdown"`
+- `markdown_content`: full synthesized markdown from Step 3 (mermaid fence included, verbatim)
 - `folder_id`: `OUTPUT_FOLDER_ID`
 - Save returned `web_view_link` as `GDOC_URL`.
 
+If the document ever needs a specific diagram edited later without a full regenerate, `mcp__google-drive__list_mermaid_diagrams` / `replace_doc_diagram` work against docs created this way.
+
 **4b. Create local Word (.docx) file** using a `python3` Bash call:
 
+- **Skip this entire step** if the user passed `output:gdoc-only` — go straight to 4c, and omit the "Local Word Doc" line from the Step 6 summary.
 - First: `mkdir -p /Users/Amara.Maheshkumar/Documents/ClaudeCodeProjects/claude_outputs/e2e-test-guide/`
-- Then run the python3 script below. Replace all `<<PLACEHOLDER>>` values with actual synthesized data from Step 3 before executing.
+- Run the python3 script below **via a Bash heredoc** (`python3 <<'PYEOF' ... PYEOF`) with the placeholders substituted inline — this way nothing but the final `.docx` touches disk. Only fall back to writing the script to a file if the content is too large for a single inline command (see Output Hygiene above) — and if you do, save it to `_scratch/`, not the output folder, and delete `_scratch/` in Step 4d.
 - Output path: `/Users/Amara.Maheshkumar/Documents/ClaudeCodeProjects/claude_outputs/e2e-test-guide/[ProjectName]_E2E_Testing_Guide.docx`
 - Save the path as `LOCAL_PATH`.
 
@@ -522,7 +577,7 @@ for row in [
     ('BRD Reference', '<<BRD_URL>>'),
     ('Jira Stories',  '<<JIRA_STORY_IDS>>'),
     ('Sprint',        '<<SPRINT_NAME>>'),
-    ('Prepared By',   'QA Team'),
+    ('Prepared By',   '<<PREPARED_BY>>'),  # from get_jira_current_user, fallback "QA Team"
     ('Last Updated',  '<<DATE>>'),
     ('Google Doc',    '<<GDOC_URL>>'),
     ('Purpose',       'Complete E2E testing guide. Any team member can use this to understand the feature and execute testing independently.'),
@@ -629,7 +684,7 @@ print(f'Saved: {OUTPUT_PATH}')
 ---
 ### STEP 4c — Generate draw.io Flow Diagram (fire in the same turn as 4a + 4b)
 
-Run the Python script below. Before running:
+Run the Python script below **via a Bash heredoc** (same reasoning as 4b — avoid writing a `.py` file to the output folder; use `_scratch/` instead if you must stage it). Before running:
 - Replace `<<PROJECT_NAME>>` with the actual project name string.
 - Replace `<<FLOW_STEPS>>` with a Python list of step dicts derived from the section 3.2 steps synthesized in STEP 3. Each dict has two keys: `label` (≤ 60 chars — actor + brief action) and `type` (one of: `"start"`, `"process"`, `"decision"`, `"error"`, `"end"`).
 
@@ -745,6 +800,15 @@ print(f'DRAWIO_PATH={out}')
 
 ---
 
+### STEP 4d — Cleanup (mandatory, even if you never created `_scratch/`)
+
+Before moving to Step 5/6:
+1. Confirm `LOCAL_PATH` (.docx) and `DRAWIO_PATH`/`DRAWIO_URL` (.drawio) exist and are non-empty.
+2. If a `_scratch/` directory was created under the output folder, delete it: `rm -rf /Users/Amara.Maheshkumar/Documents/ClaudeCodeProjects/claude_outputs/e2e-test-guide/_scratch`
+3. Run `ls /Users/Amara.Maheshkumar/Documents/ClaudeCodeProjects/claude_outputs/e2e-test-guide/` and confirm this run added nothing but the `.docx` and `.drawio` — no `.py`, no `.md`, no leftover subfolders. If anything else from this run is present, delete it.
+
+---
+
 ### STEP 5 — Create Confluence Page (optional, fully automatic)
 
 **5a. Decide whether to create a Confluence page — no user prompt needed:**
@@ -752,13 +816,16 @@ print(f'DRAWIO_PATH={out}')
 - If the user provided `confluence:<value>` in the command → create the page automatically (proceed to 5b).
 - If the user did **not** provide `confluence:` → **skip Steps 5b–5d entirely** and go straight to Step 6. Note the skip in the Step 6 summary so the user knows how to add it next time. Do NOT ask.
 
-**5b. Determine parent page (once user confirms):**
+**5b. Determine parent page:**
 
 - If the user provided a full Confluence URL (contains `atlassian.net/wiki`): extract the page ID from `/pages/<id>` and space key from `/spaces/<key>`.
 - If the user provided a numeric page ID only: use it directly as `parent_id`.
-- If the user just said "yes" (no URL): use `parent_id = 5442306956` and `space_key = MK` (default: `https://rubrik.atlassian.net/wiki/spaces/MK/overview`).
+- If the user gave `confluence:<value>` with no resolvable parent page (e.g. just a space key, or an unparseable value): **do not guess a parent page ID.** Create the page at the space root — omit `parent_id` entirely — using `space_key` from the `space:` arg (default `MK` if not given). Mention in the Step 6 summary that the page landed at the space root so the user can move it under the right parent if needed. A stale hardcoded parent ID is worse than no parent at all — it can silently nest the page somewhere wrong or fail if that page was since deleted/moved.
 
 **5c. Convert document to Confluence storage format:**
+
+> **Known limitation:** this is a line-by-line markdown→storage-format conversion, not a full markdown parser. It handles the flat structures this skill's own template produces (simple tables, single-level bullet/numbered lists, blockquotes, links, bold) reliably. It is **not** reliable for structures this template doesn't normally produce — multi-paragraph table cells, lists nested more than one level, or markdown embedded inside a blockquote. Don't add handling for those speculatively; if the synthesized content ever contains them, flag it in the Step 6 summary ("Confluence formatting is best-effort — please review the page for nested lists/multi-line table cells") rather than guessing at a conversion.
+
 Convert the markdown document to Confluence HTML storage format:
 - `# Heading` → `<h1>`, `## Heading` → `<h2>`, etc.
 - Tables → `<table><tbody><tr><th>...</th></tr><tr><td>...</td></tr></tbody></table>`
@@ -811,15 +878,16 @@ After all outputs are created, respond with:
 ```
 ✅ E2E Testing Guide created successfully!
 
-💾 Local Word Doc:  [LOCAL_PATH]        (.docx — 7 sections: Overview, New Fields, E2E Flow, Pre-conditions, Test Cases, Quick Start, Glossary)
-📄 Google Doc:      [GDOC_URL]
-🔀 Flow Diagram:    [DRAWIO_URL]        (open in diagrams.net · import into Lucidchart)
-📘 Confluence:      [CONFLUENCE_URL]   ← include this line only if a Confluence page was created
+💾 Local Word Doc:  [LOCAL_PATH]        (.docx — 7 sections: Overview, New Fields, E2E Flow, Pre-conditions, Test Cases, Quick Start, Glossary)   ← omit this line entirely if output:gdoc-only was used
+📄 Google Doc:      [GDOC_URL]          (flow diagram renders inline)
+🔀 Flow Diagram:    [DRAWIO_URL]        (editable version — open in diagrams.net · import into Lucidchart)
+📘 Confluence:      [CONFLUENCE_URL]   ← include this line only if a Confluence page was created; add "(created at space root — move under the right parent if needed)" if 5b had no resolvable parent
 
 Document covers:
 - [N] Jira stories
 - [N] E2E process steps
 - [N] Test scenarios with evidence links
+- [N] Bug/Sub-task tickets in scope were excluded (Story-only filter)   ← include only if that count is > 0 and was computed per Step 2a
 
 ---
 Stories included:
@@ -828,18 +896,27 @@ Stories included:
 ...
 
 ---
+For a deeper AC-by-AC evidence audit on any one story: /qa-evidence-audit <JIRA-ID>
+For a dedicated, richer flow diagram: /functional-flow-diagram <JIRA_IDs>
+For a rigorous BRD-vs-Jira gap check: /brd-jira-validator <BRD_URL> <JIRA_IDs>
+
+---
 To also publish to Confluence, re-run with:
 /e2e-test-guide <BRD_URL> <JIRA_IDs> confluence:<Confluence_URL_or_page_ID>
 
 To re-generate (no BRD):
 /e2e-test-guide <JIRA_IDs> project:<name>
+
+To skip the local Word doc next time:
+/e2e-test-guide <JIRA_IDs> output:gdoc-only
 ```
 
 ---
 
 ## Quality Rules
 
-- **Filter strictly:** Only include issues where `issuetype = Story` AND `status != "No Action"`. Silently skip Bugs, Sub-tasks, and any story with status "No Action" — do not mention them in the document at all.
+- **Filter strictly:** Only include issues where `issuetype = Story` AND status is not one of the excluded terminal statuses (No Action, Won't Do, Duplicate, Cancelled, Rejected — or whatever the user's own JQL already encodes). Skip excluded stories without mentioning them individually in the document body; if non-Story issues were mixed into an un-filtered input, acknowledge the count once in Step 6 (see Scale Guardrail / Step 2a) rather than silently dropping them with no trace.
+- **New fields must be verifiably new:** never list a field in Section 2 unless the source text affirmatively says it was created — if any mention says reused/existing/repurposed, exclude it (see the exclusion check in Step 2b). When in doubt, leave it out of the table and add a one-line caveat instead of guessing.
 - **Self-contained:** Every test step must be specific enough to execute without asking anyone. No vague steps like "verify the feature works" — always specify WHERE to go, WHAT to click/enter, and WHAT the exact expected result is.
 - **Ordered:** Stories and steps must follow the logical E2E flow order (trigger → completion), not Jira ID order. Derive correct order from BRD flow and story dependencies.
 - **Evidence-first:** Always show QA sign-off comments and attachment links before fallback text. If evidence exists, surface it prominently.
