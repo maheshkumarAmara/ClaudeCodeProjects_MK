@@ -19,6 +19,7 @@ from pdf_engine import (
     generator_nextgen_distribution_pty_ltd,
     generator_nox_co_ltd,
 )
+from pdf_engine.sandbox_pdf import sandbox_pdf_emails
 
 # Distributors whose PDF is built by a dedicated generator instead of the
 # coordinate-layout one in pdf_engine/generator.py.
@@ -87,6 +88,9 @@ async def generate_distributor_po(slug: str, body: GenerateRequest):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    # Template-printed addresses aren't form fields, so sandbox_fields can't reach them.
+    pdf_bytes = sandbox_pdf_emails(pdf_bytes)
 
     filename = f"{(body.fields.get('po_number') or slug).strip().replace('/', '-') or slug}.pdf"
     return Response(
