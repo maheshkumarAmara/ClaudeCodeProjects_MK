@@ -250,7 +250,7 @@ def get_quote_data(quote_id: str, org: str = SF_ORG, slug: str | None = None) ->
 
     soql = (
         "select id,SBQQ__NetPrice__c,SBQQ__NetTotal__c,SBQQ__SubscriptionTerm__c,SBQQ__Product__r.Name,"
-        "SBQQ__Product__r.ProductCode,SBQQ__Description__c,"
+        "SBQQ__Product__r.ProductCode,Printable_Product__c,SBQQ__Description__c,"
         "SBQQ__Quantity__c,SBQQ__Quote__r.Name,SBQQ__Quote__r.SBQQ__NetAmount__c,"
         "SBQQ__Quote__r.SBQQ__Account__r.Name,"
         "SBQQ__Quote__r.SBQQ__Opportunity2__r.Distributor_Lookup__c,"
@@ -294,7 +294,7 @@ def get_quote_data(quote_id: str, org: str = SF_ORG, slug: str | None = None) ->
         terms = rec.get("SBQQ__SubscriptionTerm__c")
         line_items.append(
             {
-                "part_number": product.get("ProductCode") or product.get("Name") or "",
+                "part_number": rec.get("Printable_Product__c") or product.get("ProductCode") or product.get("Name") or "",
                 "description": rec.get("SBQQ__Description__c") or product.get("Name") or "",
                 "qty": str(rec.get("SBQQ__Quantity__c") or ""),
                 "unit_cost": str(rec.get("SBQQ__NetPrice__c") or ""),
