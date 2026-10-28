@@ -494,9 +494,166 @@
     .elsr-comparison-close-btn { margin-top: 1.5rem; background: linear-gradient(to right, #ef4444, #f87171); color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; border: none; cursor: pointer; transition: transform 0.2s; }
     .elsr-comparison-close-btn:hover { transform: translateY(-2px); }
 
+    /* =============================================
+       ORDER VALIDATION APP THEME (dark navy)
+       Appended override layer: restyles the page to match the Order Validation
+       app (Streamlit) using the same palette. No markup or script depends on it.
+       Everything is scoped under body.ov-theme so it outranks Tailwind's
+       utility classes, which the CDN build injects after this stylesheet.
+       ============================================= */
+    :root {
+        --ov-bg: #0c1929;
+        --ov-surface: rgba(255, 255, 255, 0.04);
+        --ov-surface-2: #12263e;
+        --ov-border: rgba(255, 255, 255, 0.10);
+        --ov-border-strong: rgba(255, 255, 255, 0.18);
+        --ov-text: #c4daea;
+        --ov-text-strong: #f0f8ff;
+        --ov-text-muted: #6a9abb;
+        --ov-accent: #0984e3;
+        --ov-accent-2: #0c55a0;
+    }
+    body.ov-theme {
+        background: var(--ov-bg) !important;
+        color: var(--ov-text);
+        font-size: 14px;
+        -webkit-font-smoothing: antialiased;
+    }
+    body.ov-theme ::-webkit-scrollbar { width: 5px; height: 5px; }
+    body.ov-theme ::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); border-radius: 4px; }
+    body.ov-theme ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 4px; }
+    body.ov-theme ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.32); }
+
+    /* ---- header bar (same banner as the Order Validation app) ---- */
+    body.ov-theme > .w-full.bg-slate-100 {
+        background: linear-gradient(135deg, #091d36 0%, #0d2a50 55%, #0e3868 100%) !important;
+        border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 14px;
+        box-shadow: 0 6px 28px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+        padding: 1.25rem 1.8rem;
+    }
+    body.ov-theme > .w-full.bg-slate-100 #mainTitle { color: var(--ov-text-strong) !important; letter-spacing: 0.2px; }
+    body.ov-theme > .w-full.bg-slate-100 p,
+    body.ov-theme > .w-full.bg-slate-100 label,
+    body.ov-theme > .w-full.bg-slate-100 .text-gray-600,
+    body.ov-theme > .w-full.bg-slate-100 .text-gray-500 { color: #88b8d4 !important; }
+    /* the Rubrik logo is a dark-on-transparent SVG: sit it on a light chip so it stays legible */
+    body.ov-theme > .w-full.bg-slate-100 img {
+        background: #f4f8fc; border-radius: 8px; padding: 4px 10px; box-sizing: content-box;
+    }
+
+    /* ---- cards ---- */
+    body.ov-theme .section-card {
+        background-color: var(--ov-surface);
+        backdrop-filter: none;
+        border: 1px solid var(--ov-border);
+        border-radius: 11px;
+        box-shadow: none;
+        color: var(--ov-text);
+    }
+
+    /* ---- inputs ---- */
+    body.ov-theme input, body.ov-theme select, body.ov-theme textarea {
+        background-color: var(--ov-surface-2);
+        border: 1px solid var(--ov-border-strong);
+        border-radius: 9px;
+        color: #dceef8;
+        color-scheme: dark;
+    }
+    body.ov-theme input::placeholder, body.ov-theme textarea::placeholder { color: #2e5470; }
+    body.ov-theme input:focus, body.ov-theme textarea:focus, body.ov-theme select:focus {
+        background-color: var(--ov-surface-2);
+        border-color: rgba(9,132,227,0.7);
+        box-shadow: 0 0 0 3px rgba(9,132,227,0.12);
+    }
+    body.ov-theme select option { background: var(--ov-surface-2); color: #dceef8; }
+    body.ov-theme input[readonly] { background-color: rgba(255,255,255,0.03); color: var(--ov-text-muted); }
+    body.ov-theme label { color: #6a9abb; }
+
+    /* ---- tables ---- */
+    body.ov-theme th {
+        background-color: #0d2240;
+        color: #88b8d4;
+        border-bottom: 2px solid rgba(9,132,227,0.35);
+        text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.72rem;
+    }
+    body.ov-theme td { border-bottom: 1px solid rgba(255,255,255,0.07); color: var(--ov-text); }
+    body.ov-theme tbody tr:hover { background-color: rgba(9,132,227,0.06); }
+    body.ov-theme table input[type="text"], body.ov-theme table input[type="date"], body.ov-theme table input[type="number"] {
+        background-color: transparent; border: none; color: #dceef8;
+    }
+    body.ov-theme .selected-row { background-color: rgba(9,132,227,0.18) !important; border-left: 3px solid var(--ov-accent); }
+    body.ov-theme .selected-row:hover { background-color: rgba(9,132,227,0.26) !important; }
+    body.ov-theme .dragging { background: rgba(9,132,227,0.25); }
+
+    /* ---- buttons (same gradients as the Order Validation primary button) ---- */
+    body.ov-theme .action-button { border-radius: 10px; font-weight: 600; letter-spacing: 0.3px; }
+    body.ov-theme .generate-button,
+    body.ov-theme .move-selected-btn,
+    body.ov-theme .download-button {
+        background: linear-gradient(135deg, #0c55a0 0%, #0984e3 100%);
+        box-shadow: 0 4px 18px rgba(9,132,227,0.38);
+    }
+    body.ov-theme .refresh-button {
+        background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); box-shadow: none; color: #d4e8f4;
+    }
+
+    /* ---- Tailwind utility colours used in the markup ---- */
+    body.ov-theme .bg-white, body.ov-theme .bg-gray-50, body.ov-theme .bg-slate-50 { background-color: var(--ov-surface-2) !important; }
+    body.ov-theme .bg-gray-100, body.ov-theme .bg-slate-100, body.ov-theme .bg-gray-200, body.ov-theme .bg-slate-200 { background-color: rgba(255,255,255,0.07) !important; }
+    body.ov-theme .text-gray-900, body.ov-theme .text-gray-800, body.ov-theme .text-gray-700, body.ov-theme .text-slate-900,
+    body.ov-theme .text-slate-800, body.ov-theme .text-slate-700 { color: #dceef8 !important; }
+    body.ov-theme .text-gray-600, body.ov-theme .text-gray-500, body.ov-theme .text-slate-600, body.ov-theme .text-slate-500 { color: #88b8d4 !important; }
+    body.ov-theme .text-gray-400, body.ov-theme .text-slate-400 { color: #6a9abb !important; }
+    body.ov-theme .border-gray-100, body.ov-theme .border-gray-200, body.ov-theme .border-gray-300,
+    body.ov-theme .border-slate-200, body.ov-theme .border-slate-300 { border-color: var(--ov-border-strong) !important; }
+    body.ov-theme .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: var(--ov-border) !important; }
+    body.ov-theme .hover\:bg-gray-100:hover, body.ov-theme .hover\:bg-gray-50:hover { background-color: rgba(255,255,255,0.10) !important; }
+
+    /* ---- details/summary, modals, light panels inside modules ---- */
+    body.ov-theme details { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.08); border-radius: 11px; }
+    body.ov-theme .modal-content { background: #0f2337; color: var(--ov-text); border: 1px solid var(--ov-border-strong); }
+    body.ov-theme .modal-close-btn { background: rgba(255,255,255,0.10); color: #dceef8; }
+    body.ov-theme .modal-close-btn:hover { background: rgba(255,255,255,0.18); }
+    body.ov-theme .elsr-comparison-content { background-color: #0f2337; }
+    body.ov-theme .elsr-comparison-section h3 { color: #dceef8; }
+    body.ov-theme .elsr-comparison-textarea { background-color: var(--ov-surface-2); border-color: var(--ov-border-strong); color: #dceef8; }
+    body.ov-theme #messageBox { background-color: #12263e; border: 1px solid var(--ov-border-strong); }
+
+    /* ---- status colours: lift dark text shades and tone pale tints for the dark page ---- */
+    body.ov-theme .text-red-400, body.ov-theme .text-red-500, body.ov-theme .text-red-600, body.ov-theme .text-red-700 { color: #ff7675 !important; }
+    body.ov-theme .text-green-400, body.ov-theme .text-green-600, body.ov-theme .text-green-700, body.ov-theme .text-green-800,
+    body.ov-theme .text-emerald-700 { color: #3ddc97 !important; }
+    body.ov-theme .text-amber-300, body.ov-theme .text-amber-500, body.ov-theme .text-amber-600, body.ov-theme .text-amber-700,
+    body.ov-theme .text-yellow-400 { color: #fdcb6e !important; }
+    body.ov-theme .text-blue-400, body.ov-theme .text-blue-500, body.ov-theme .text-blue-600, body.ov-theme .text-blue-700,
+    body.ov-theme .text-indigo-700 { color: #6cb8f5 !important; }
+    body.ov-theme table input.text-green-600 { color: #3ddc97 !important; }
+    body.ov-theme table input.text-red-600 { color: #ff7675 !important; }
+    body.ov-theme .bg-amber-50 { background-color: rgba(253,203,110,0.10) !important; }
+    body.ov-theme .bg-amber-100, body.ov-theme .bg-amber-200 { background-color: rgba(253,203,110,0.18) !important; }
+    body.ov-theme .bg-green-100, body.ov-theme .bg-green-200, body.ov-theme .bg-emerald-100 { background-color: rgba(0,184,148,0.18) !important; }
+    body.ov-theme .bg-blue-100, body.ov-theme .bg-indigo-100 { background-color: rgba(9,132,227,0.18) !important; }
+    body.ov-theme .border-amber-200, body.ov-theme .border-amber-300 { border-color: rgba(253,203,110,0.35) !important; }
+    body.ov-theme .hover\:bg-amber-200:hover, body.ov-theme .hover\:bg-emerald-200:hover,
+    body.ov-theme .hover\:bg-blue-200:hover, body.ov-theme .hover\:bg-indigo-200:hover { filter: brightness(1.25); }
+    /* amber buttons that carry dark text on a solid amber fill keep their fill; only the pale tints above change */
+
+    /* ---- Entitlement graph: legend (inline-styled) and connector labels ---- */
+    body.ov-theme #elsr_visualizer-container > div[style*="position:absolute"] {
+        background: rgba(15, 35, 55, 0.92) !important;
+        border-color: rgba(255,255,255,0.14) !important;
+        box-shadow: none !important;
+    }
+    body.ov-theme #elsr_visualizer-container > div[style*="position:absolute"] div,
+    body.ov-theme #elsr_visualizer-container > div[style*="position:absolute"] span:not([style*="width:22px"]) { color: #c4daea !important; }
+    /* connector labels stroke their text in white to cut the line behind them: use the panel colour instead */
+    body.ov-theme .connector-label { fill: #c4daea; stroke: #12263e; }
+    body.ov-theme #elsr_visualizer-container { background-color: #12263e !important; }
+
 </style>
 </head>
-<body>
+<body class="ov-theme">
 
 <!-- ============================================= -->
 <!-- HEADER BAR - Logo, Page Selector, Developer   -->
@@ -2473,6 +2630,72 @@ How to Use This EDI Generator
       .results-row { grid-template-columns: 1fr; gap: 6px; }
       .result-arrow { transform: rotate(90deg); }
     }
+
+    /* ── Order Validation App theme (dark navy) ──
+       Appended override layer. The page is built on the variables above, so most of
+       the restyle is redefining them; hardcoded colours get direct rules below.
+       The @media print block further down is deliberately left alone. */
+    :root {
+      --primary: #0984e3;
+      --primary-dark: #0c55a0;
+      --primary-light: rgba(9,132,227,0.14);
+      --accent: #00b894;
+      --accent-light: rgba(0,184,148,0.16);
+      --warning: #fdcb6e;
+      --warning-light: rgba(253,203,110,0.14);
+      --danger: #ff7675;
+      --surface: rgba(255,255,255,0.04);
+      --bg: #0c1929;
+      --text: #dceef8;
+      --text-secondary: #88b8d4;
+      --border: rgba(255,255,255,0.16);
+      --border-light: rgba(255,255,255,0.08);
+      --shadow-sm: none;
+      --shadow-md: none;
+      --shadow-lg: none;
+      --radius: 12px;
+      color-scheme: dark;
+    }
+    body { background: #0c1929; background-attachment: fixed; font-size: 14px; -webkit-font-smoothing: antialiased; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 4px; }
+
+    .header {
+      background: linear-gradient(135deg, #091d36 0%, #0d2a50 55%, #0e3868 100%);
+      border: 1px solid rgba(255,255,255,0.07);
+      box-shadow: 0 6px 28px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+    .header-icon { background: linear-gradient(135deg, #0d5fa3 0%, #0984e3 100%); box-shadow: 0 4px 16px rgba(9,132,227,0.35); }
+
+    .section {
+      background: rgba(255,255,255,0.04);
+      backdrop-filter: none; -webkit-backdrop-filter: none;
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: none;
+    }
+    .field input, .field select, input, select, textarea {
+      background: #12263e; color: #dceef8; border-color: rgba(255,255,255,0.16);
+    }
+    .field input::placeholder, input::placeholder, textarea::placeholder { color: #2e5470; }
+    .field input:focus, .field select:focus {
+      border-color: rgba(9,132,227,0.7); box-shadow: 0 0 0 3px rgba(9,132,227,0.12);
+    }
+    .field input[readonly] { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.08); color: #88b8d4; }
+    select option { background: #12263e; color: #dceef8; }
+
+    .btn-primary { background: linear-gradient(135deg, #0c55a0, #0984e3); box-shadow: 0 4px 18px rgba(9,132,227,0.38); }
+    .btn-primary:hover { background: linear-gradient(135deg, #1065b4, #1a95f5); }
+    .btn-primary:disabled { background: #182c3e; color: #2e5470; box-shadow: none; }
+    .btn-outline { background: rgba(255,255,255,0.07); color: #d4e8f4; border: 1px solid rgba(255,255,255,0.12); }
+    .btn-outline:hover { background: rgba(255,255,255,0.13); border-color: rgba(255,255,255,0.22); }
+    .btn-danger-outline:hover { background: rgba(255,118,117,0.12); }
+    .btn-copy-soql { background: rgba(255,255,255,0.10); color: #d4e8f4; }
+    .btn-copy-soql:hover { background: rgba(255,255,255,0.18); }
+    .badge-orange, .info-strip.orange { background: rgba(253,203,110,0.14); color: #fdcb6e; }
+    .badge-red { background: rgba(255,118,117,0.14); color: #ff7675; }
+    .logic-box { border-color: rgba(253,203,110,0.4); }
+    .del-row-btn:hover { background: rgba(255,118,117,0.12); }
   </style>
 </head>
 <body>
