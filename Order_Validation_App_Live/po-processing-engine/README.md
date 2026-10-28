@@ -4,7 +4,7 @@ Upload an existing PO (Purchase Order) PDF, edit fields in the browser, and down
 
 ## Status
 
-Working end-to-end for `arrow-ecs-sau` and `exclusive-networks-south-africa`: load the template PDF into an editable form (`GET /api/distributors/{slug}/template`), edit fields and line items, and download a regenerated PDF (`POST /api/distributors/{slug}/generate`). Line items are fully dynamic (add/remove/reorder rows) with true multi-page reflow when the items table overflows the first page. PDF editing uses `pypdf` + `reportlab` (whiteout-and-redraw overlay merged onto the original template page) rather than PyMuPDF, to avoid its AGPL/commercial licensing.
+Working end-to-end for the distributors listed in the Distributors table below: load the template PDF into an editable form (`GET /api/distributors/{slug}/template`), edit fields and line items, and download a regenerated PDF (`POST /api/distributors/{slug}/generate`). Line items are fully dynamic (add/remove/reorder rows) with true multi-page reflow when the items table overflows the first page. PDF editing uses `pypdf` + `reportlab` (whiteout-and-redraw overlay merged onto the original template page) rather than PyMuPDF, to avoid its AGPL/commercial licensing.
 
 Known limitations:
 - Replacement text is drawn in Helvetica at the original point size rather than the original embedded subset font — visually close, not pixel-identical.
@@ -12,7 +12,7 @@ Known limitations:
 - `NextGen Distribution Pty Ltd` has its own parser and generator (`pdf_engine/parsers/nextgen_distribution_pty_ltd.py`, `pdf_engine/generator_nextgen_distribution_pty_ltd.py`) instead of a `DistributorLayout`. Preview/Generate paginate the items across pages with their section headings ("Expansion Quote" / "Renewal Quote"), redraw the header, address blocks, footer terms and "Order Total" bar, and renumber "Page No. N of M". The Term Qty / Term / Start / End columns are read from each row's `terms` text (e.g. `18 Months (2/01/2026 - 30/06/2027)`; a bare number means months). A loaded row keeps its printed amount until its qty, unit price or terms are edited; after that (and for rows pulled from a Quote) it is recomputed as qty × unit price × term months. The Order Total is always the sum of the rows, so it can differ from the sample's own printed total (the sample's rows add up to 684,617.50 against a printed 684,613.43). "Use this Quote" fills line items plus four header fields: `delivery_name` and `end_user` (both the Quote's Account Name, `SBQQ__Account__c`), `quote_number` (the Quote Name) and `total` (the Quote's `SBQQ__NetAmount__c`, written as `USD <amount>`). No other NextGen header fields have a Salesforce mapping yet. Note the PDF's Order Total bar is still computed from the line items — `total` only supplies its currency code — so the printed total can differ from the Quote's Net Amount when the pulled lines exclude renewals, optional lines or RBK/RHA/RCA products.
 - `Computer Gross spa` has its own parser and generator (`pdf_engine/parsers/computer_gross_spa.py`, `pdf_engine/generator_computer_gross_spa.py`). Its template is a one-page form with a 12-row items table, but the generator builds the table itself, so a PO can have any number of line items. A PO of up to 12 lines prints exactly the template's 12-row page (unused rows blank). More lines grow the table in place while the TOTAL / Shipping / IOR block still fits on the page; beyond that the table continues on extra pages that repeat the column header, and the TOTAL / Shipping / IOR block and closing sentence go on the last page only (each page of a multi-page PO is labelled "PO <number> - Page i of n"). The closing sentence ("... ACCEPTS ALL ADDITIONAL TERMS ON RUBRIK QUOTE <quote> DATED <date>") is rebuilt from `quote_number` and `quote_date`. Clickable `mailto:` links are rebuilt to match the printed addresses (the template's own links are dropped). The TOTAL is the sum of qty × unit price over the rows. Limits: the pieces of the template page that aren't shown (unused rows, the old header/tail values) stay in the PDF's hidden text layer, so copy/paste or text search of the PDF can still find the sample PO's original values, including its original email addresses; descriptions are clipped to their cell width; text is Helvetica, not the template's Tahoma.
 - `Exclusive Networks (Norway)` has its own parser and generator (`pdf_engine/parsers/exclusive_networks_norway.py`, `pdf_engine/generator_exclusive_networks_norway.py`). The template is a flowing 2-page document with no ruled table; the generator cuts the letterhead/header, the repeated column-header band, the totals block and the footer out of the template pages and places them around rows it draws itself, so a PO can have any number of line items (pages are added as needed, the header band repeats, and the totals block goes under the last row — never under an empty table). Every number is recomputed: a row's Net Amount is qty × Disc. U.P (U.P less any "% disc."), the subtotal is the sum of the rows, tax is the subtotal × the `tax_rate` field and the total is subtotal + tax; the printed subtotal/tax/total form fields are not used. A row's Quote ID is its own `quote_id`, else the form's `quote_number`, else the quote number in the comment line (the comment line's quote number is swapped to match when a different `quote_number` is supplied). A bare `terms` number (as pulled from Salesforce) prints as "Terms N months". A row carrying `serial_number` / `contract_start_date` / `contract_end_date` prints the "Supported S/N / Contract Start / End Date" block above it (the parser attaches each block in the sample to the row printed below it — a judgement call, as the PDF doesn't say which row a block belongs to); the form has no columns for those three values, so they only appear for a row loaded from the template. The footer's static "Email:" line and the template's `mailto:` links are rebuilt on `sandbox.com`. Long SKUs wrap mid-token instead of overflowing. Pulling a Quote fills only the line items: there is no Salesforce field mapper for this distributor yet, and the default mapper's `quote_number` / `buyer` keys don't exist on this form, so no header fields are filled. Limits: text is Helvetica, not the template's Noto Sans; the original text of covered or clipped-away template pieces stays in the PDF's hidden text layer (the generated PDF's extracted text contains each such value more than once, so don't rely on text extraction of it); months aren't pluralized ("Terms 1 months").
-- Only `arrow-ecs-sau` and `exclusive-networks-south-africa` have a `DistributorLayout` configured so far (see `pdf_engine/layouts/`). The other distributor slugs in `config.DISTRIBUTORS` will return a clear "not yet configured" error from the template/generate endpoints until their sample PDFs and layouts are added.
+- Distributors with a dedicated parser and generator (see the Distributors table below): ADN, Arrow (Netherlands), Computer Gross, Exclusive Networks (Norway), Ingram Micro Canada, Innocom, Networld, NextGen and NOX. Only `arrow-ecs-sau` and `exclusive-networks-south-africa` use a `DistributorLayout` (see `pdf_engine/layouts/`); their sample PDFs now sit in `data/templates/Old/` and they are hidden from the dropdown. Every other slug in `config.DISTRIBUTORS` (including `iValue InfoSolutions Limited` and `HCL America, Inc.`, which are still listed) returns a "not yet configured" or "no template" error from the template/generate endpoints until a parser/generator or layout and sample PDF are added.
 - For `exclusive-networks-south-africa`, long `part_number`/`description` values are wrapped onto extra lines (word-wrap for description, character-wrap for part numbers, mirroring how the sample PDF itself wraps a long code mid-character) to fit their table columns; row height and the "Terms:" line position adjust automatically to whichever column wraps taller. Most of the page-1 info panel (dispatch instructions, "Ship to"/contact block, billing address) is static distributor boilerplate left as untouched background — only the order-specific lines (Quote #, reseller/end user, PO number, contact, address, shipment/payment terms) are modeled as editable fields.
 
 ## Salesforce integration (pull-only)
@@ -61,43 +61,63 @@ cp env.example .env   # adjust PORT / SALESFORCE_ORG_ALIAS if needed
 
 ## Run
 
+Standalone:
+
 ```bash
 uvicorn main:app --reload --port 8010
 ```
 
 Visit http://127.0.0.1:8010/
 
+Embedded in the Order Validation App, `pages/PO_Processing_Engine.py` starts this same server itself (with `sys.executable -m uvicorn`) on port **8012** (`PO_ENGINE_PORT` overrides it) and shows it in an iframe; "Open in a new tab" goes to `http://127.0.0.1:8012/`. 8012 is deliberately not 8011, so a copy of the app from another checkout can't leave an engine on the port that this copy then reuses with different code.
+
 ## Structure
 
 ```
 po-processing-engine/
-  main.py            # FastAPI app, static mount, index route, /api/health
-  config.py          # BASE_DIR, load_dotenv, PORT, SALESFORCE_ORG_ALIAS
+  main.py              # FastAPI app: static mount, index route, /api/health, distributor + Salesforce + generate endpoints
+  config.py            # BASE_DIR, PORT, SALESFORCE_ORGS, DISTRIBUTORS, SANDBOX_EMAIL_DOMAIN
   salesforce_client.py # Read-only Salesforce CLI (`sf`) query wrapper for the Quote pull feature
+  sandbox_email.py     # Forces every email address in field values to sandbox.com
   requirements.txt
   env.example
-  templates/
-    index.html
-  static/
-    style.css
-    script.js
+  templates/index.html
+  static/              # style.css, script.js
+  pdf_engine/
+    extractor.py       # Loads a template PDF into editable fields/line items (dispatches to a parser or layout)
+    generator.py       # Coordinate-layout generator (used by distributors with a DistributorLayout)
+    generator_<disti>.py   # Dedicated generator per distributor
+    parsers/<disti>.py     # Dedicated template parser per distributor
+    layouts/               # DistributorLayout definitions (arrow-ecs-sau, exclusive-networks-south-africa)
+    paginate.py, models.py # Shared pagination / layout helpers
+    sandbox_pdf.py     # Rewrites email addresses printed in the generated PDF
   data/
-    uploads/          # future: ad-hoc uploaded source PDFs (not tied to a known distributor)
-    templates/         # per-distributor base PO PDFs, e.g. templates/hcl/
-      <disti-slug>/
-    generated/         # per-distributor regenerated output PDFs, e.g. generated/hcl/
-      <disti-slug>/
+    uploads/           # future: ad-hoc uploaded source PDFs (not tied to a known distributor)
+    templates/<slug>/  # the sample PO PDF for each distributor (Old/ holds retired samples)
+    generated/<slug>/  # regenerated output PDFs (git-ignored)
 ```
 
 ## Distributors
 
-Distributor slugs are defined in `config.DISTRIBUTORS` and each has a matching folder under `data/templates/` and `data/generated/`:
+`config.DISTRIBUTORS` maps a slug to a display name and drives `GET /api/distributors`. The slug is also the folder name under `data/templates/` and `data/generated/`, so the newer entries use the display name itself (spaces and punctuation included) as the slug. The first six entries in the config are legacy kebab-case slugs.
 
-- `pt-synnex-metrodata-indonesia` — PT. Synnex Metrodata Indonesia
-- `pt-ecs-indo-jaya` — PT. ECS Indo Jaya
-- `hcl` — HCL POs
-- `exclusive-networks-turkey` — Exclusive Networks Turkey
-- `exclusive-networks-south-africa` — Exclusive Networks (South Africa)
-- `arrow-ecs-sau` — ARROW E.C.S., SAU
+| Slug | Display name | Template | Parser | Generator | In dropdown |
+|---|---|---|---|---|---|
+| `ADN Distribution GmbH` | ADN Distribution GmbH | yes | yes | yes | yes |
+| `Arrow (Netherlands)` | Arrow ECS BV (Netherlands) | yes | yes | yes | yes |
+| `Computer Gross spa` | Computer Gross spa | yes | yes | yes | yes |
+| `Exclusive Networks (Norway)` | Exclusive Networks (Norway) | yes | yes | yes | yes |
+| `Ingram Micro Canada` | Ingram Micro Canada | yes | yes | yes | yes |
+| `Innocom Ltd` | Innocom Ltd | yes | yes | yes | yes |
+| `Networld Corporation` | Networld Corporation | yes | yes | yes | yes |
+| `NextGen Distribution Pty Ltd` | NextGen Distribution Pty Ltd | yes | yes | yes | yes |
+| `NOX Co.,LTD.` | NOX Co.,LTD. | yes | yes | yes | yes |
+| `iValue InfoSolutions Limited` | iValue InfoSolutions Limited | yes | no | no | yes, but returns "not yet configured" |
+| `HCL America, Inc.` | HCL America, Inc. | no | no | no | yes, but returns an error |
+| `arrow-ecs-sau` | ARROW E.C.S., SAU | in `templates/Old/` | layout | layout | hidden |
+| `exclusive-networks-south-africa` | Exclusive Networks (South Africa) | in `templates/Old/` | layout | layout | hidden |
+| `pt-synnex-metrodata-indonesia`, `pt-ecs-indo-jaya`, `hcl`, `exclusive-networks-turkey` | legacy placeholders | no | no | no | hidden |
 
-Drop each distributor's sample PO PDF into its `data/templates/<slug>/` folder.
+"Hidden" slugs are filtered out of the dropdown by `HIDDEN_DISTRIBUTOR_SLUGS` in `static/script.js` but are still returned by the API. The two layout-based distributors need their sample PDF moved back from `templates/Old/<slug>/` to `templates/<slug>/` before they will load.
+
+Adding a distributor currently means touching several places: `config.DISTRIBUTORS`, `pdf_engine/parsers/__init__.py` (`PARSERS`), `main.py` (`CUSTOM_GENERATORS`), optionally `salesforce_client._FIELD_MAPPERS`, and `static/script.js` if it should be hidden.
