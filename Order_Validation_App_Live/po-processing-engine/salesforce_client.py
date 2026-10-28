@@ -12,6 +12,7 @@ import subprocess
 from decimal import Decimal
 
 import config
+import distributors
 
 SF_ORG = config.SALESFORCE_ORG_ALIAS
 _QUERY_TIMEOUT_SECONDS = 30
@@ -209,15 +210,8 @@ def _map_fields_computer_gross_spa(quote: dict, account: dict, order: dict) -> d
     return fields
 
 
-_FIELD_MAPPERS = {
-    "arrow-ecs-sau": _map_fields_default,
-    "exclusive-networks-south-africa": _map_fields_exclusive_networks_south_africa,
-    "NextGen Distribution Pty Ltd": _map_fields_nextgen_distribution_pty_ltd,
-    "Computer Gross spa": _map_fields_computer_gross_spa,
-}
-
-
-_NEXTGEN_SLUG = "NextGen Distribution Pty Ltd"
+# Which field mapper and per-line hook a distributor uses is set on its entry in
+# distributors.py (sf_mapper / sf_line_hook); no entry means _map_fields_default.
 
 
 def _apply_nextgen_pricing(item: dict, rec: dict) -> None:
@@ -285,7 +279,8 @@ def get_quote_data(quote_id: str, org: str = SF_ORG, slug: str | None = None) ->
     distributor = (opportunity.get("Distributor_Lookup__r") or {}).get("Name")
     suggested_slug = match_distributor(distributor)
     effective_slug = slug or suggested_slug
-    map_fields = _FIELD_MAPPERS.get(effective_slug, _map_fields_default)
+    map_fields = distributors.get_sf_mapper(effective_slug) or _map_fields_default
+    line_hook = distributors.get_sf_line_hook(effective_slug)
     order = _get_order_data(opportunity.get("Id"), org)
 
     line_items = []
@@ -302,8 +297,8 @@ def get_quote_data(quote_id: str, org: str = SF_ORG, slug: str | None = None) ->
                 "terms": str(terms) if terms is not None else "",
             }
         )
-        if effective_slug == _NEXTGEN_SLUG:
-            _apply_nextgen_pricing(line_items[-1], rec)
+        if line_hook is not None:
+            line_hook(line_items[-1], rec)
 
     return {
         "fields": map_fields(quote, account, order),

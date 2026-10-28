@@ -31,7 +31,7 @@ Requirements:
 
 Known limitations:
 - `% disc.` has no source field in the underlying query — always left blank for manual entry, for every distributor.
-- The fields populated from a Quote pull are distributor-specific (`salesforce_client._FIELD_MAPPERS`), since each distributor's PDF layout models its fields differently:
+- The fields populated from a Quote pull are distributor-specific (the `sf_mapper` set on each entry in `distributors.py`), since each distributor's PDF layout models its fields differently:
   - `arrow-ecs-sau`: `quote_number` (Quote Name) and `buyer` (Account Name).
   - `exclusive-networks-south-africa`: this layout bakes each field's static label into the same printed line as its value, so the mapper reconstructs that exact text for every trailer-page line it can source:
     - From the Quote itself: `quote_number_line` (`"Quote #:{Quote Name}"`), `reseller_end_user_line` (`"Reseller/ End User: {Account Name}"`), `contact_person_line`/`tel_nr_line`/`email_line` (from the Quote's primary Contact — `SBQQ__PrimaryContact__r.Name`/`Phone`/`Email`), `address_block` (from the Quote's `SBQQ__Shipping*__c` fields), and `payment_terms_line` (from `SBQQ__PaymentTerms__c`, used as a fallback — see below).
@@ -120,4 +120,4 @@ po-processing-engine/
 
 "Hidden" slugs are filtered out of the dropdown by `HIDDEN_DISTRIBUTOR_SLUGS` in `static/script.js` but are still returned by the API. The two layout-based distributors need their sample PDF moved back from `templates/Old/<slug>/` to `templates/<slug>/` before they will load.
 
-Adding a distributor currently means touching several places: `config.DISTRIBUTORS`, `pdf_engine/parsers/__init__.py` (`PARSERS`), `main.py` (`CUSTOM_GENERATORS`), optionally `salesforce_client._FIELD_MAPPERS`, and `static/script.js` if it should be hidden.
+The list lives in one place, `distributors.py` (`REGISTRY`). Each entry gives the slug, display name, whether it is hidden from the dropdown, and "module:function" references to its parser, generator, layout and Salesforce field mapper. `config.DISTRIBUTORS` is derived from it, and the app checks at startup that every reference resolves. To add a distributor, write its parser and generator modules, drop its sample PDF in `data/templates/<slug>/`, and add one `Distributor(...)` entry. The only other place that knows about distributors is `HIDDEN_DISTRIBUTOR_SLUGS` in `static/script.js`, which should be kept in step with the `hidden=True` entries.
