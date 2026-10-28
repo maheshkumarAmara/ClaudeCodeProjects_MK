@@ -40,12 +40,12 @@ from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 from pypdf import PageObject, PdfReader, PdfWriter, Transformation
-from pypdf.annotations import Link
 from pypdf.generic import DecodedStreamObject, NameObject
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
 import config
+from pdf_engine.common import add_links, fit_size, money_2dp, qty_text
 from pdf_engine.extractor import find_template_path
 from pdf_engine.generator import _render_overlay
 from pdf_engine.paginate import _to_decimal, wrap_chars, wrap_text
@@ -185,11 +185,7 @@ def _compose_page(template_bytes: bytes, pieces: list[tuple[int, float, float, f
 
 
 def _add_links(writer: PdfWriter, links: list) -> None:
-    page_index = len(writer.pages) - 1
-    for left, top, right, bottom, uri in links:
-        writer.add_annotation(
-            page_number=page_index, annotation=Link(rect=(left, PAGE_H - bottom, right, PAGE_H - top), url=uri)
-        )
+    add_links(writer, links, PAGE_H)
 
 
 # --- Drawing helpers --------------------------------------------------------------
@@ -202,9 +198,7 @@ def _cover(c: canvas.Canvas, box: tuple[float, float, float, float], dy: float =
 
 
 def _fit(text: str, font: str, size: float, max_width: float) -> float:
-    while size > MIN_FONT_SIZE and stringWidth(text, font, size) > max_width:
-        size -= 0.1
-    return size
+    return fit_size(text, font, size, max_width, MIN_FONT_SIZE)
 
 
 def _text(
@@ -251,11 +245,11 @@ def _replace(c: canvas.Canvas, box, x, top, text, size=9.0, *, bold=False, align
 
 
 def _money(value: Decimal) -> str:
-    return f"{value.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP):,.2f}"
+    return money_2dp(value)
 
 
 def _qty_text(value: Decimal) -> str:
-    return f"{int(value):,}" if value == value.to_integral_value() else f"{value.normalize():,f}"
+    return qty_text(value)
 
 
 def _unit_text(value: Decimal) -> str:

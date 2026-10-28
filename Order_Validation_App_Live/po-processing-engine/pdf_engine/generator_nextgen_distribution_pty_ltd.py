@@ -47,6 +47,7 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
 import config
+from pdf_engine.common import fit_size, money_2dp, qty_text
 from pdf_engine.extractor import find_template_path
 from pdf_engine.generator import _fresh_page, _render_overlay
 from pdf_engine.paginate import wrap_chars, wrap_text
@@ -171,7 +172,7 @@ def _num(value) -> Decimal:
 
 
 def _money(value: Decimal) -> str:
-    return f"{value.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP):,.2f}"
+    return money_2dp(value)
 
 
 def _unit_price_text(value: Decimal) -> str:
@@ -179,7 +180,7 @@ def _unit_price_text(value: Decimal) -> str:
 
 
 def _qty_text(value: Decimal) -> str:
-    return f"{int(value):,}" if value == value.to_integral_value() else f"{value.normalize():,f}"
+    return qty_text(value)
 
 
 @dataclass
@@ -325,9 +326,7 @@ def _cover(c: canvas.Canvas, page_height: float, left: float, top: float, right:
 
 
 def _fit(text: str, font: str, size: float, max_width: float) -> float:
-    while size > MIN_FONT_SIZE and stringWidth(text, font, size) > max_width:
-        size -= 0.1
-    return size
+    return fit_size(text, font, size, max_width, MIN_FONT_SIZE)
 
 
 def _text(
