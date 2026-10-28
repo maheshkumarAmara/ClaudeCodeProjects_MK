@@ -6,3 +6,12 @@ __pycache__/
 Order_Validation_App/data/jira_config.json
 Order_Validation_App/data/history.json
 Order_Validation_App/SFTP_Upload/
+
+# Secrets / local runtime data (any folder)
+**/data/jira_config.json
+**/data/history.json
+**/logs/
+venv/
+.venv/
+node_modules/
+.claude/

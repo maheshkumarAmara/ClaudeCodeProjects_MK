@@ -45,4 +45,4 @@ echo "🚀 Launching Order Validation App..."
 echo "   Opening at http://localhost:$STREAMLIT_PORT"
 echo "   Select QA or UAT environment in the app sidebar."
 echo ""
-streamlit run streamlit_app.py --server.port "$STREAMLIT_PORT" --server.headless true --server.enableCORS false --server.enableXsrfProtection false
+streamlit run Order_Validation_App.py --server.port "$STREAMLIT_PORT" --server.headless true --server.enableCORS false --server.enableXsrfProtection false

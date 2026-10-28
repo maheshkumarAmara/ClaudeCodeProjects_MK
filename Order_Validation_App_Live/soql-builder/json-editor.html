@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JSON Editor</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="sb-header">
+      <div class="sb-header-icon">🧩</div>
+      <div class="sb-header-text">
+        <h1>JSON Editor</h1>
+        <p>Self-hosted — nothing here is sent anywhere external.</p>
+      </div>
+    </header>
+
+    <main class="json-editor-main">
+      <section class="panel json-editor-panel">
+        <div id="json-status-line"></div>
+
+        <div id="json-empty-state" class="csv-paste-wrap hidden">
+          <h2 style="margin-top: 0">Paste JSON to load</h2>
+          <textarea id="json-paste-input" placeholder="Paste any JSON here…"></textarea>
+          <div class="button-row">
+            <button id="json-load-btn" class="primary">Load</button>
+          </div>
+        </div>
+
+        <div id="json-editor-body" class="hidden">
+          <div class="button-row">
+            <button id="json-view-tree-btn" class="primary">Tree</button>
+            <button id="json-view-text-btn">Text</button>
+            <button id="json-view-flowchart-btn">Flow Chart</button>
+            <span class="muted" style="margin-left: 6px">|</span>
+            <input id="json-search-input" type="text" placeholder="Search keys/values…" />
+            <button id="json-expand-all-btn">Expand All</button>
+            <button id="json-collapse-all-btn">Collapse All</button>
+            <button id="json-format-btn" class="hidden">Format</button>
+            <button id="json-copy-btn">Copy JSON</button>
+          </div>
+          <div id="json-tree-view" class="field-tree json-tree-view"></div>
+          <div id="json-text-view" class="csv-paste-wrap hidden">
+            <textarea id="json-text-area" spellcheck="false"></textarea>
+          </div>
+          <div id="json-flowchart-view" class="json-flowchart-view hidden">
+            <div class="flowchart-zoom-controls">
+              <button id="flowchart-zoom-out-btn" type="button" title="Zoom out">−</button>
+              <button id="flowchart-zoom-reset-btn" type="button" title="Reset zoom">Reset</button>
+              <button id="flowchart-zoom-in-btn" type="button" title="Zoom in">+</button>
+              <button id="flowchart-download-pdf-btn" type="button" title="Download diagram as PDF">Download PDF</button>
+            </div>
+            <div id="json-flowchart-canvas-wrap" class="json-flowchart-canvas-wrap"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="json-editor.js"></script>
+  </body>
+</html>

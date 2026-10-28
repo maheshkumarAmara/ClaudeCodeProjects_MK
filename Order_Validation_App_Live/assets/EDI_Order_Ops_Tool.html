@@ -239,33 +239,45 @@
     /* =============================================
        JSON TREE VIEWER (JSON Response Unpacker)
        ============================================= */
+    /* Palette matches the SOQL Builder JSON Editor (soql-builder/styles.css :root vars):
+       kw-color #4fb3f0 (keys), str-color #f0a860 (strings), accent #0984e3 (numbers),
+       ok #00b894 (booleans), comment-color #6a9abb (null/punct/muted),
+       json-object-color #b98af0 / json-array-color #3fd1c0 (container framing). */
     .json-tree-view {
         font-family: 'Fira Code', monospace;
         font-size: 0.8rem;
         line-height: 1.7;
-        color: #111827;
+        color: #dceef8;
     }
-    .json-tree-row { white-space: pre-wrap; word-break: break-word; }
+    .json-tree-row {
+        white-space: pre-wrap;
+        word-break: break-word;
+        border-radius: 4px;
+        padding: 1px 4px;
+    }
+    .json-tree-row:not(.json-tree-close):hover { background: rgba(9, 132, 227, 0.18); }
     .json-tree-toggle {
         display: inline-block;
         width: 1rem;
         cursor: pointer;
-        color: #6b7280;
+        color: #6a9abb;
         user-select: none;
     }
-    .json-tree-toggle:hover { color: #374151; }
-    .json-tree-key { color: #374151; font-weight: 600; }
-    .json-tree-string { color: #16a34a; }
-    .json-tree-number { color: #dc2626; }
-    .json-tree-boolean { color: #d97706; }
-    .json-tree-null { color: #9ca3af; font-style: italic; }
-    .json-tree-punct { color: #6b7280; }
+    .json-tree-toggle:hover { color: #dceef8; }
+    .json-tree-key { color: #4fb3f0; font-weight: 600; }
+    .json-tree-string { color: #f0a860; }
+    .json-tree-number { color: #0984e3; }
+    .json-tree-boolean { color: #00b894; font-weight: 600; }
+    .json-tree-null { color: #6a9abb; font-style: italic; }
+    .json-tree-punct { color: #6a9abb; }
+    .json-tree-punct.json-tree-punct-object { color: #b98af0; }
+    .json-tree-punct.json-tree-punct-array { color: #3fd1c0; }
     .json-tree-badge {
         display: none;
         margin-left: 0.4rem;
         padding: 0 0.5rem;
-        background-color: #e5e7eb;
-        color: #6b7280;
+        background-color: rgba(255, 255, 255, 0.08);
+        color: #6a9abb;
         border-radius: 0.75rem;
         font-size: 0.7rem;
         vertical-align: middle;
@@ -274,11 +286,27 @@
     .json-tree-children {
         margin-left: 0.9rem;
         padding-left: 0.6rem;
-        border-left: 1px dashed #e2e8f0;
+        border-left: 1px dashed rgba(255, 255, 255, 0.15);
+        transition: border-color 0.12s ease, border-width 0.12s ease;
+    }
+    /* Parent-child trace: hovering any nested row thickens/colors every ancestor's
+       left guide line, same technique as SOQL Builder's .json-children:has(...) rule. */
+    .json-tree-children:has(.json-tree-row:not(.json-tree-close):hover) {
+        border-left: 2px solid #0984e3;
     }
     .json-tree-children.json-tree-collapsed { display: none; }
     .json-tree-close.json-tree-collapsed { display: none; }
     .json-tab-btn.active { background-color: #4f46e5 !important; color: #fff !important; }
+    /* The global `textarea:focus` rule (background-color: rgba(255,255,255,0.9)) outranks
+       the Tailwind bg-[#0f2337] class on this textarea once focused for editing, which was
+       flipping the panel back to a white background behind the light-blue text (invisible).
+       #json_output:focus (ID + pseudo-class) has higher specificity, so it wins instead. */
+    #json_output:focus {
+        background-color: #0f2337 !important;
+        color: #dceef8;
+        border-color: #0984e3;
+        box-shadow: 0 0 0 3px rgba(9, 132, 227, 0.25);
+    }
 
     /* =============================================
        EDI DISTRIBUTORS PAGE STYLES
@@ -571,14 +599,17 @@
         <div class="section-card">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-semibold text-gray-700">Formatted Result</h2>
-                <button id="json_copyBtn" class="action-button generate-button text-xs py-1.5 px-3">Copy Clean JSON</button>
+                <div class="flex gap-2">
+                    <button id="json_editBtn" class="text-xs bg-amber-600 text-white px-3 py-1.5 rounded hover:bg-amber-500">Edit JSON</button>
+                    <button id="json_copyBtn" class="action-button generate-button text-xs py-1.5 px-3">Copy Clean JSON</button>
+                </div>
             </div>
             <div class="flex gap-2 mb-2">
                 <button id="json_viewTextBtn" class="json-tab-btn text-xs font-semibold py-1 px-3 rounded-md bg-slate-200 text-slate-700 transition-colors">Text</button>
                 <button id="json_viewTreeBtn" class="json-tab-btn active text-xs font-semibold py-1 px-3 rounded-md bg-slate-200 text-slate-700 transition-colors">Tree</button>
             </div>
-            <textarea id="json_output" class="hidden w-full h-[600px] bg-white text-gray-900 border border-gray-200 rounded-lg font-mono text-sm p-4 focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="Paste raw data to begin..."></textarea>
-            <div id="json_treeOutput" class="json-tree-view w-full h-[600px] bg-white text-gray-900 border border-gray-200 rounded-lg p-4 overflow-auto"><span class="text-gray-400">Paste raw data to begin...</span></div>
+            <textarea id="json_output" readonly class="hidden w-full h-[600px] bg-[#0f2337] text-[#dceef8] border border-white/10 rounded-lg font-mono text-sm p-4 focus:ring-2 focus:ring-[#0984e3] outline-none resize-none" placeholder="Paste raw data to begin..."></textarea>
+            <div id="json_treeOutput" class="json-tree-view w-full h-[600px] bg-[#0f2337] text-[#dceef8] border border-white/10 rounded-lg p-4 overflow-auto"><span class="text-[#6a9abb]">Paste raw data to begin...</span></div>
         </div>
     </div>
 </div>
@@ -4020,7 +4051,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: `<ol class="list-decimal ml-4 space-y-2">
                         <li><b>Paste Raw JSON:</b> Paste your raw JSON response into the "Raw JSON Response" text area on the left. This is typically a Salesforce API response where some field values are stringified JSON strings (e.g., <code>"OrderItems": "[{\"Id\":\"123\"}]"</code>).</li>
                         <li><b>Unpack &amp; Format:</b> Click <b>"Unpack &amp; Format"</b> to parse any escaped/stringified JSON values and produce a clean, fully expanded, human-readable format.</li>
-                        <li><b>Review Output:</b> The formatted JSON appears in the "Formatted Result" panel on the right. All nested stringified values are expanded in place.</li>
+                        <li><b>Review Output:</b> The formatted JSON appears in the "Formatted Result" panel on the right. All nested stringified values are expanded in place. Switch between <b>Text</b> and <b>Tree</b> views.</li>
+                        <li><b>Edit JSON (Optional):</b> Click <b>"Edit JSON"</b> to manually modify the output (switches to Text view). Click <b>"Lock Edit"</b> when done — the tool validates the JSON, reformats it, and refreshes the Tree view to match.</li>
                         <li><b>Copy:</b> Click <b>"Copy Clean JSON"</b> to copy the formatted output to your clipboard.</li>
                     </ol>`
                 },
@@ -4357,8 +4389,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             row.appendChild(keyEl);
                         }
 
+                        const punctTypeClass = isArray ? 'json-tree-punct-array' : 'json-tree-punct-object';
+
                         const open = document.createElement('span');
-                        open.className = 'json-tree-punct';
+                        open.className = 'json-tree-punct ' + punctTypeClass;
                         open.textContent = isArray ? '[' : '{';
                         row.appendChild(open);
 
@@ -4372,7 +4406,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         entries.forEach(([k, v]) => children.appendChild(this.renderJsonTreeNode(String(k), v)));
 
                         const close = document.createElement('div');
-                        close.className = 'json-tree-row json-tree-punct json-tree-close';
+                        close.className = 'json-tree-row json-tree-punct json-tree-close ' + punctTypeClass;
                         close.textContent = isArray ? ']' : '}';
 
                         toggle.onclick = () => {
@@ -4432,9 +4466,40 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (textTab) textTab.onclick = () => showView('text');
                     if (treeTab) treeTab.onclick = () => showView('tree');
 
+                    const editBtn = document.getElementById('json_editBtn');
+                    const setEditUI = (editing) => {
+                        textArea.readOnly = !editing;
+                        editBtn.textContent = editing ? 'Lock Edit' : 'Edit JSON';
+                        editBtn.className = editing
+                            ? 'text-xs bg-green-700 text-white px-3 py-1.5 rounded hover:bg-green-600'
+                            : 'text-xs bg-amber-600 text-white px-3 py-1.5 rounded hover:bg-amber-500';
+                    };
+                    if (editBtn) editBtn.onclick = () => {
+                        const isReadOnly = textArea.readOnly;
+                        if (isReadOnly) {
+                            const current = textArea.value.trim();
+                            if (!current) return App.utils.showMessageBox('Unpack some data first before editing.');
+                            showView('text');
+                            setEditUI(true);
+                            textArea.focus();
+                        } else {
+                            let parsed;
+                            try {
+                                parsed = JSON.parse(textArea.value);
+                            } catch (e) {
+                                return App.utils.showMessageBox('Invalid JSON — fix errors before locking.');
+                            }
+                            textArea.value = JSON.stringify(parsed, null, 2);
+                            this.renderJsonTree(parsed);
+                            setEditUI(false);
+                            App.utils.showMessageBox('Edits locked — Tree view refreshed.');
+                        }
+                    };
+
                     if(btn) btn.onclick = () => {
                         const input = document.getElementById('json_rawInput').value.trim();
                         if (!input) return;
+                        if (editBtn) setEditUI(false);
                         try {
                             let nested = 0;
                             const unpack = (o) => {
@@ -4455,7 +4520,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             App.utils.showMessageBox(nested > 0 ? 'Unpacked!' : 'No nested JSON found — returned as-is.');
                         } catch (e) {
                             document.getElementById('json_output').value = 'Error: ' + e.message;
-                            treeArea.innerHTML = `<span class="text-red-500">Error: ${e.message}</span>`;
+                            treeArea.innerHTML = `<span class="text-[#ff8a80]">Error: ${e.message}</span>`;
                         }
                     };
                     const copy = document.getElementById('json_copyBtn');
@@ -4466,7 +4531,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (jsonClearBtn) jsonClearBtn.onclick = () => {
                         document.getElementById('json_rawInput').value = '';
                         document.getElementById('json_output').value = '';
-                        treeArea.innerHTML = '<span class="text-gray-400">Paste raw data to begin...</span>';
+                        treeArea.innerHTML = '<span class="text-[#6a9abb]">Paste raw data to begin...</span>';
+                        if (editBtn) setEditUI(false);
                     };
                 }
             },
@@ -6226,10 +6292,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- ARROW LOGIC ---
         if (getEl('vendor').value === 'arrow') {
-            const futureDate = new Date();
-            futureDate.setDate(today.getDate() + 14);
             const p1Value = ediData.contractManufacturer.trim().toLowerCase() === 'super micro computer, inc.' ? 'SMCI' : 'FLEX';
-            const segments = ['ST{850{000000001', `BEG{00{DS{103303${ediData.disti_poNumber}{{${formatDate(futureDate.toISOString().slice(0, 10))}}}`, 'CUR{DS{USD'];
+            const segments = ['ST{850{000000001', `BEG{00{DS{103303${ediData.disti_poNumber}{{${formatDate(today.toISOString().slice(0, 10))}}}`, 'CUR{DS{USD'];
 
             segments.push('REF{CO{F3TO4165A');
             if (ediData.disti_quoteNumber) segments.push(`REF{Q1{${ediData.disti_quoteNumber}}`);

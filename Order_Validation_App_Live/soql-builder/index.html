@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SOQL Builder</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <script>
+      window.AUTH_TOKEN = "__AUTH_TOKEN__";
+    </script>
+
+    <header class="sb-header">
+      <div class="sb-header-icon">🔎</div>
+      <div class="sb-header-text">
+        <h1>SOQL Builder</h1>
+        <p>Build, run &amp; explore SOQL queries against Salesforce &nbsp;·&nbsp; Rubrik ProdOps</p>
+      </div>
+      <div class="sb-header-controls">
+        <span id="mode-badge" class="offline">Offline (file://) — build &amp; copy SOQL</span>
+        <div id="connected-controls" class="hidden">
+          <span id="org-picker-wrap">
+            Org: <select id="org-select"></select>
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab-btn active" data-section="explorer">Object Explorer</button>
+      <button type="button" class="tab-btn" data-section="utilities">Utilities</button>
+    </div>
+
+    <div id="utilities-section" class="hidden">
+      <h2 id="utilities-heading" class="utilities-heading hidden">Utilities</h2>
+
+      <section id="rest-explorer-panel" class="panel hidden">
+        <h2 id="rest-explorer-toggle" class="panel-toggle-header">
+          <span id="rest-explorer-toggle-icon" class="panel-toggle-icon">▶</span> REST Explorer
+        </h2>
+        <div id="rest-explorer-body" class="panel-collapsible-body hidden">
+          <div class="button-row">
+            <select id="rest-method-select">
+              <option value="GET">GET</option>
+              <option value="POST">POST</option>
+              <option value="PUT">PUT</option>
+              <option value="PATCH">PATCH</option>
+              <option value="DELETE">DELETE</option>
+              <option value="HEAD">HEAD</option>
+              <option value="OPTIONS">OPTIONS</option>
+              <option value="TRACE">TRACE</option>
+            </select>
+            <input id="rest-path-input" type="text" placeholder="/services/data/v67.0/limits" />
+            <button id="rest-send-btn" class="primary">Send</button>
+          </div>
+          <div id="rest-warning-banner" class="warning-banner hidden">
+            This method can modify data in Salesforce immediately. You'll be asked to confirm before it's sent.
+          </div>
+          <div class="csv-paste-wrap">
+            <h2 style="margin-top: 0">Headers (one per line, <code>Key: Value</code>)</h2>
+            <textarea id="rest-headers-input" placeholder="Content-Type: application/json"></textarea>
+          </div>
+          <div class="csv-paste-wrap">
+            <h2 style="margin-top: 0">Body</h2>
+            <textarea id="rest-body-input" placeholder="Raw request body (JSON, XML, etc.) — leave empty for none"></textarea>
+          </div>
+          <div id="rest-status-line"></div>
+          <div id="rest-response-section"></div>
+        </div>
+      </section>
+
+      <section id="apex-execute-panel" class="panel hidden">
+        <h2>Apex Execute (Anonymous)</h2>
+        <div class="warning-banner danger-banner">
+          This runs arbitrary Apex against Salesforce immediately, including any DML or callouts in the code. You'll be
+          asked to confirm every run.
+        </div>
+        <div class="csv-paste-wrap">
+          <textarea id="apex-code-input" placeholder="System.debug('Hello from SOQL Builder');">String result = PolarisFulfilmentAPI.getPolarisOrderJSON('801hr000002NXAEAA4'); // OrderId
+System.debug(result);</textarea>
+        </div>
+        <div class="button-row">
+          <button id="apex-execute-btn" class="danger">Execute</button>
+          <button id="apex-json-editor-btn" disabled>JSON Editor</button>
+        </div>
+        <div id="apex-status-line"></div>
+        <div id="apex-result-section"></div>
+      </section>
+    </div>
+
+    <div id="explorer-section">
+    <h2 class="section-heading">Object Explorer</h2>
+
+    <main>
+      <section class="panel">
+        <h2>Objects</h2>
+        <input id="object-search" type="text" placeholder="Search by API name or label…" />
+        <div id="object-list"></div>
+        <div id="root-object-label" class="muted">No object selected yet.</div>
+
+        <h2 style="margin-top: 18px">
+          Fields
+          <span id="field-select-controls" class="field-select-controls">
+            <button id="select-all-fields-btn" type="button">Select all</button>
+            <button id="select-none-fields-btn" type="button">Select none</button>
+          </span>
+        </h2>
+        <input id="field-search" type="text" placeholder="Search fields by label or API name…" />
+        <div id="field-tree" class="field-tree"></div>
+
+        <h2 style="margin-top: 18px">Related lists (child subqueries)</h2>
+        <div id="related-lists"></div>
+      </section>
+
+      <div class="explorer-col-2">
+        <section class="panel">
+          <h2>Semi-join: link two unrelated objects via a shared parent</h2>
+          <p class="muted semi-join-hint">
+            Neither object below is the "parent" — they're siblings that both point at some third,
+            unnamed parent object. Pick which one your main query reads from, and which one it should
+            match against.
+          </p>
+          <div class="button-row semi-join-row">
+            <label class="semi-join-field">
+              <span class="semi-join-role">Main object (FROM)</span>
+              <select id="semi-join-a"></select>
+            </label>
+            <span class="muted semi-join-connector">matched against</span>
+            <label class="semi-join-field">
+              <span class="semi-join-role">Other object (subquery)</span>
+              <select id="semi-join-b"></select>
+            </label>
+            <button id="insert-semi-join-btn">Insert template</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>SOQL</h2>
+          <div class="soql-editor-wrap">
+            <div id="soql-line-numbers" aria-hidden="true"></div>
+            <pre id="soql-highlight" aria-hidden="true"><code></code></pre>
+            <textarea id="soql-text" spellcheck="false"></textarea>
+            <div id="soql-suggest-box" class="soql-suggest-box hidden"></div>
+          </div>
+          <div class="button-row">
+            <button id="regenerate-btn">Regenerate from selections</button>
+            <button id="run-query-btn" class="primary hidden">Run Query</button>
+            <button id="explain-btn" class="hidden">Explain</button>
+            <label id="query-all-wrap" class="inline-checkbox hidden">
+              <input type="checkbox" id="query-all-checkbox" /> Query All
+            </label>
+            <label id="use-tooling-wrap" class="inline-checkbox hidden">
+              <input type="checkbox" id="use-tooling-checkbox" /> Use Tooling API
+            </label>
+            <select id="query-history-select" class="hidden">
+              <option value="">History…</option>
+            </select>
+          </div>
+          <div id="status-line"></div>
+          <div id="query-plan-section" class="hidden"></div>
+
+          <div id="csv-paste-section" class="csv-paste-wrap hidden">
+            <h2>Or paste CSV results (offline mode)</h2>
+            <textarea id="csv-paste" placeholder="Paste CSV output from sf data query --result-format csv here…"></textarea>
+            <div class="button-row">
+              <button id="load-csv-btn">Load pasted CSV</button>
+            </div>
+          </div>
+
+          <div id="results-section"></div>
+        </section>
+      </div>
+    </main>
+    </div>
+
+    <script src="schema.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
