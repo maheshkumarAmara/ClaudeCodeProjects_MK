@@ -18,7 +18,7 @@ from reportlab.pdfgen import canvas
 
 import config
 from pdf_engine.extractor import find_template_path
-from pdf_engine.layouts import get_layout
+from distributors import get_layout
 from pdf_engine.models import DistributorLayout, FieldBox, TableLayout
 from pdf_engine.paginate import ItemsPage, RowLayout, _to_decimal, format_amount, paginate
 

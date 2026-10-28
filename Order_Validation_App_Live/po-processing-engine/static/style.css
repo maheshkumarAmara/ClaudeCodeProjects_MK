@@ -1,110 +1,262 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Visual theme mirrors the Order Validation App (dark navy, blue gradient accents).
+   Styling only: element ids/classes used by script.js are unchanged. */
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    color-scheme: dark;
+}
+
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: #f5f6f8;
-    color: #1f2430;
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    background: #0c1929;
+    color: #c4daea;
     margin: 0;
     padding: 0;
 }
 
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.04); border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.18); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.32); }
+
 .container {
-    max-width: 900px;
-    margin: 48px auto;
-    padding: 32px;
-    background: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 1.2rem 1.6rem 2rem;
 }
 
-h1 {
-    margin-top: 0;
+/* ── App header ── */
+.app-header {
+    background: linear-gradient(135deg, #091d36 0%, #0d2a50 55%, #0e3868 100%);
+    padding: 1.25rem 1.8rem;
+    border-radius: 14px;
+    margin-bottom: 1.4rem;
+    box-shadow: 0 6px 28px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+}
+
+.app-header-icon {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #0d5fa3 0%, #0984e3 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 1.5rem;
+    box-shadow: 0 4px 16px rgba(9, 132, 227, 0.35);
+}
+
+.app-header-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-header-text h1 {
+    color: #f0f8ff;
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    line-height: 1.2;
+}
+
+.app-header-text p {
+    color: #6a9abb;
+    margin: 0.25rem 0 0;
+    font-size: 0.8rem;
+    font-weight: 400;
+}
+
+.app-header-tags {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+}
+
+.app-tag {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 20px;
+    padding: 0.2rem 0.75rem;
+    font-size: 0.72rem;
+    color: #88b8d4;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+/* ── Cards ── */
+.card {
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 11px;
+    padding: 1rem 1.2rem 1.1rem;
+    margin-bottom: 1rem;
+}
+
+.card-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: #3d6680;
+    margin: 0 0 0.7rem;
 }
 
 h2 {
-    font-size: 1.05rem;
-    margin: 28px 0 12px;
-    color: #1f2430;
+    color: #dceef8;
+    font-size: 1rem;
+    font-weight: 600;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    margin: 0 0 0.75rem;
 }
 
 .status {
-    font-size: 0.9rem;
-    color: #6b7280;
+    font-size: 0.72rem;
+    color: #88b8d4;
 }
 
 .placeholder {
-    color: #374151;
+    color: #c4daea;
 }
 
+/* ── Picker rows ── */
 .picker-row {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin: 20px 0;
+    margin: 0;
+}
+
+.picker-row + .picker-row {
+    margin-top: 0.8rem;
 }
 
 .picker-row label {
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
+    color: #6a9abb;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
+/* ── Inputs ── */
 select,
 input[type="text"],
 textarea {
     font-family: inherit;
-    font-size: 0.9rem;
-    padding: 6px 8px;
-    border: 1px solid #d1d5db;
-    border-radius: 4px;
-    background: #fff;
-    color: #1f2430;
+    font-size: 0.88rem;
+    padding: 7px 10px;
+    background: #12263e;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 9px;
+    color: #dceef8;
+    transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+select option {
+    background: #12263e;
+    color: #dceef8;
+}
+
+select:focus,
+input[type="text"]:focus,
+textarea:focus {
+    border-color: rgba(9, 132, 227, 0.7);
+    box-shadow: 0 0 0 3px rgba(9, 132, 227, 0.12);
+    outline: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: #2e5470;
+    font-size: 0.83rem;
 }
 
 textarea {
     resize: vertical;
     width: 100%;
+    line-height: 1.55;
 }
 
+/* ── Buttons ── */
 button {
     font-family: inherit;
-    font-size: 0.9rem;
-    padding: 7px 14px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    padding: 8px 20px;
     border: none;
-    border-radius: 4px;
-    background: #2563eb;
-    color: #fff;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #0c55a0 0%, #0984e3 100%);
+    color: #ffffff;
     cursor: pointer;
+    box-shadow: 0 4px 18px rgba(9, 132, 227, 0.38);
+    transition: all 0.2s ease;
 }
 
 button:hover {
-    background: #1d4ed8;
+    background: linear-gradient(135deg, #1065b4 0%, #1a95f5 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 26px rgba(9, 132, 227, 0.48);
+}
+
+button:active {
+    transform: translateY(0);
 }
 
 button.secondary {
-    background: #e5e7eb;
-    color: #1f2430;
+    background: rgba(255, 255, 255, 0.07);
+    color: #d4e8f4;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    font-weight: 500;
+    box-shadow: none;
 }
 
 button.secondary:hover {
-    background: #d1d5db;
+    background: rgba(255, 255, 255, 0.13);
+    border-color: rgba(255, 255, 255, 0.22);
+    transform: none;
+    box-shadow: none;
 }
 
+/* ── Messages ── */
 .message {
-    font-size: 0.9rem;
-    padding: 8px 12px;
-    border-radius: 4px;
-    background: #eef2ff;
-    color: #3730a3;
+    font-size: 0.88rem;
+    padding: 0.7rem 1rem;
+    margin: 0 0 1rem;
+    border-radius: 10px;
+    border-left: 3px solid #0984e3;
+    background: rgba(9, 132, 227, 0.09);
+    color: #c4daea;
 }
 
 .message-error {
-    background: #fef2f2;
-    color: #b91c1c;
+    border-left-color: #d63031;
+    background: rgba(214, 48, 49, 0.09);
+    color: #ffb4b4;
 }
 
+/* ── Fields ── */
 .fields-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 12px 20px;
+    gap: 14px 20px;
 }
 
 .field {
@@ -114,47 +266,73 @@ button.secondary:hover {
 }
 
 .field label {
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     font-weight: 600;
-    color: #6b7280;
+    color: #6a9abb;
     text-transform: uppercase;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.5px;
+}
+
+.field input,
+.field textarea {
+    width: 100%;
+}
+
+/* ── Line items ── */
+.table-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
 }
 
 .line-items-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 8px;
 }
 
 .line-items-table th,
 .line-items-table td {
-    padding: 6px 8px;
-    border-bottom: 1px solid #e5e7eb;
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
     text-align: left;
     vertical-align: top;
 }
 
+.line-items-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.line-items-table tbody tr:hover {
+    background: rgba(9, 132, 227, 0.06);
+}
+
 .line-items-table th {
-    font-size: 0.78rem;
+    background: #0d2240;
+    font-size: 0.72rem;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.02em;
-    color: #6b7280;
+    letter-spacing: 0.5px;
+    color: #88b8d4;
 }
 
 .line-items-table .serial-col {
     width: 1%;
     white-space: nowrap;
     text-align: center;
-    color: #6b7280;
-    padding-top: 12px;
+    color: #527a96;
+    padding-top: 14px;
 }
 
 .line-items-table input[type="text"] {
     width: 100%;
-    box-sizing: border-box;
 }
 
+#add-row-btn {
+    margin-top: 0.8rem;
+}
+
+/* ── Salesforce search ── */
 #sf-quote-search {
     flex: 1;
 }
@@ -165,10 +343,11 @@ button.secondary:hover {
 
 .sf-results {
     list-style: none;
-    margin: -8px 0 20px;
+    margin: 0 0 1rem;
     padding: 0;
-    border: 1px solid #e5e7eb;
-    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 11px;
     overflow: hidden;
 }
 
@@ -177,29 +356,54 @@ button.secondary:hover {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 8px 12px;
+    padding: 0.6rem 1rem;
     font-size: 0.88rem;
-    border-bottom: 1px solid #e5e7eb;
+    color: #c4daea;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.sf-results li:hover {
+    background: rgba(9, 132, 227, 0.08);
 }
 
 .sf-results li:last-child {
     border-bottom: none;
 }
 
+/* ── Actions & preview ── */
 .actions {
-    margin-top: 24px;
+    margin-top: 1.2rem;
     display: flex;
     justify-content: flex-end;
     gap: 10px;
 }
 
 #pdf-preview-container {
-    margin-top: 20px;
+    margin-top: 1.2rem;
 }
 
 #pdf-preview-frame {
     width: 100%;
     height: 640px;
-    border: 1px solid #d1d5db;
-    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+@media (max-width: 760px) {
+    .app-header {
+        flex-wrap: wrap;
+    }
+
+    .fields-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .picker-row {
+        flex-wrap: wrap;
+    }
 }

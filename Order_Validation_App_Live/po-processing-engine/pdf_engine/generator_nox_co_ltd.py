@@ -30,6 +30,7 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
 import config
+from pdf_engine.common import clip_text, fit_size
 from pdf_engine.extractor import find_template_path
 from pdf_engine.generator import _fresh_page, _render_overlay
 from pdf_engine.paginate import _to_decimal
@@ -138,15 +139,11 @@ _SHIPPING_TERM = (92.2, 462.0, 91.0, 461.3, 300.0, 470.5, 7.9)
 
 
 def _fit(text: str, font: str, size: float, max_width: float) -> float:
-    while size > MIN_FONT_SIZE and stringWidth(text, font, size) > max_width:
-        size -= 0.1
-    return size
+    return fit_size(text, font, size, max_width, MIN_FONT_SIZE)
 
 
 def _clip(text: str, font: str, size: float, max_width: float) -> str:
-    while text and stringWidth(text, font, size) > max_width:
-        text = text[:-1]
-    return text
+    return clip_text(text, font, size, max_width)
 
 
 def _cover(c: canvas.Canvas, page_height: float, left: float, top: float, right: float, bottom: float) -> None:

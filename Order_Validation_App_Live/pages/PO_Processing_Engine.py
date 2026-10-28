@@ -4,7 +4,8 @@ Runs the PO Processing Engine (a FastAPI app, copied verbatim into
 po-processing-engine/) as its own local server and embeds it in an iframe,
 using the same idempotent auto-start pattern as pages/SOQL_Builder.py. No logic
 from the engine is reimplemented or modified. Purely additive: does not touch
-or import anything from Order_Validation_App.py or the other pages.
+or import anything from Order_Validation_App.py or the other pages (it only
+imports the shared stylesheet from theme.py).
 """
 
 import os
@@ -17,12 +18,17 @@ from pathlib import Path
 import streamlit as st
 import streamlit.components.v1 as components
 
+# theme.py lives in the project root, one level above pages/.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from theme import apply_theme  # noqa: E402
+
 st.set_page_config(page_title="PO Processing Engine · Rubrik", page_icon="📄", layout="wide")
 
 PO_ENGINE_DIR = Path(__file__).parent.parent / "po-processing-engine"
-# 8010 is where the engine runs when launched standalone, so the embedded copy
-# uses its own port and the two never collide.
-PORT = int(os.environ.get("PO_ENGINE_PORT", "8011"))
+# 8010 is where the engine runs when launched standalone, and 8011 can be held by
+# another checkout's embedded engine, so this copy uses its own port and never
+# reuses an engine serving different code.
+PORT = int(os.environ.get("PO_ENGINE_PORT", "8012"))
 LOG_PATH = "/tmp/po_processing_engine_server.log"
 
 
@@ -53,59 +59,7 @@ def _log_tail(lines: int = 30) -> str:
         return "(no log yet)"
 
 
-st.markdown(
-    """
-    <style>
-    #MainMenu { visibility: hidden; }
-    footer    { visibility: hidden; }
-    [data-testid="stDeployButton"] { display: none; }
-
-    .stApp,
-    [data-testid="stAppViewContainer"],
-    [data-testid="stAppViewBlockContainer"],
-    [data-testid="stHeader"],
-    [data-testid="stToolbar"],
-    header[data-testid="stHeader"],
-    .main .block-container {
-        background: #0c1929 !important;
-    }
-    .block-container,
-    [data-testid="stAppViewBlockContainer"] {
-        padding-top: 1.5rem !important;
-        padding-bottom: 0rem !important;
-        padding-left: 0.6rem !important;
-        padding-right: 0.6rem !important;
-        max-width: 100% !important;
-    }
-    [data-testid="stElementContainer"]:has(iframe) { margin-bottom: 0 !important; }
-    iframe { border: none !important; background: #ffffff; }
-
-    [data-testid="stHeader"] * { color: #8ab4cc !important; }
-    [data-testid="stToolbar"] * { color: #8ab4cc !important; }
-    .main, .main p, .main span, .main div,
-    .main label, .main .stMarkdown,
-    [data-testid="stMarkdownContainer"] { color: #c4daea !important; }
-    .main a { color: #7dd3fc !important; }
-
-    section[data-testid="stSidebar"] {
-        background: #08111e !important;
-        border-right: 1px solid rgba(255,255,255,0.07) !important;
-    }
-    section[data-testid="stSidebar"] * { color: #b8d4e8 !important; }
-
-    [data-testid="stCaptionContainer"],
-    [data-testid="stCaptionContainer"] * { color: #9db9cc !important; opacity: 1 !important; }
-    [data-testid="stError"] {
-        background: rgba(214,48,49,0.09) !important;
-        border-radius: 10px; border-left: 3px solid #d63031; padding: 0.7rem 1rem;
-    }
-    [data-testid="stCode"], [data-testid="stCode"] > div, [data-testid="stCode"] pre {
-        background: #091d36 !important; color: #a8cce0 !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+apply_theme("po")
 
 st.caption(
     "Runs the PO Processing Engine as a local server bound to 127.0.0.1 only. "

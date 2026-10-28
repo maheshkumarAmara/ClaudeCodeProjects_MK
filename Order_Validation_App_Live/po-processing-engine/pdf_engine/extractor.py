@@ -16,9 +16,8 @@ from pathlib import Path
 import pdfplumber
 
 import config
-from pdf_engine.layouts import get_layout
+from distributors import get_layout, get_parser
 from pdf_engine.models import DistributorLayout, FieldBox, TableLayout
-from pdf_engine.parsers import PARSERS
 
 
 def find_template_path(slug: str) -> Path | None:
@@ -199,7 +198,7 @@ def parse_template(slug: str) -> dict:
     if path is None:
         raise FileNotFoundError(f"No template PDF found for distributor '{slug}'")
 
-    parser = PARSERS.get(slug)
+    parser = get_parser(slug)
     if parser is not None:
         result = parser(path)
         result.setdefault("hidden_fields", [])

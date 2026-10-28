@@ -41,7 +41,6 @@ from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 from pypdf import PageObject, PdfReader, PdfWriter, Transformation
-from pypdf.annotations import Link
 from pypdf.generic import DecodedStreamObject, NameObject
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.pdfmetrics import stringWidth
@@ -49,6 +48,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
 import config
+from pdf_engine.common import add_links
 from pdf_engine.extractor import find_template_path
 from pdf_engine.generator import _render_overlay
 from pdf_engine.paginate import _to_decimal, wrap_text
@@ -305,11 +305,7 @@ def _compose_page(template_bytes: bytes, pieces: list[tuple[float, float, float]
 
 
 def _add_links(writer: PdfWriter, links: list) -> None:
-    page_index = len(writer.pages) - 1
-    for left, top, right, bottom, uri in links:
-        writer.add_annotation(
-            page_number=page_index, annotation=Link(rect=(left, PAGE_H - bottom, right, PAGE_H - top), url=uri)
-        )
+    add_links(writer, links, PAGE_H)
 
 
 # --- Rows ---------------------------------------------------------------------------

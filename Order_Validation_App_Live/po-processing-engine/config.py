@@ -3,6 +3,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+import distributors
+
 BASE_DIR = Path(__file__).parent
 os.chdir(BASE_DIR)
 
@@ -27,25 +29,7 @@ SALESFORCE_ORGS = {
     "uat-org": "UAT",
 }
 
-# Distributor ("disti") slug -> display name.
+# Distributor ("disti") slug -> display name, in dropdown order.
 # Each slug has a matching subfolder under data/templates/ and data/generated/.
-DISTRIBUTORS = {
-    "pt-synnex-metrodata-indonesia": "PT. Synnex Metrodata Indonesia",
-    "pt-ecs-indo-jaya": "PT. ECS Indo Jaya",
-    "hcl": "HCL POs",
-    "exclusive-networks-turkey": "Exclusive Networks Turkey",
-    "exclusive-networks-south-africa": "Exclusive Networks (South Africa)",
-    "arrow-ecs-sau": "ARROW E.C.S., SAU",
-    # Slugs for these match their data/templates/ folder names exactly.
-    "ADN Distribution GmbH": "ADN Distribution GmbH",
-    "Arrow (Netherlands)": "Arrow ECS BV (Netherlands)",
-    "Computer Gross spa": "Computer Gross spa",
-    "Exclusive Networks (Norway)": "Exclusive Networks (Norway)",
-    "HCL America, Inc.": "HCL America, Inc.",
-    "Ingram Micro Canada": "Ingram Micro Canada",
-    "Innocom Ltd": "Innocom Ltd",
-    "iValue InfoSolutions Limited": "iValue InfoSolutions Limited",
-    "Networld Corporation": "Networld Corporation",
-    "NextGen Distribution Pty Ltd": "NextGen Distribution Pty Ltd",
-    "NOX Co.,LTD.": "NOX Co.,LTD.",
-}
+# The list itself lives in distributors.py -- add new distributors there.
+DISTRIBUTORS = distributors.names()
