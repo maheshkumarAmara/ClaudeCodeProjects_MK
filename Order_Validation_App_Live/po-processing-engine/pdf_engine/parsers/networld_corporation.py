@@ -30,6 +30,8 @@ from pathlib import Path
 
 import pdfplumber
 
+from pdf_engine.extractor import open_pdf
+
 X_TOLERANCE = 1.5
 LINE_TOLERANCE = 2.0
 
@@ -187,7 +189,7 @@ def _parse_value_block(words: list[dict], start_top: float) -> dict[str, str]:
 
 
 def parse_template(path: Path) -> dict:
-    with pdfplumber.open(path) as pdf:
+    with open_pdf(path) as pdf:
         page = pdf.pages[0]
         words = page.extract_words(x_tolerance=X_TOLERANCE, keep_blank_chars=False)
 

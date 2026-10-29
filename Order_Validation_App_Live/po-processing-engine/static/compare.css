@@ -1,0 +1,152 @@
+.compare-form {
+    display: grid;
+    grid-template-columns: 1.2fr 1.4fr 1.4fr 0.6fr auto;
+    gap: 14px 18px;
+    align-items: end;
+}
+
+.compare-field label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #6f9bb8;
+    margin-bottom: 0.35rem;
+}
+
+.compare-field select,
+.compare-field input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.compare-hint {
+    margin: 0.8rem 0 0;
+    font-size: 0.8rem;
+    color: #6f9bb8;
+}
+
+a.app-tag {
+    text-decoration: none;
+}
+
+a.app-tag:hover {
+    color: #dceef8;
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.compare-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+}
+
+.compare-stat {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 0.7rem 0.9rem;
+}
+
+.compare-stat strong {
+    display: block;
+    font-size: 1.5rem;
+    color: #dceef8;
+}
+
+.compare-stat span {
+    font-size: 0.72rem;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: #6f9bb8;
+}
+
+.compare-stat.good strong { color: #55d6a0; }
+.compare-stat.bad strong { color: #ff8a8a; }
+.compare-stat.warn strong { color: #f6c453; }
+
+.compare-results-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 0.8rem;
+}
+
+.compare-results-head .card-title {
+    margin: 0;
+}
+
+.compare-filters {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.compare-filters button {
+    padding: 5px 12px;
+    font-size: 0.78rem;
+}
+
+.compare-filters button.active {
+    background: rgba(9, 132, 227, 0.28);
+    border-color: rgba(9, 132, 227, 0.6);
+    color: #ffffff;
+}
+
+.compare-table td {
+    font-size: 0.85rem;
+}
+
+.compare-badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.compare-badge.match { background: rgba(85, 214, 160, 0.14); color: #55d6a0; }
+.compare-badge.mismatch { background: rgba(255, 138, 138, 0.14); color: #ff8a8a; }
+.compare-badge.only_pdf,
+.compare-badge.only_json { background: rgba(246, 196, 83, 0.14); color: #f6c453; }
+
+.compare-cell-bad {
+    background: rgba(255, 138, 138, 0.1);
+}
+
+.compare-pair {
+    display: block;
+    white-space: nowrap;
+}
+
+.compare-pair small {
+    color: #6f9bb8;
+    margin-right: 4px;
+}
+
+.compare-empty {
+    text-align: center;
+    color: #6f9bb8;
+    padding: 1.2rem;
+}
+
+.compare-detected {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.76rem;
+    color: #55d6a0;
+}
+
+.compare-detected.warn {
+    color: #f6c453;
+}
+
+@media (max-width: 1000px) {
+    .compare-form {
+        grid-template-columns: 1fr 1fr;
+    }
+}

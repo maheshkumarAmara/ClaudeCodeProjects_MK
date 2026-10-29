@@ -16,6 +16,8 @@ from pathlib import Path
 
 import pdfplumber
 
+from pdf_engine.extractor import open_pdf
+
 LINE_TOLERANCE = 2.0
 
 # Label / value rows: label text (left of VALUE_LEFT) -> field key.
@@ -201,7 +203,7 @@ def _parse_signature(page) -> dict[str, str]:
 
 
 def parse_template(path: Path) -> dict:
-    with pdfplumber.open(path) as pdf:
+    with open_pdf(path) as pdf:
         page = pdf.pages[0]
         fields = _parse_header(page)
         fields.update(_parse_label_rows(page))

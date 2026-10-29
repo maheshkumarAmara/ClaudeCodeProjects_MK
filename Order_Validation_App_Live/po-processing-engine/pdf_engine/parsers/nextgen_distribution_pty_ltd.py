@@ -29,6 +29,8 @@ from pathlib import Path
 
 import pdfplumber
 
+from pdf_engine.extractor import open_pdf
+
 LINE_TOLERANCE = 2.0
 
 # Items table columns (x0 ranges), measured from the sample.
@@ -260,7 +262,7 @@ def _parse_items_page(page, section: str) -> tuple[list[dict], str]:
 
 
 def parse_template(path: Path) -> dict:
-    with pdfplumber.open(path) as pdf:
+    with open_pdf(path) as pdf:
         page_texts = [page.extract_text() or "" for page in pdf.pages]
         fields = _parse_header(pdf.pages[0])
         fields.update(_parse_address_blocks(pdf.pages[0]))

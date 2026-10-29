@@ -30,6 +30,8 @@ from pathlib import Path
 
 import pdfplumber
 
+from pdf_engine.extractor import open_pdf
+
 # --- The sample's character grid --------------------------------------------------
 GRID_X0 = 15.0
 GRID_ADVANCE = 4.2
@@ -67,7 +69,7 @@ def _field(row: str, index: int) -> str:
 def read_rows(path: Path) -> list[str]:
     """The whole document as one stream of text rows (physical sheets concatenated)."""
     rows: list[str] = []
-    with pdfplumber.open(path) as pdf:
+    with open_pdf(path) as pdf:
         for page in pdf.pages:
             lines: dict[int, dict[int, str]] = {}
             for char in page.chars:

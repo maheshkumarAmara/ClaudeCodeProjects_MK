@@ -17,6 +17,8 @@ from pathlib import Path
 
 import pdfplumber
 
+from pdf_engine.extractor import open_pdf
+
 MAIN_ROW_RE = re.compile(r"^(\d+) (RUB\d+) (.+) (\d+) %$")
 SKU_RE = re.compile(r"^\[([^\]]+)\]$")
 # e.g. "RS-BT-EDG-PE-PP - Per 1 FETB Per Month": SKU followed by the unit of measure.
@@ -142,7 +144,7 @@ def _parse_line_items(lines: list[str]) -> list[dict]:
 
 
 def parse_template(path: Path) -> dict:
-    with pdfplumber.open(path) as pdf:
+    with open_pdf(path) as pdf:
         page_texts = [page.extract_text() or "" for page in pdf.pages]
         licensee_address = _licensee_address(pdf.pages[0])
 

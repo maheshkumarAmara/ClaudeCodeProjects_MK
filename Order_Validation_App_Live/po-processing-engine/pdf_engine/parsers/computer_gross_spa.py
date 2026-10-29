@@ -15,6 +15,8 @@ from pathlib import Path
 
 import pdfplumber
 
+from pdf_engine.extractor import open_pdf
+
 LINE_TOLERANCE = 2.0
 
 # Details block: label rows and the four value columns (x0 ranges).
@@ -194,7 +196,7 @@ def _parse_shipping(page) -> dict[str, str]:
 
 
 def parse_template(path: Path) -> dict:
-    with pdfplumber.open(path) as pdf:
+    with open_pdf(path) as pdf:
         page = pdf.pages[0]
         fields = _parse_header(page)
         fields.update(_parse_billing(page))

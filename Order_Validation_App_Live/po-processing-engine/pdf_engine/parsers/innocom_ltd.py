@@ -30,6 +30,8 @@ from pathlib import Path
 
 import pdfplumber
 
+from pdf_engine.extractor import open_pdf
+
 LINE_TOLERANCE = 2.0
 
 # Items table columns (x ranges of a word's x0), measured from the sample.
@@ -116,11 +118,15 @@ def _parse_items_page(page, items: list[dict]) -> float:
         elif current is not None:
             rate = _in_x(line, COL_EXCHANGE)
             term = _in_x(line, COL_TERM)
+            # The exchange rate is only printed for a non-USD row; a USD row has just
+            # the TERM (M) on this line, so read the term from its own column.
             if rate and _NUMBER_RE.match(rate[0]["text"]):
                 current["exchange_rate"] = _plain_number(rate[0]["text"])
-                current["terms"] = _plain_number(term[0]["text"]) if term else ""
+            if term and _NUMBER_RE.match(term[0]["text"]):
+                current["terms"] = _plain_number(term[0]["text"])
+            is_rate_line = bool(rate and _NUMBER_RE.match(rate[0]["text"])) or bool(term and _NUMBER_RE.match(term[0]["text"]))
             extra = _text(_in_x(line, COL_DESCRIPTION))
-            if extra and not rate:
+            if extra and not is_rate_line:
                 current["description"] = f"{current['description']} {extra}".strip()
                 current["description_lines"].append(extra)
     for item in items:
@@ -142,7 +148,7 @@ def _left_column_text(page, x_max: float = 340.0) -> str:
 
 
 def parse_template(path: Path) -> dict:
-    with pdfplumber.open(path) as pdf:
+    with open_pdf(path) as pdf:
         first = pdf.pages[0].extract_text() or ""
         last_full = pdf.pages[-1].extract_text() or ""
         last = _left_column_text(pdf.pages[-1])
@@ -192,7 +198,7 @@ def parse_template(path: Path) -> dict:
     fields["contact_email"] = _after("\n".join(contact_lines), "Email:")
     fields["contact_website"] = next((ln for ln in contact_lines if ln.startswith("www.")), "")
     # The signature block sits at the bottom right (x >= 430), below the totals box.
-    with pdfplumber.open(path) as pdf:
+    with open_pdf(path) as pdf:
         page = pdf.pages[-1]
         sig_lines = [
             _text(ws) for _, ws in _cluster_lines([w for w in page.extract_words() if w["x0"] >= 430 and w["top"] > 300])

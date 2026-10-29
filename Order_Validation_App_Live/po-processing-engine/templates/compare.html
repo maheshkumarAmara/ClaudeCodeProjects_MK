@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compare PDF &amp; JSON — PO Processing Engine</title>
+    <link rel="stylesheet" href="/static/style.css?v=2">
+    <link rel="stylesheet" href="/static/compare.css?v=2">
+</head>
+<body>
+    <main class="container">
+        <header class="app-header">
+            <div class="app-header-icon">🔍</div>
+            <div class="app-header-text">
+                <h1>Compare PDF &amp; JSON</h1>
+                <p>Check a purchase order PDF against a JSON file, SKU by SKU</p>
+            </div>
+            <div class="app-header-tags">
+                <a class="app-tag" href="/">&larr; Back to PO Processing Engine</a>
+            </div>
+        </header>
+
+        <section class="card">
+            <p class="card-title">Files</p>
+            <div class="compare-form">
+                <div class="compare-field">
+                    <label for="cmp-distributor">Distributor</label>
+                    <select id="cmp-distributor"></select>
+                    <small id="cmp-detected" class="compare-detected" hidden></small>
+                </div>
+                <div class="compare-field">
+                    <label for="cmp-pdf">Purchase order PDF</label>
+                    <input id="cmp-pdf" type="file" accept="application/pdf,.pdf">
+                </div>
+                <div class="compare-field">
+                    <label for="cmp-json">JSON file</label>
+                    <input id="cmp-json" type="file" accept="application/json,.json">
+                </div>
+                <div class="compare-field compare-field-small">
+                    <label for="cmp-tolerance">Price tolerance</label>
+                    <input id="cmp-tolerance" type="text" value="0.01" inputmode="decimal">
+                </div>
+                <div class="compare-actions">
+                    <button id="cmp-run" type="button">Compare</button>
+                </div>
+            </div>
+            <p class="compare-hint">The distributor is picked automatically from the PDF and JSON; choose one yourself to override it. The PDF must be a text PDF in that distributor's layout, not a scan. Numbers within the tolerance count as equal.</p>
+        </section>
+
+        <p id="cmp-message" class="message" hidden></p>
+
+        <section id="cmp-results" hidden>
+            <div class="card">
+                <p class="card-title">Summary</p>
+                <div id="cmp-summary" class="compare-summary"></div>
+            </div>
+
+            <div class="card">
+                <div class="compare-results-head">
+                    <p class="card-title">Line items</p>
+                    <div class="compare-filters" id="cmp-filters">
+                        <button type="button" class="secondary active" data-filter="all">All</button>
+                        <button type="button" class="secondary" data-filter="issues">Differences only</button>
+                        <button type="button" class="secondary" data-filter="mismatch">Mismatched</button>
+                        <button type="button" class="secondary" data-filter="only_pdf">Only in PDF</button>
+                        <button type="button" class="secondary" data-filter="only_json">Only in JSON</button>
+                    </div>
+                    <button id="cmp-download" type="button" class="secondary">Download CSV</button>
+                </div>
+                <div class="table-wrap">
+                    <table class="line-items-table compare-table">
+                        <thead>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Status</th>
+                                <th>Quantity</th>
+                                <th>Unit price</th>
+                                <th>Term</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cmp-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card" id="cmp-header-card" hidden>
+                <p class="card-title">Header fields found in both files</p>
+                <div class="table-wrap">
+                    <table class="line-items-table compare-table">
+                        <thead>
+                            <tr><th>Field</th><th>PDF</th><th>JSON</th><th>Status</th></tr>
+                        </thead>
+                        <tbody id="cmp-header-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+    <script src="/static/compare.js?v=2"></script>
+</body>
+</html>

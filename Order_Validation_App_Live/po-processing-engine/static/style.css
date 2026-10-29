@@ -87,6 +87,15 @@ body {
     flex-shrink: 0;
 }
 
+a.app-tag {
+    text-decoration: none;
+}
+
+a.app-tag:hover {
+    color: #dceef8;
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
 .app-tag {
     background: rgba(255, 255, 255, 0.07);
     border: 1px solid rgba(255, 255, 255, 0.10);

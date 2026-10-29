@@ -11,6 +11,7 @@ description may come back mildly garbled — acceptable since the value is
 only a pre-fill; the user reviews/edits it in the form before regenerating.
 """
 
+import contextvars
 from pathlib import Path
 
 import pdfplumber
@@ -197,7 +198,83 @@ def parse_template(slug: str) -> dict:
     path = find_template_path(slug)
     if path is None:
         raise FileNotFoundError(f"No template PDF found for distributor '{slug}'")
+    return parse_pdf(slug, path)
 
+
+def _is_white(color) -> bool:
+    """True for a white fill, given as a float (grayscale) or a 1-, 3- or 4-number tuple (gray, RGB, CMYK)."""
+    if color is None:
+        return False
+    if isinstance(color, (int, float)):
+        return color == 1
+    values = tuple(color)
+    if len(values) == 4:  # CMYK: white is no ink at all
+        return all(v == 0 for v in values)
+    return bool(values) and all(v == 1 for v in values)
+
+# Set per request (and per thread / task) by parse_pdf(visible_only=True); read by open_pdf().
+_visible_only: contextvars.ContextVar[bool] = contextvars.ContextVar("visible_only", default=False)
+
+
+def _visible_page(page):
+    """The page without the original text that a generated PO hides under white boxes.
+
+    A PO this engine generated draws new text (Helvetica) over white boxes that cover
+    the template's original text (Arial, Verdana, ...) but leaves that original text in
+    the file, so reading every character doubles each value. When a page has both, keep
+    only the Helvetica text and any text that no white box covers. A page with no
+    Helvetica text, such as a PO straight from a distributor, is returned unchanged.
+    """
+    if not any("Helvetica" in c["fontname"] for c in page.chars):
+        return page
+    whites = [r for r in page.rects if r.get("fill") and _is_white(r.get("non_stroking_color"))]
+
+    def hidden(c) -> bool:
+        if "Helvetica" in c["fontname"]:
+            return False
+        cx, cy = (c["x0"] + c["x1"]) / 2, (c["top"] + c["bottom"]) / 2
+        return any(r["x0"] <= cx <= r["x1"] and r["top"] <= cy <= r["bottom"] for r in whites)
+
+    return page.filter(lambda o: o.get("object_type") != "char" or not hidden(o))
+
+
+class _VisibleDocument:
+    """A pdfplumber PDF whose pages expose only the visible text (see _visible_page)."""
+
+    def __init__(self, pdf):
+        self._pdf = pdf
+        self.pages = [_visible_page(p) for p in pdf.pages]
+
+    def __getattr__(self, name):
+        return getattr(self._pdf, name)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return self._pdf.__exit__(*exc)
+
+
+def open_pdf(path):
+    """pdfplumber.open() for the parsers: the visible text only while parse_pdf(visible_only=True) runs."""
+    pdf = pdfplumber.open(path)
+    return _VisibleDocument(pdf) if _visible_only.get() else pdf
+
+
+def parse_pdf(slug: str, path: Path, visible_only: bool = False) -> dict:
+    """Parses any PDF of this distributor's layout (the stored sample, or an uploaded PO).
+
+    With visible_only=True the parser sees just the text a viewer would see, which is
+    what an uploaded, already-generated PO needs (see _visible_page).
+    """
+    token = _visible_only.set(visible_only)
+    try:
+        return _parse_pdf(slug, path)
+    finally:
+        _visible_only.reset(token)
+
+
+def _parse_pdf(slug: str, path: Path) -> dict:
     parser = get_parser(slug)
     if parser is not None:
         result = parser(path)
@@ -208,7 +285,7 @@ def parse_template(slug: str) -> dict:
     if layout is None:
         raise LookupError(f"No layout configured yet for distributor '{slug}'")
 
-    with pdfplumber.open(path) as pdf:
+    with open_pdf(path) as pdf:
         fields = _extract_fields(pdf, layout)
         line_items = _extract_line_items(pdf, layout)
 

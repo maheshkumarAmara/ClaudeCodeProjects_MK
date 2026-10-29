@@ -15,6 +15,8 @@ from pathlib import Path
 
 import pdfplumber
 
+from pdf_engine.extractor import open_pdf
+
 # Column boundaries (x0 ranges) measured from the sample's items table.
 COL_LINE_NO = (0, 55)
 COL_ARROW_ITEM = (55, 146)
@@ -149,7 +151,7 @@ def _parse_complementary_page(page) -> dict[str, str]:
 
 
 def parse_template(path: Path) -> dict:
-    with pdfplumber.open(path) as pdf:
+    with open_pdf(path) as pdf:
         page_texts = [page.extract_text() or "" for page in pdf.pages]
         items: list[dict] = []
         # Every page except the trailing "Complementary Order Information" one
