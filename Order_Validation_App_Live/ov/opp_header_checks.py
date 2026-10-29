@@ -5,6 +5,10 @@ requirement holds for the Opportunity's current stage. The org rules are gated o
 and only fire on a save that changes the field. A saved record cannot show that, so these are
 state checks: they say what a save into that stage would require.
 
+Opportunity header vs line-item sync (SAL25-145, OpportunityObjectTriggerHelper.validateOppHeaderAndLinesSync)
+is an Apex trigger check, not a validation rule. It is ported as a state check too. The org gates it on the
+Disable_Opp_Manual_Arroyo_values_Sync_validation label being "No" (it is "No" in QA); this port assumes it is on.
+
 Not ported:
 - Profile and business-group exemptions (System Administrator, Rubrik Data Migration Admin,
   Rubrik Product Manager, Deal Operations, Business Group RD/RVP/AVP/GVP). These depend on the
@@ -12,6 +16,8 @@ Not ported:
 - Cloud_Enviromment (needs OrderItem product counts).
 - Stage 6 PDF Addendum, Trade-Up hold and Click-Thru rules (need Contact Role and trade-up data).
 """
+
+from decimal import Decimal, ROUND_HALF_UP
 
 from ov.calc import fmt_amount
 
@@ -48,6 +54,56 @@ STAGE3_REQUIRED_FIELDS = [
 ]
 
 
+# (Opportunity header field, OpportunityLineItem field, label) — one row per sum in validateOppHeaderAndLinesSync.
+# The first entry (ACV) is summed with the Renewal / non-Renewal line filter; the rest are plain sums.
+HEADER_LINE_SYNC_FIELDS = [
+    ("ACV_Amount__c", "ACV_Amount__c", "ACV Amount"),
+    ("Renewal_Subsumed_ACV__c", "Subsumed_Renewal_Amount__c", "Renewal Subsumed ACV"),
+    ("Subsumed_Renewal_TCV__c", "Subsumed_Renewal_TCV__c", "Subsumed Renewal TCV"),
+    ("New_Expansion_ACV__c", "New_Expansion_ACV__c", "New Expansion ACV"),
+    ("New_Expansion_TCV__c", "New_Expansion_TCV__c", "New Expansion TCV"),
+    ("Core_New_Expansion_ACV__c", "Core_New_Expansion_ACV__c", "Core New Expansion ACV"),
+    ("Nas_New_Expansion_ACV__c", "Nas_New_Expansion_ACV__c", "NAS New Expansion ACV"),
+    ("SaaS_New_Expansion_ACV__c", "SaaS_New_Expansion_ACV__c", "SaaS New Expansion ACV"),
+    ("PLS_NCD_New_Expansion_ACV__c", "PLS_NCD_New_Expansion_ACV__c", "PLS NCD New Expansion ACV"),
+    ("Subsumed_Renewal_Churn_ACV__c", "Subsumed_Renewal_Churn_ACV__c", "Subsumed Renewal Churn ACV"),
+    ("Subsumed_Renewal_Churn_TCV__c", "Subsumed_Renewal_Churn_TCV__c", "Subsumed Renewal Churn TCV"),
+    ("Comp_Uplift_ACV__c", "Comp_Uplift_ACV__c", "Comp Uplift ACV"),
+]
+SYNC_ERROR_MSG = ("An opportunity amount override needs to be reviewed/updated. "
+                  "Please contact dealgovernance@rubrik.com for assistance.")
+
+
+def _scale2(value):
+    """Apex Decimal.setScale(2): HALF_UP rounding to 2 decimals."""
+    return Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def header_line_sync_mismatches(opp: dict, line_items: list) -> list:
+    """Return [(label, header_value, line_total)] for each header field that differs from its line-item sum."""
+    is_renewal_opp = opp.get("Opportunity_Sub_Type__c") == "Renewal"
+    mismatches = []
+    for header_field, line_field, label in HEADER_LINE_SYNC_FIELDS:
+        total = Decimal("0")
+        for line in line_items:
+            value = line.get(line_field)
+            if value is None:
+                continue
+            if header_field == "ACV_Amount__c":
+                is_renewal_line = line.get("Line_Type__c") == "Renewal"
+                if is_renewal_opp != is_renewal_line:
+                    continue
+            total += Decimal(str(value))
+        header = opp.get(header_field)
+        if header is None:
+            differs = total != 0
+        else:
+            differs = _scale2(header) != _scale2(total)
+        if differs:
+            mismatches.append((label, header, total))
+    return mismatches
+
+
 def _blank(value):
     return value is None or (isinstance(value, str) and not value.strip())
 
@@ -71,8 +127,12 @@ def _row(name, applies, violated, error_msg, details, expected, actual):
             "Expected": expected, "Actual": actual, "Status": status}
 
 
-def opp_header_checks(order_record: dict) -> list:
-    """Return the Opportunity Header rows for one Order record (the dict from the Order SOQL)."""
+def opp_header_checks(order_record: dict, opp_line_items=None) -> list:
+    """Return the Opportunity Header rows for one Order record (the dict from the Order SOQL).
+
+    opp_line_items is the list of OpportunityLineItem records for the Opportunity (the Q11 query). When it is
+    None the header-vs-line-sync check is reported as N/A.
+    """
     opp = order_record.get("Opportunity") or {}
     if not opp:
         return [{"#": "—", "Validation": "Opportunity Header",
@@ -299,6 +359,27 @@ def opp_header_checks(order_record: dict) -> list:
         details=f"UCL Scale %: {_shown(opp.get('UCL_Scale_Percentage__c'))} | "
                 f"Scale Cloud Validated: {bool(scale_validated)}",
         expected="Scale Cloud Validated = true", actual=f"{bool(scale_validated)}",
+    ))
+
+    # SAL25-145 — Opportunity header amounts must equal the sum of the line items when an amount override is on
+    override = bool(opp.get("Opportunity_Amount_Override__c"))
+    if opp_line_items is None:
+        sync_mismatches = []
+        sync_details = "Opportunity line items were not fetched."
+    else:
+        sync_mismatches = header_line_sync_mismatches(opp, opp_line_items)
+        sync_details = (f"Amount Override: {override} | Line items: {len(opp_line_items)} | "
+                        + ("all 12 header fields match line totals" if not sync_mismatches else
+                           "; ".join(f"{label}: header {_money(h)} vs lines {_money(t)}"
+                                     for label, h, t in sync_mismatches)))
+    rows.append(_row(
+        "Header amounts match Opportunity Line Items (Amount Override)",
+        applies=opp_line_items is not None and override and stage in (STAGE_6, STAGE_7_WON),
+        violated=bool(sync_mismatches),
+        error_msg=SYNC_ERROR_MSG,
+        details=f"Stage: {stage or '(blank)'} | {sync_details}",
+        expected="Header = sum of line items (2 dp) for all 12 fields",
+        actual="In sync" if not sync_mismatches else f"{len(sync_mismatches)} field(s) differ",
     ))
 
     return rows

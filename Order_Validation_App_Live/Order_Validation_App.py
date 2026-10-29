@@ -17,6 +17,7 @@ from ov.booking_compare import (
 )
 from ov.calc import add_days, add_months, compute_expected_metrics, end_of_month, fmt_amount, parse_date
 from ov.opp_header_checks import opp_header_checks
+from ov.opp_line_checks import opp_line_checks
 from ov.parsing import _clean_sf, _parse_csv_upload, _parse_order_text
 from ov.report import generate_html_report
 from ov.sf_client import _prefetch_order_data, run_sf_query, verify_sf_org
@@ -1516,7 +1517,11 @@ if validate_btn and _merged:
 
                     # ── Opportunity Header validations ──────────────────────────────────
                     # Ported from the Opportunity validation rules in the QA org (see ov/opp_header_checks.py).
-                    opp_header_results = opp_header_checks(record)
+                    _opp_lines_result = _pf_data.get("opp_lines_result")
+                    opp_header_results = opp_header_checks(
+                        record, (_opp_lines_result or {}).get("records") if _opp_lines_result else None)
+                    _opp_line_records = (_opp_lines_result or {}).get("records") if _opp_lines_result else None
+                    opp_line_results = opp_line_checks(record, _opp_line_records, items_result.get("records"))
 
                     # ── QuoteLine validations ───────────────────────────────────────────
                     # Tier A = real pass/fail checks grounded in standard Salesforce CPQ
@@ -3786,7 +3791,54 @@ if validate_btn and _merged:
 
                     if scope_opportunity_lineitems:
                         with _tab_map["opportunity_lineitems"]:
-                            st.info("🚧 Opportunity Lineitems validations — logic coming soon.")
+                            ol_info_rows = renumber([r for r in opp_line_results if r["Status"].startswith("ℹ️")])
+                            ol_pass_rows = renumber([r for r in opp_line_results if r["Status"].startswith("✅")])
+                            ol_fail_rows = renumber([r for r in opp_line_results if r["Status"].startswith("❌")])
+
+                            st.caption(f"Opportunity: {record.get('Opportunity', {}).get('Name') or '—'} "
+                                       f"| {len(_opp_line_records or [])} line item(s)")
+
+                            st.markdown(f"""
+                            <div style="display:flex; gap:1rem; margin-bottom:1.2rem;">
+                                <div style="flex:1; background:#fff; border-radius:10px; padding:1rem 1.2rem;
+                                            box-shadow:0 2px 8px rgba(0,0,0,0.07); border-left:4px solid #0f3460;">
+                                    <div style="font-size:0.75rem; color:#5a6a7a; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Total Checks</div>
+                                    <div style="font-size:2rem; font-weight:700; color:#1a1a2e;">{len(ol_pass_rows) + len(ol_fail_rows)}</div>
+                                </div>
+                                <div style="flex:1; background:#fff; border-radius:10px; padding:1rem 1.2rem;
+                                            box-shadow:0 2px 8px rgba(0,0,0,0.07); border-left:4px solid #00b894;">
+                                    <div style="font-size:0.75rem; color:#5a6a7a; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Passed ✅</div>
+                                    <div style="font-size:2rem; font-weight:700; color:#00b894;">{len(ol_pass_rows)}</div>
+                                </div>
+                                <div style="flex:1; background:#fff; border-radius:10px; padding:1rem 1.2rem;
+                                            box-shadow:0 2px 8px rgba(0,0,0,0.07); border-left:4px solid #d63031;">
+                                    <div style="font-size:0.75rem; color:#5a6a7a; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Failed ❌</div>
+                                    <div style="font-size:2rem; font-weight:700; color:#d63031;">{len(ol_fail_rows)}</div>
+                                </div>
+                                <div style="flex:1; background:#fff; border-radius:10px; padding:1rem 1.2rem;
+                                            box-shadow:0 2px 8px rgba(0,0,0,0.07); border-left:4px solid #0984e3;">
+                                    <div style="font-size:0.75rem; color:#5a6a7a; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Info ℹ️</div>
+                                    <div style="font-size:2rem; font-weight:700; color:#0984e3;">{len(ol_info_rows)}</div>
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+
+                            if ol_info_rows:
+                                with st.expander(f"ℹ️ Not triggered / reference — {len(ol_info_rows)} row(s)", expanded=False):
+                                    render_table(pd.DataFrame(ol_info_rows))
+
+                            with st.expander(f"✅ Passed — {len(ol_pass_rows)} validation(s)", expanded=True):
+                                if ol_pass_rows:
+                                    render_table(pd.DataFrame(ol_pass_rows))
+                                else:
+                                    st.caption("No Opportunity Lineitem validations passed.")
+
+                            with st.expander(f"❌ Failed — {len(ol_fail_rows)} validation(s)", expanded=True):
+                                if ol_fail_rows:
+                                    render_table(pd.DataFrame(ol_fail_rows))
+                                    _copy_buttons_html(ol_fail_rows)
+                                else:
+                                    st.success("All Opportunity Lineitem validations passed — no failures.")
 
                     if scope_header:
                         with _tab_map["header"]:
@@ -4505,7 +4557,7 @@ if validate_btn and _merged:
                     # Rendered here (after every validation section/tab above has run) so the
                     # placeholder — created near the top of the page via st.empty() — reflects
                     # ALL sections' results, not just a subset computed earlier in the script.
-                    _all = (results + orderitem_results + quote_header_results + opp_header_results + quote_line_results + _ent_rows
+                    _all = (results + orderitem_results + quote_header_results + opp_header_results + opp_line_results + quote_line_results + _ent_rows
                             + _cli_rows + _scale_rows + _bkh_rows + _bkli_all_rows)
                     _tot_pass  = len([r for r in _all if r["Status"].startswith("✅")])
                     _tot_fail  = len([r for r in _all if r["Status"].startswith("❌")])
@@ -4594,6 +4646,10 @@ if validate_btn and _merged:
                     _oh_dl_fail = [r for r in opp_header_results if r["Status"].startswith("❌")]
                     if _oh_dl_pass: all_dl_sections[f"{prefix}Opp Header Pass"] = pd.DataFrame(_oh_dl_pass)
                     if _oh_dl_fail: all_dl_sections[f"{prefix}Opp Header Fail"] = pd.DataFrame(_oh_dl_fail)
+                    _ol_dl_pass = [r for r in opp_line_results if r["Status"].startswith("✅")]
+                    _ol_dl_fail = [r for r in opp_line_results if r["Status"].startswith("❌")]
+                    if _ol_dl_pass: all_dl_sections[f"{prefix}Opp Lineitems Pass"] = pd.DataFrame(_ol_dl_pass)
+                    if _ol_dl_fail: all_dl_sections[f"{prefix}Opp Lineitems Fail"] = pd.DataFrame(_ol_dl_fail)
 
     # ── Post-loop: Run history + Cross-order summary ──────────────────────────
     if order_nums:

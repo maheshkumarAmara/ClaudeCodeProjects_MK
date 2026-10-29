@@ -59,7 +59,7 @@ def _prefetch_order_data(order_num: str, alias: str) -> dict:
                Opportunity.Rubrik_Security_Cloud_Gov_t_Owner__c,
                Opportunity.Rubrik_Security_Cloud_Gov_t_Owner__r.Email,
                Opportunity.Rubrik_Security_Cloud_Gov_t_Owner__r.Phone,
-               Opportunity.Amount, Opportunity.SBQQ__Ordered__c,
+               Opportunity.Amount, Opportunity.CloseDate, Opportunity.SBQQ__Ordered__c,
                Opportunity.Account.RCDMT_EOL_Date__c,
                Opportunity.StageName, Opportunity.Opportunity_Sub_Type__c, Opportunity.Opportunity_Type__c,
                Opportunity.AccountId, Opportunity.Champion__c, Opportunity.Economic_Buyer__c,
@@ -78,6 +78,11 @@ def _prefetch_order_data(order_num: str, alias: str) -> dict:
                Opportunity.Account.BillingStateCode, Opportunity.Account.BillingCountry,
                Opportunity.Account.ETM_Area__c, Opportunity.Account.Industry,
                Opportunity.SBQQ__PrimaryQuote__r.ProcessType__c, Opportunity.SBQQ__PrimaryQuote__r.SBQQ__NetAmount__c,
+               Opportunity.Opportunity_Amount_Override__c, Opportunity.ACV_Amount__c, Opportunity.Renewal_Subsumed_ACV__c,
+               Opportunity.Subsumed_Renewal_TCV__c, Opportunity.New_Expansion_ACV__c, Opportunity.New_Expansion_TCV__c,
+               Opportunity.Core_New_Expansion_ACV__c, Opportunity.Nas_New_Expansion_ACV__c, Opportunity.SaaS_New_Expansion_ACV__c,
+               Opportunity.PLS_NCD_New_Expansion_ACV__c, Opportunity.Subsumed_Renewal_Churn_ACV__c,
+               Opportunity.Subsumed_Renewal_Churn_TCV__c, Opportunity.Comp_Uplift_ACV__c,
                Has_Third_Party_Hardware_Product__c,
                Third_Party_Hardware_fulfilment_status__c,
                RSC_G_Enabled__c, Ready_for_Gov_Sync__c,
@@ -274,7 +279,22 @@ def _prefetch_order_data(order_num: str, alias: str) -> dict:
         ORDER BY SBQQ__Number__c ASC
     """
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as _pool:
+    # ── Q11: OpportunityLineItem — header-vs-line sync (SAL25-145) and the Opportunity Lineitems tab ──
+    # Semi-join on Order.OrderNumber so it runs in the same parallel round as the others.
+    soql_opp_lines = f"""
+        SELECT Id, Product2.Name, Product2.Product_Type__c, Product2.Support_Type__c,
+               Prod_Type__c, Support_Type__c, Line_Type__c, Quantity, UnitPrice, TotalPrice,
+               Subscription_Term__c, Renewal_Due_Date__c, Renewal_Timing__c, isSplit__c,
+               SBQQ__QuoteLine__r.SBQQ__Quantity__c, SBQQ__QuoteLine__r.SBQQ__SubscriptionTerm__c,
+               ACV_Amount__c, Subsumed_Renewal_Amount__c, Subsumed_Renewal_TCV__c,
+               New_Expansion_ACV__c, New_Expansion_TCV__c, Core_New_Expansion_ACV__c,
+               Nas_New_Expansion_ACV__c, SaaS_New_Expansion_ACV__c, PLS_NCD_New_Expansion_ACV__c,
+               Subsumed_Renewal_Churn_ACV__c, Subsumed_Renewal_Churn_TCV__c, Comp_Uplift_ACV__c
+        FROM OpportunityLineItem
+        WHERE OpportunityId IN (SELECT OpportunityId FROM Order WHERE OrderNumber = '{order_num}')
+    """
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=11) as _pool:
         _fc = _pool.submit(run_sf_query, alias, soql_combined)
         _fm = _pool.submit(run_sf_query, alias, soql_metrics)
         _fe = _pool.submit(run_sf_query, alias, soql_ent)
@@ -285,6 +305,7 @@ def _prefetch_order_data(order_num: str, alias: str) -> dict:
         _fog = _pool.submit(run_sf_query, alias, soql_order_item_gate)
         _fmdt = _pool.submit(run_sf_query, alias, soql_order_control_mdt)
         _fql = _pool.submit(run_sf_query, alias, soql_quote_lines)
+        _fol = _pool.submit(run_sf_query, alias, soql_opp_lines)
         _combined = _fc.result()
         _metrics  = _fm.result()
         _ent      = _fe.result()
@@ -295,6 +316,7 @@ def _prefetch_order_data(order_num: str, alias: str) -> dict:
         _orderitem_gate = _fog.result()
         _mdt      = _fmdt.result()
         _ql       = _fql.result()
+        _opp_lines = _fol.result()
 
     # Flatten OrderItems subquery into the same dict structure the caller expects
     _order_rec = (_combined.get("records") or [{}])[0]
@@ -317,4 +339,5 @@ def _prefetch_order_data(order_num: str, alias: str) -> dict:
         "orderitem_gate_result": _orderitem_gate,
         "mdt_result":      _mdt,
         "ql_result":       _ql,
+        "opp_lines_result": _opp_lines,
     }
