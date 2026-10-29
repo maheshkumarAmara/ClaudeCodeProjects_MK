@@ -16,6 +16,7 @@ from ov.booking_compare import (
     bk_soql_in,
 )
 from ov.calc import add_days, add_months, compute_expected_metrics, end_of_month, fmt_amount, parse_date
+from ov.opp_header_checks import opp_header_checks
 from ov.parsing import _clean_sf, _parse_csv_upload, _parse_order_text
 from ov.report import generate_html_report
 from ov.sf_client import _prefetch_order_data, run_sf_query, verify_sf_org
@@ -1512,6 +1513,10 @@ if validate_btn and _merged:
                                 "Expected": "—", "Actual": _val_str,
                                 "Status": f"ℹ️ {_val_str}",
                             })
+
+                    # ── Opportunity Header validations ──────────────────────────────────
+                    # Ported from the Opportunity validation rules in the QA org (see ov/opp_header_checks.py).
+                    opp_header_results = opp_header_checks(record)
 
                     # ── QuoteLine validations ───────────────────────────────────────────
                     # Tier A = real pass/fail checks grounded in standard Salesforce CPQ
@@ -3731,7 +3736,53 @@ if validate_btn and _merged:
 
                     if scope_opportunity_header:
                         with _tab_map["opportunity_header"]:
-                            st.info("🚧 Opportunity Header validations — logic coming soon.")
+                            oh_info_rows = renumber([r for r in opp_header_results if r["Status"].startswith("ℹ️")])
+                            oh_pass_rows = renumber([r for r in opp_header_results if r["Status"].startswith("✅")])
+                            oh_fail_rows = renumber([r for r in opp_header_results if r["Status"].startswith("❌")])
+
+                            st.caption(f"Opportunity: {record.get('Opportunity', {}).get('Name') or '—'}")
+
+                            st.markdown(f"""
+                            <div style="display:flex; gap:1rem; margin-bottom:1.2rem;">
+                                <div style="flex:1; background:#fff; border-radius:10px; padding:1rem 1.2rem;
+                                            box-shadow:0 2px 8px rgba(0,0,0,0.07); border-left:4px solid #0f3460;">
+                                    <div style="font-size:0.75rem; color:#5a6a7a; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Total Checks</div>
+                                    <div style="font-size:2rem; font-weight:700; color:#1a1a2e;">{len(oh_pass_rows) + len(oh_fail_rows)}</div>
+                                </div>
+                                <div style="flex:1; background:#fff; border-radius:10px; padding:1rem 1.2rem;
+                                            box-shadow:0 2px 8px rgba(0,0,0,0.07); border-left:4px solid #00b894;">
+                                    <div style="font-size:0.75rem; color:#5a6a7a; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Passed ✅</div>
+                                    <div style="font-size:2rem; font-weight:700; color:#00b894;">{len(oh_pass_rows)}</div>
+                                </div>
+                                <div style="flex:1; background:#fff; border-radius:10px; padding:1rem 1.2rem;
+                                            box-shadow:0 2px 8px rgba(0,0,0,0.07); border-left:4px solid #d63031;">
+                                    <div style="font-size:0.75rem; color:#5a6a7a; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Failed ❌</div>
+                                    <div style="font-size:2rem; font-weight:700; color:#d63031;">{len(oh_fail_rows)}</div>
+                                </div>
+                                <div style="flex:1; background:#fff; border-radius:10px; padding:1rem 1.2rem;
+                                            box-shadow:0 2px 8px rgba(0,0,0,0.07); border-left:4px solid #0984e3;">
+                                    <div style="font-size:0.75rem; color:#5a6a7a; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Info ℹ️</div>
+                                    <div style="font-size:2rem; font-weight:700; color:#0984e3;">{len(oh_info_rows)}</div>
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+
+                            if oh_info_rows:
+                                with st.expander(f"ℹ️ Not triggered / reference — {len(oh_info_rows)} row(s)", expanded=False):
+                                    render_table(pd.DataFrame(oh_info_rows))
+
+                            with st.expander(f"✅ Passed — {len(oh_pass_rows)} validation(s)", expanded=True):
+                                if oh_pass_rows:
+                                    render_table(pd.DataFrame(oh_pass_rows))
+                                else:
+                                    st.caption("No Opportunity Header validations passed.")
+
+                            with st.expander(f"❌ Failed — {len(oh_fail_rows)} validation(s)", expanded=True):
+                                if oh_fail_rows:
+                                    render_table(pd.DataFrame(oh_fail_rows))
+                                    _copy_buttons_html(oh_fail_rows)
+                                else:
+                                    st.success("All Opportunity Header validations passed — no failures.")
 
                     if scope_opportunity_lineitems:
                         with _tab_map["opportunity_lineitems"]:
@@ -4454,7 +4505,7 @@ if validate_btn and _merged:
                     # Rendered here (after every validation section/tab above has run) so the
                     # placeholder — created near the top of the page via st.empty() — reflects
                     # ALL sections' results, not just a subset computed earlier in the script.
-                    _all = (results + orderitem_results + quote_header_results + quote_line_results + _ent_rows
+                    _all = (results + orderitem_results + quote_header_results + opp_header_results + quote_line_results + _ent_rows
                             + _cli_rows + _scale_rows + _bkh_rows + _bkli_all_rows)
                     _tot_pass  = len([r for r in _all if r["Status"].startswith("✅")])
                     _tot_fail  = len([r for r in _all if r["Status"].startswith("❌")])
@@ -4539,6 +4590,10 @@ if validate_btn and _merged:
                     if oi_fail_rows: all_dl_sections[f"{prefix}OI Fail"]   = pd.DataFrame(oi_fail_rows)
                     if metrics_pass_rows: all_dl_sections[f"{prefix}Metrics Pass"] = pd.DataFrame(metrics_pass_rows)
                     if metrics_fail_rows: all_dl_sections[f"{prefix}Metrics Fail"] = pd.DataFrame(metrics_fail_rows)
+                    _oh_dl_pass = [r for r in opp_header_results if r["Status"].startswith("✅")]
+                    _oh_dl_fail = [r for r in opp_header_results if r["Status"].startswith("❌")]
+                    if _oh_dl_pass: all_dl_sections[f"{prefix}Opp Header Pass"] = pd.DataFrame(_oh_dl_pass)
+                    if _oh_dl_fail: all_dl_sections[f"{prefix}Opp Header Fail"] = pd.DataFrame(_oh_dl_fail)
 
     # ── Post-loop: Run history + Cross-order summary ──────────────────────────
     if order_nums:
