@@ -224,6 +224,16 @@ async function useSalesforceQuote(quoteId) {
         }
 
         for (const [key, value] of Object.entries(data.fields || {})) {
+            if (key === "end_user_company") {
+                // Norway's end_user_block: swap only its first line (the company)
+                // and keep the address, contact, phone and email lines.
+                const block = document.getElementById("field-end_user_block");
+                if (block) {
+                    const rest = block.value.split("\n").slice(1);
+                    block.value = [value, ...rest].join("\n");
+                }
+                continue;
+            }
             const input = document.getElementById(`field-${key}`);
             if (input) {
                 input.value = value;

@@ -222,6 +222,46 @@ def _map_fields_ingram_micro_canada(quote: dict, account: dict, order: dict) -> 
     return fields
 
 
+def _map_fields_nox_co_ltd(quote: dict, account: dict, order: dict) -> dict:
+    # The "End User" row (end_user) is the Quote's Account (SBQQ__Account__c) name.
+    fields = _map_fields_default(quote, account, order)
+    account_name = account.get("Name")
+    if account_name:
+        fields["end_user"] = account_name
+    return fields
+
+
+def _map_fields_innocom_ltd(quote: dict, account: dict, order: dict) -> dict:
+    # The "End User:" line (end_user) is the Quote's Account (SBQQ__Account__c) name.
+    fields = _map_fields_default(quote, account, order)
+    account_name = account.get("Name")
+    if account_name:
+        fields["end_user"] = account_name
+    return fields
+
+
+def _map_fields_arrow_netherlands(quote: dict, account: dict, order: dict) -> dict:
+    # The End User block's Company (end_user_company) is the Quote's Account
+    # (SBQQ__Account__c) name.
+    fields = _map_fields_default(quote, account, order)
+    account_name = account.get("Name")
+    if account_name:
+        fields["end_user_company"] = account_name
+    return fields
+
+
+def _map_fields_exclusive_networks_norway(quote: dict, account: dict, order: dict) -> dict:
+    # end_user_block is one multi-line value whose first line is the end user's
+    # company. The page replaces only that first line with end_user_company (the
+    # Quote's Account name), so the sample's address, contact, phone and email
+    # lines stay in place.
+    fields = _map_fields_default(quote, account, order)
+    account_name = account.get("Name")
+    if account_name:
+        fields["end_user_company"] = account_name
+    return fields
+
+
 # Which field mapper and per-line hook a distributor uses is set on its entry in
 # distributors.py (sf_mapper / sf_line_hook); no entry means _map_fields_default.
 

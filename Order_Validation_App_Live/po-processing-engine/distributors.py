@@ -63,6 +63,7 @@ REGISTRY: tuple[Distributor, ...] = (
         "Arrow ECS BV (Netherlands)",
         parser=_P + "arrow_netherlands:parse_template",
         generator=_G + "arrow_netherlands:generate_arrow_netherlands_po",
+        sf_mapper="salesforce_client:_map_fields_arrow_netherlands",
     ),
     Distributor(
         "Computer Gross spa",
@@ -76,6 +77,7 @@ REGISTRY: tuple[Distributor, ...] = (
         "Exclusive Networks (Norway)",
         parser=_P + "exclusive_networks_norway:parse_template",
         generator=_G + "exclusive_networks_norway:generate_exclusive_networks_norway_po",
+        sf_mapper="salesforce_client:_map_fields_exclusive_networks_norway",
     ),
     Distributor("HCL America, Inc.", "HCL America, Inc."),
     Distributor(
@@ -90,6 +92,7 @@ REGISTRY: tuple[Distributor, ...] = (
         "Innocom Ltd",
         parser=_P + "innocom_ltd:parse_template",
         generator=_G + "innocom_ltd:generate_innocom_ltd_po",
+        sf_mapper="salesforce_client:_map_fields_innocom_ltd",
     ),
     Distributor("iValue InfoSolutions Limited", "iValue InfoSolutions Limited"),
     Distributor(
@@ -111,6 +114,7 @@ REGISTRY: tuple[Distributor, ...] = (
         "NOX Co.,LTD.",
         parser=_P + "nox_co_ltd:parse_template",
         generator=_G + "nox_co_ltd:generate_nox_co_ltd_po",
+        sf_mapper="salesforce_client:_map_fields_nox_co_ltd",
     ),
 )
 
