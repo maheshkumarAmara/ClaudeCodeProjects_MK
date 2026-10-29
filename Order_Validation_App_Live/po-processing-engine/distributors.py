@@ -57,6 +57,7 @@ REGISTRY: tuple[Distributor, ...] = (
         "ADN Distribution GmbH",
         parser=_P + "adn_distribution_gmbh:parse_template",
         generator=_G + "adn:generate_adn_po",
+        sf_mapper="salesforce_client:_map_fields_adn_distribution_gmbh",
     ),
     Distributor(
         "Arrow (Netherlands)",

@@ -214,6 +214,25 @@ def _draw_block(c: canvas.Canvas, page_height: float, block: _Block, top: float)
         )
 
 
+LICENSEE_BLOCK_COVER = (396.0, 334.0, 546.0, 396.5)
+LICENSEE_FIRST_TOP = 336.0
+LICENSEE_PITCH = 8.4
+LICENSEE_SIZE = 7.0
+LICENSEE_ROOM = 546.0 - 398.0
+
+
+def _draw_licensee_address(c: canvas.Canvas, page_height: float, fields: dict) -> None:
+    """Licensee address block, right column of the first page. The template's
+    own lines sit under a white cover so only the edited address shows."""
+    x0, top, x1, bottom = LICENSEE_BLOCK_COVER
+    _whiteout(c, page_height, x0, top, x1, bottom)
+    y = LICENSEE_FIRST_TOP
+    for raw in str(fields.get("licensee_address") or "").split("\n"):
+        for line in wrap_text(raw, LICENSEE_ROOM, LICENSEE_SIZE):
+            _text(c, page_height, 398.0, y, line, LICENSEE_SIZE)
+            y += LICENSEE_PITCH
+
+
 def _draw_header_values(c: canvas.Canvas, page_height: float, fields: dict) -> None:
     """Values on the first page's header block, which only prints once."""
     _whiteout(c, page_height, 433.0, 156.5, 566.0, 165.5)
@@ -290,6 +309,7 @@ def _draw_page(
 
     if t == TEMPLATE_FIRST:
         _draw_header_values(c, page_height, fields)
+        _draw_licensee_address(c, page_height, fields)
 
     y = FIRST_TOP if t == TEMPLATE_FIRST else CONT_TOP
     for block in spec.blocks:

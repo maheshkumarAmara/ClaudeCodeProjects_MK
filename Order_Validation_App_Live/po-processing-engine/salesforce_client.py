@@ -231,6 +231,17 @@ def _map_fields_nox_co_ltd(quote: dict, account: dict, order: dict) -> dict:
     return fields
 
 
+def _map_fields_adn_distribution_gmbh(quote: dict, account: dict, order: dict) -> dict:
+    # licensee_address is one multi-line value whose first line is the licensee's
+    # company. The page replaces only that first line with licensee_company (the
+    # Quote's Account name), so the address, contact and email lines stay in place.
+    fields = _map_fields_default(quote, account, order)
+    account_name = account.get("Name")
+    if account_name:
+        fields["licensee_company"] = account_name
+    return fields
+
+
 def _map_fields_innocom_ltd(quote: dict, account: dict, order: dict) -> dict:
     # The "End User:" line (end_user) is the Quote's Account (SBQQ__Account__c) name.
     fields = _map_fields_default(quote, account, order)

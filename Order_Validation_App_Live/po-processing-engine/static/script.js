@@ -1,4 +1,4 @@
-const MULTILINE_FIELD_KEYS = new Set(["end_user_block", "reseller_block", "ship_to_block", "address_block", "delivery_address", "invoice_address"]);
+const MULTILINE_FIELD_KEYS = new Set(["end_user_block", "reseller_block", "ship_to_block", "address_block", "delivery_address", "invoice_address", "licensee_address"]);
 const LINE_ITEM_COLUMNS = ["part_number", "description", "qty", "unit_cost", "pct_disc", "terms"];
 
 let currentSlug = null;
@@ -223,11 +223,12 @@ async function useSalesforceQuote(quoteId) {
             return;
         }
 
+        // Keys whose value replaces only the first line of a multi-line box.
+        const FIRST_LINE_KEYS = { end_user_company: "end_user_block", licensee_company: "licensee_address" };
         for (const [key, value] of Object.entries(data.fields || {})) {
-            if (key === "end_user_company") {
-                // Norway's end_user_block: swap only its first line (the company)
-                // and keep the address, contact, phone and email lines.
-                const block = document.getElementById("field-end_user_block");
+            if (key in FIRST_LINE_KEYS) {
+                // Swap only the company line and keep the address, contact, phone and email lines.
+                const block = document.getElementById(`field-${FIRST_LINE_KEYS[key]}`);
                 if (block) {
                     const rest = block.value.split("\n").slice(1);
                     block.value = [value, ...rest].join("\n");

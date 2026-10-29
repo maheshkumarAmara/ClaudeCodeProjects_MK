@@ -49,6 +49,33 @@ TOTAL_PATTERNS = {
 }
 
 
+# The Licensee address block sits in the right-hand column of the first page,
+# below "Licensee address:" (about top 336 to 387, x from 398).
+LICENSEE_X_RANGE = (395.0, 560.0)
+LICENSEE_TOP_RANGE = (333.0, 396.0)
+
+
+def _licensee_address(page) -> str:
+    """Lines of the Licensee address block, joined with newlines."""
+    words = [
+        w
+        for w in page.extract_words()
+        if LICENSEE_TOP_RANGE[0] <= w["top"] <= LICENSEE_TOP_RANGE[1]
+        and LICENSEE_X_RANGE[0] <= w["x0"] <= LICENSEE_X_RANGE[1]
+    ]
+    lines: dict[float, list[dict]] = {}
+    for w in words:
+        lines.setdefault(round(w["top"]), []).append(w)
+    # "Licensee address:" is the label itself, not part of the address.
+    text_lines = []
+    for top in sorted(lines):
+        text = " ".join(w["text"] for w in sorted(lines[top], key=lambda w: w["x0"]))
+        if text.startswith("Licensee address:"):
+            continue
+        text_lines.append(text)
+    return "\n".join(text_lines)
+
+
 def _search(patterns: dict[str, str], text: str) -> dict[str, str]:
     values = {}
     for key, pattern in patterns.items():
@@ -117,9 +144,11 @@ def _parse_line_items(lines: list[str]) -> list[dict]:
 def parse_template(path: Path) -> dict:
     with pdfplumber.open(path) as pdf:
         page_texts = [page.extract_text() or "" for page in pdf.pages]
+        licensee_address = _licensee_address(pdf.pages[0])
 
     full_text = "\n".join(page_texts)
     fields = _search(HEADER_PATTERNS, page_texts[0])
+    fields["licensee_address"] = licensee_address
     fields.update(_search(TOTAL_PATTERNS, full_text))
     return {
         "fields": fields,
