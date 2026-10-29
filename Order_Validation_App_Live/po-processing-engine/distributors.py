@@ -83,6 +83,7 @@ REGISTRY: tuple[Distributor, ...] = (
         "Ingram Micro Canada",
         parser=_P + "ingram_micro_canada:parse_template",
         generator=_G + "ingram_micro_canada:generate_ingram_micro_canada_po",
+        sf_mapper="salesforce_client:_map_fields_ingram_micro_canada",
     ),
     Distributor(
         "Innocom Ltd",

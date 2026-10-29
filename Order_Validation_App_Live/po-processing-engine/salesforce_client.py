@@ -210,6 +210,18 @@ def _map_fields_computer_gross_spa(quote: dict, account: dict, order: dict) -> d
     return fields
 
 
+def _map_fields_ingram_micro_canada(quote: dict, account: dict, order: dict) -> dict:
+    # The END USER INFO block's name (end_user_name) is the Quote's Account
+    # (SBQQ__Account__c) name. The generator prints end_user_name_pieces (the
+    # template's own line breaks) only while it still joins back to end_user_name,
+    # so a different name is wrapped by the generator instead.
+    fields = _map_fields_default(quote, account, order)
+    account_name = account.get("Name")
+    if account_name:
+        fields["end_user_name"] = account_name
+    return fields
+
+
 # Which field mapper and per-line hook a distributor uses is set on its entry in
 # distributors.py (sf_mapper / sf_line_hook); no entry means _map_fields_default.
 
