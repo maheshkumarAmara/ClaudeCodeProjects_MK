@@ -8,11 +8,11 @@ Quick reference for every app in this repo that runs a local server. Paths are r
 |---|---|---|---|
 | 8000 | [Jira Dashboard](#2-jira-dashboard) | FastAPI | `uvicorn main:app --reload` |
 | 8001 | [BRD Jira UI](#3-brd-jira-ui) | FastAPI | `python main.py` |
-| 8010 | [PO Processing Engine](#4-po-processing-engine) (standalone) | FastAPI | `uvicorn main:app --reload --port 8010` |
-| 8501 | [Order Validation App](#1-order-validation-app) | Streamlit (or the gateway in front of it) | `./launch.sh` |
+| 8502 | [Order Validation App](#1-order-validation-app) | Streamlit (or the gateway in front of it) | `./launch.sh` |
 | 8510 | Order Validation internal Streamlit, behind the gateway | Streamlit | `gateway.js` |
 | 3001 | Salesforce bridge for the EDI tool | Node | `launch.sh` / `gateway.js` |
-| 8012 | PO Processing Engine when embedded in Order Validation | FastAPI | `pages/PO_Processing_Engine.py` |
+| 8012 | PO Processing Engine, embedded in Order Validation | FastAPI | `pages/PO_Processing_Engine.py` |
+| 4570 | [SOQL Builder](#4-soql-builder-standalone) (standalone default) | Node | `node server.mjs` |
 | 4580 | SOQL Builder when embedded in Order Validation | Node | `pages/SOQL_Builder.py` |
 
 No two apps share a port by default, so they can all run at the same time. If you see `[Errno 48] Address already in use`, something is already on that port. Find it with:
@@ -28,7 +28,7 @@ lsof -nP -iTCP:<port> -sTCP:LISTEN
 Streamlit app that validates Salesforce orders against business rules (QA and UAT). It also hosts the EDI Validator, Developer Console, SOQL Builder and PO Processing Engine as extra pages.
 
 - **Folder:** `Order_Validation_App_Live/`
-- **URL:** http://localhost:8501
+- **URL:** http://localhost:8502
 - **Needs:** Python 3.8+, Node.js, Salesforce CLI (`sf`) logged in to `qa-org` / `uat-org`
 
 ```bash
@@ -37,9 +37,13 @@ chmod +x launch.sh        # first time only
 ./launch.sh
 ```
 
-`launch.sh` installs dependencies, starts the Salesforce bridge on 3001 if it isn't already running, then starts Streamlit on 8501. Override the port with `STREAMLIT_PORT=8502 ./launch.sh`.
+`launch.sh` installs dependencies, starts the Salesforce bridge on 3001 if it isn't already running, then starts Streamlit on 8502. Override the port with `STREAMLIT_PORT=8503 ./launch.sh`.
 
-**Optional always-on gateway.** `gateway.js` listens on 8501 and starts Streamlit (on 8510) and the bridge on the first visit. It stops them again after 15 minutes with no open connection.
+- **Pages:** Order Validation (main, `Order_Validation_App.py`), EDI Validator, Developer Console, SOQL Builder and PO Processing Engine (all in `pages/`). The main app's helpers live in `ov/` (including `ov/opp_header_checks.py`, the Opportunity header checks).
+- **Two copies on one machine:** `launch.sh` skips starting the bridge if something already listens on 3001, even when that bridge belongs to another checkout. The EDI Validator page then talks to that other checkout's bridge. Stop the old one on 3001 first if you want this checkout's bridge code.
+- **Always-on gateway:** the launchd agent `com.rubrik.order-validation-gateway` is pinned to the folder you ran `install_autostart.sh` from. If that is a different checkout, the gateway's port serves that checkout's code, not this one. The old checkout's gateway still listens on 8501 until you reinstall it from this folder.
+
+**Optional always-on gateway.** `gateway.js` listens on 8502 and starts Streamlit (on 8510) and the bridge on the first visit. It stops them again after 15 minutes with no open connection.
 
 ```bash
 bash install_autostart.sh      # install, also starts at login
@@ -48,6 +52,7 @@ bash uninstall_autostart.sh    # remove
 
 - **Logs:** `Order_Validation_App_Live/logs/` (`gateway.log`, `app.log`, `launchd.log`), plus `/tmp/sf_bridge_server.log`.
 - **Details:** see `Order_Validation_App_Live/README.md`.
+- **PO Processing Engine:** there is no standalone PO engine folder in this repo any more. The engine lives in `Order_Validation_App_Live/po-processing-engine/` (FastAPI, see its own `README.md`) and runs only as the app's PO Processing Engine page. Opening that page starts it on 8012 (override with `PO_ENGINE_PORT`). It needs `sf` authenticated to `rbkqa` and `uat-org`.
 - **Note:** the servers that its pages start themselves (PO engine on 8012, SOQL Builder on 4580) keep running after Streamlit stops.
 
 ## 2. Jira Dashboard
@@ -89,27 +94,18 @@ python main.py
 
 `python main.py` starts uvicorn on port 8001 with reload and opens the browser. It binds to `0.0.0.0`, so it is reachable from other machines on your network. Use `uvicorn main:app --reload --port 8001` if you'd rather bind to localhost only.
 
-## 4. PO Processing Engine
+## 4. SOQL Builder (standalone)
 
-Edit a distributor's purchase order PDF and regenerate it. It can also pull a Salesforce Quote (read-only) to pre-fill the form.
+Visual SOQL builder, a small Node server with no npm dependencies to install. Order Validation normally starts it for you on 4580 when you open its SOQL Builder page.
 
-- **Folder:** `po-processing-engine/`
-- **URL:** http://127.0.0.1:8010
-- **Needs:** Salesforce CLI (`sf`) authenticated to `rbkqa` and `uat-org`
-- **Config:** copy `env.example` to `.env`. `PORT` and `SALESFORCE_ORG_ALIAS` are optional.
+- **Folder:** `Order_Validation_App_Live/soql-builder/`
+- **URL:** http://127.0.0.1:4570 (default). Override with `SOQL_BUILDER_PORT`.
+- **Needs:** Node.js and the Salesforce CLI (`sf`)
 
 ```bash
-cd po-processing-engine
-python3 -m venv venv                 # first time only
-source venv/bin/activate
-pip install -r requirements.txt      # first time only
-cp env.example .env                  # first time only
-uvicorn main:app --reload --port 8010
+cd Order_Validation_App_Live/soql-builder
+node server.mjs
 ```
-
-You don't need to run this separately to use it from Order Validation. That app starts its own copy on 8012 when you open the PO Processing Engine page.
-
-- **Details:** see `po-processing-engine/README.md`.
 
 ## 5. SF Inspector Plus
 
@@ -137,4 +133,6 @@ These have nothing to start locally:
 - `weekly-status-checker/`: `WeeklyStatusChecker.gs`, an Apps Script.
 - `MK_Branch/`: notes and a `.gs` tracker, no server.
 - `MSPPayGo.html`, `SalaryBreakupCalculator.html`: standalone HTML files, open them in a browser.
-- `Order_Validation_App_backup_*/`, `po-processing-engine_backup_*/`: backups. Don't run these, they would clash with the live ports.
+- `PRDOPS-1625-linked-doc.md`: a notes file.
+
+The top-level `po-processing-engine/`, the backup folders (`Order_Validation_App_backup_*`, `po-processing-engine_backup_*`) and `Ope mid year/` are no longer on disk, although git still tracks them. Don't restore and run a backup copy of an app while the live one is up, because it would clash on the same ports.
