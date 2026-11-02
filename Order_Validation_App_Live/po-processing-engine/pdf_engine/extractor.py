@@ -25,7 +25,8 @@ def find_template_path(slug: str) -> Path | None:
     folder = config.TEMPLATES_DIR / slug
     if not folder.is_dir():
         return None
-    pdfs = sorted(folder.glob("*.pdf"))
+    # Case-insensitive, so a sample saved as "....PDF" is found like "....pdf".
+    pdfs = sorted(p for p in folder.iterdir() if p.is_file() and p.suffix.lower() == ".pdf")
     return pdfs[0] if pdfs else None
 
 

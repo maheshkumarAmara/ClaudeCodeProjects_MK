@@ -9,9 +9,10 @@ from pydantic import BaseModel
 
 import config
 import distributors
+import history
 import salesforce_client
 from sandbox_email import sandbox_fields
-from pdf_engine import compare, detect, extractor, generator
+from pdf_engine import compare, convert, detect, extractor, generator
 from pdf_engine.sandbox_pdf import sandbox_pdf_emails
 from pdf_engine.strip_hidden import strip_hidden_text
 
@@ -82,13 +83,24 @@ async def compare_pdf_json(
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "upload.pdf"
         path.write_bytes(pdf_bytes)
+        found = detect.detect(path, json_text)
         if not slug:
-            slug = detect.detect(path, json_text)["slug"] or ""
+            slug = found["slug"] or ""
             if not slug:
                 raise HTTPException(
                     status_code=422,
                     detail="Could not tell which distributor this is from the files. Choose the distributor and try again.",
                 )
+        if found["conflict"]:
+            # The JSON and the PDF name different distributors, so parsing the PDF with
+            # either one would compare the wrong layout or an unrelated order.
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"The JSON is for {config.DISTRIBUTORS.get(found['json'], found['json'])} but the PDF looks like "
+                    f"{config.DISTRIBUTORS.get(found['pdf'], found['pdf'])}. Use matching files."
+                ),
+            )
         if distributors.get(slug) is None:
             raise HTTPException(status_code=400, detail=f"Unknown distributor '{slug}'.")
         try:
@@ -137,8 +149,10 @@ class GenerateRequest(BaseModel):
     line_items: list[dict]
 
 
-@app.post("/api/distributors/{slug}/generate")
-async def generate_distributor_po(slug: str, body: GenerateRequest):
+def _build_po_pdf(slug: str, body: GenerateRequest) -> bytes:
+    """The finished PO PDF for `body`: generated, sandboxed and stripped of hidden text.
+    Shared by the PDF download and the Convert & Download formats, so they all start from
+    exactly what Generate & download PDF delivers."""
     custom = distributors.get_generator(slug)
     fields = sandbox_fields(body.fields)
     try:
@@ -158,18 +172,88 @@ async def generate_distributor_po(slug: str, body: GenerateRequest):
 
     # The generators cover the template's values with white boxes and draw new text over
     # them, leaving the old text in the file. Remove it, so the PDF holds only what shows.
-    pdf_bytes = strip_hidden_text(pdf_bytes)
+    return strip_hidden_text(pdf_bytes)
 
-    filename = f"{(body.fields.get('po_number') or slug).strip().replace('/', '-') or slug}.pdf"
+
+def _po_basename(slug: str, body: GenerateRequest) -> str:
+    return (body.fields.get("po_number") or slug).strip().replace("/", "-") or slug
+
+
+@app.post("/api/distributors/{slug}/generate")
+async def generate_distributor_po(slug: str, body: GenerateRequest, preview: bool = False):
+    pdf_bytes = _build_po_pdf(slug, body)
+    filename = f"{_po_basename(slug, body)}.pdf"
     # Keep the archived copy (data/generated/<slug>/) identical to what was delivered.
     archive = config.GENERATED_DIR / slug / filename
     if archive.parent.is_dir():
         archive.write_bytes(pdf_bytes)
+    # "Preview PDF" calls this same endpoint with ?preview=true; only a real download is history.
+    if not preview:
+        history.add(slug, "PDF", sandbox_fields(body.fields), body.line_items)
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@app.get("/api/convert/formats")
+async def list_convert_formats():
+    return {"formats": [{"key": key, "label": label} for key, (label, _) in convert.FORMATS.items()]}
+
+
+@app.post("/api/distributors/{slug}/convert/{fmt}")
+async def convert_distributor_po(slug: str, fmt: str, body: GenerateRequest):
+    if fmt not in convert.FORMATS:
+        raise HTTPException(status_code=400, detail=f"Unknown format '{fmt}'. Choose one of: {', '.join(convert.FORMATS)}.")
+    # Image and text formats are made from the finished PDF, so build it first. Data formats
+    # read the form values, but go through the same build so a layout that can't be
+    # generated (or a bad value) is reported the same way as for the PDF download.
+    pdf_bytes = _build_po_pdf(slug, body)
+    basename = _po_basename(slug, body)
+    try:
+        content, media_type, ext = convert.convert(
+            fmt,
+            pdf_bytes=pdf_bytes,
+            fields=sandbox_fields(body.fields),
+            line_items=body.line_items,
+            slug=slug,
+            basename=basename,
+        )
+    except Exception as exc:  # a renderer failing on an unusual PDF
+        raise HTTPException(status_code=500, detail=f"Could not convert to {fmt.upper()}: {exc}") from exc
+    history.add(slug, fmt.upper(), sandbox_fields(body.fields), body.line_items)
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{basename}.{ext}"'},
+    )
+
+
+@app.get("/api/history")
+async def list_history():
+    return {"entries": history.summaries()}
+
+
+@app.get("/api/history/{entry_id}")
+async def get_history_entry(entry_id: str):
+    entry = history.get(entry_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="That history entry no longer exists.")
+    return entry
+
+
+@app.delete("/api/history/{entry_id}")
+async def delete_history_entry(entry_id: str):
+    if not history.delete(entry_id):
+        raise HTTPException(status_code=404, detail="That history entry no longer exists.")
+    return {"deleted": entry_id}
+
+
+@app.delete("/api/history")
+async def clear_history():
+    history.clear()
+    return {"cleared": True}
 
 
 def _resolve_sf_org(org: str) -> str:

@@ -6,8 +6,10 @@ one also carries the totals and payment/delivery terms) followed by a
 one or two wrapped continuation lines, so rows are split into columns by
 x-position and continuation lines are folded back into their item.
 
-This only loads the template into the editor. There is no layout for Arrow
-(Netherlands) yet, so generate/preview are rejected until one is added.
+A subscription line prints its term at the end of its description ("Premium
+support : 36 months"); that number is also returned as the item's `terms`, so
+it can be compared with a JSON subscription term. The description keeps the
+text as printed.
 """
 
 import re
@@ -25,14 +27,18 @@ COL_DESCRIPTION = (271, 470)
 COL_QTY = (470, 530)
 COL_RRP = (530, 612)
 COL_DISCOUNT = (612, 700)
-COL_UNIT_PRICE = (700, 770)
-COL_TOTAL = (770, 900)
+# Unit price text ends near x=747 and Total price is right-aligned to x=826, so a wide
+# total ("10,588,320.00$") starts as far left as x=768. Cut between them at 757.
+COL_UNIT_PRICE = (700, 757)
+COL_TOTAL = (757, 900)
 
 HEADER_ROW_TOP = 70.0  # items start below the repeated column-header row
 FOOTER_TOP = 460.0  # the Arrow ECS address footer begins below this
 LINE_TOLERANCE = 2.0
 MAIN_ROW_RE = re.compile(r"^\d+$")
 TOTALS_START_RE = re.compile(r"^(Total (excl|incl)\.|VAT\b|Terms of payment|Delivery terms)")
+# A subscription line ends its description with its term, e.g. "... : 36 months".
+TERM_IN_DESCRIPTION_RE = re.compile(r":\s*(\d+)\s*months?\s*$", re.IGNORECASE)
 
 HEADER_PATTERNS = {
     "po_number": r"Purchase order (\S+)",
@@ -83,6 +89,14 @@ def _plain_number(text: str) -> str:
     return text.replace(",", "").replace("$", "").strip()
 
 
+def _term_from_description(description: str) -> str:
+    """The term in months that a subscription line prints at the end of its
+    description, e.g. "Premium support : 36 months" -> "36". Lines without one
+    (hardware, cables) have no term and return ""."""
+    match = TERM_IN_DESCRIPTION_RE.search(description)
+    return match.group(1) if match else ""
+
+
 def _parse_items_page(page) -> list[dict]:
     words = [
         w
@@ -120,6 +134,10 @@ def _parse_items_page(page) -> list[dict]:
             desc_cont = _column_text(line, COL_DESCRIPTION)
             if desc_cont:
                 current["description"] = f"{current['description']} {desc_cont}".strip()
+    # The description is complete only once its continuation lines are folded in,
+    # so the term is read after the whole page has been walked.
+    for item in items:
+        item["terms"] = _term_from_description(item["description"])
     return items
 
 

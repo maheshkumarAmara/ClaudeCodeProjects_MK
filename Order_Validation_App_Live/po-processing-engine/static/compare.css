@@ -96,6 +96,15 @@ a.app-tag:hover {
     color: #ffffff;
 }
 
+.compare-count {
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    color: #6f9bb8;
+    margin-left: 0.4rem;
+}
+
 .compare-table td {
     font-size: 0.85rem;
 }
@@ -114,6 +123,12 @@ a.app-tag:hover {
 .compare-badge.only_pdf,
 .compare-badge.only_json { background: rgba(246, 196, 83, 0.14); color: #f6c453; }
 
+.compare-field-badge {
+    display: block;
+    width: fit-content;
+    margin-top: 0.3rem;
+}
+
 .compare-cell-bad {
     background: rgba(255, 138, 138, 0.1);
 }
@@ -126,6 +141,20 @@ a.app-tag:hover {
 .compare-pair small {
     color: #6f9bb8;
     margin-right: 4px;
+}
+
+.compare-comment {
+    min-width: 220px;
+    font-size: 0.8rem;
+    color: #c4daea;
+}
+
+.compare-comment-line {
+    display: block;
+}
+
+.compare-comment-line + .compare-comment-line {
+    margin-top: 0.25rem;
 }
 
 .compare-empty {

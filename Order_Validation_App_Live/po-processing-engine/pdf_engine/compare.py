@@ -39,11 +39,36 @@ HEADER_ALIASES = {
     "contact_phone": ("shiptophonenumber",),
     "contact_email": ("shiptoemail",),
     "incoterms": ("shippingmethod",),
+    "delivery_terms": ("shippingmethod",),
+    "contingency_note": ("noteoncontingencyandspeciallanguage",),
+    "distributor_name": ("distributorname",),
+    "bill_to_name": ("billtoname",),
+    "goods_value": ("totalexclvathstgst",),
+    "vat_amount": ("vathstgst",),
+    "ship_to_company": ("shiptoname",),
+    "ship_to_contact": ("shiptocontactname",),
+    "ship_to_email": ("shiptoemail",),
+    "ship_to_street": ("shippingstreet",),
+    "ship_to_postcode": ("shippingpostalcode",),
+    "ship_to_city": ("shippingcity",),
+    "ship_to_country": ("shippingcountry",),
+    "ship_to_phone": ("shiptophonenumber",),
+    "enduser_po": ("endusernumber", "enduserponumber", "endcustomerpo"),
+    "licensee_company": ("accountname",),
 }
 HEADER_DATE_FIELDS = {"order_date", "po_date"}
-HEADER_NUMBER_FIELDS = {"total", "total_price", "tax"}
+HEADER_NUMBER_FIELDS = {"total", "total_price", "tax", "goods_value", "vat_amount"}
+# Header fields compared as exact text. The ADN total prints as "101.340,00 USD", and a
+# JSON that holds "101340.00" must not match it.
+HEADER_EXACT_FIELDS = {"total"}
+# Top-level JSON keys that describe the run, not the purchase order, so they are not header fields.
+JSON_ENVELOPE_KEYS = {"correlationid", "status", "traceid"}
 COMPARED_FIELDS = ("qty", "unit_cost", "terms", "amount")
 NUMERIC_FIELDS = {"qty", "unit_cost", "amount"}
+FIELD_LABELS = {"qty": "Quantity", "unit_cost": "Unit price", "terms": "Term", "amount": "Amount"}
+HEADER_LABELS = {"po_number": "PO number", "po_date": "PO date", "order_date": "Order date", "customer_po": "Customer PO"}
+NOT_IN_JSON = "SKU not found in the JSON"
+NOT_IN_PDF = "SKU not found in the PDF"
 
 
 def _norm_key(key: str) -> str:
@@ -120,7 +145,16 @@ def _json_header(data) -> dict:
     return header
 
 
-def _equal(field: str, pdf_value, json_value, tolerance: Decimal) -> bool:
+def _pdf_value(item: dict, field: str):
+    """The PDF side of a field. A parser that keeps the text exactly as printed
+    (`<field>_as_printed`, set for ADN's unit price) has that text compared as it is,
+    with no number conversion on either side."""
+    return item.get(f"{field}_as_printed", item.get(field))
+
+
+def _equal(field: str, pdf_value, json_value, tolerance: Decimal, exact: bool = False) -> bool:
+    if exact:
+        return str(pdf_value if pdf_value is not None else "").strip() == str(json_value if json_value is not None else "").strip()
     if field in NUMERIC_FIELDS:
         a, b = to_number(pdf_value), to_number(json_value)
         if a is None or b is None:
@@ -147,6 +181,9 @@ def _to_date(value):
 
 
 def _header_equal(field: str, pdf_value, json_value, tol: Decimal) -> bool:
+    if field in HEADER_EXACT_FIELDS:
+        # Compared as printed, with no number conversion on either side.
+        return str(pdf_value if pdf_value is not None else "").strip() == str(json_value if json_value is not None else "").strip()
     if field in HEADER_DATE_FIELDS:
         a, b = _to_date(pdf_value), _to_date(json_value)
         if a is not None and b is not None:
@@ -166,6 +203,34 @@ def _show(value) -> str:
     return "" if value is None else str(value)
 
 
+def _header_comment(field: str, pdf_value, json_value) -> str:
+    """Why a header field differs; the same wording style as line comments."""
+    label = HEADER_LABELS.get(field, field.replace("_", " ").capitalize())
+    pdf_text, json_text = _show(pdf_value).strip(), _show(json_value).strip()
+    if not json_text:
+        return f"{label} is missing in the JSON (PDF has {pdf_text})"
+    if field in HEADER_EXACT_FIELDS:
+        return f'{label} differs as printed: PDF "{pdf_text}", JSON "{json_text}"'
+    return f"{label} differs: PDF {pdf_text}, JSON {json_text}"
+
+
+def _field_comment(field: str, pdf_value, json_value, tol: Decimal, exact: bool = False) -> str:
+    """Why a compared field differs, in words a reviewer can act on."""
+    label = FIELD_LABELS[field]
+    pdf_text, json_text = _show(pdf_value).strip(), _show(json_value).strip()
+    if not json_text:
+        return f"{label} is missing in the JSON (PDF has {pdf_text})"
+    if not pdf_text:
+        return f"{label} is missing in the PDF (JSON has {json_text})"
+    if exact:
+        return f'{label} differs as printed: PDF "{pdf_text}", JSON "{json_text}"'
+    if field in NUMERIC_FIELDS:
+        a, b = to_number(pdf_value), to_number(json_value)
+        if a is not None and b is not None:
+            return f"{label} differs: PDF {pdf_text}, JSON {json_text} (difference {abs(a - b)}, tolerance {tol})"
+    return f"{label} differs: PDF {pdf_text}, JSON {json_text}"
+
+
 def compare(pdf_parsed: dict, json_text: str, tolerance: str = "0.01") -> dict:
     data = json.loads(json_text)
     tol = to_number(tolerance) or Decimal("0.01")
@@ -183,7 +248,7 @@ def compare(pdf_parsed: dict, json_text: str, tolerance: str = "0.01") -> dict:
             1
             for f in COMPARED_FIELDS
             if not (f == "amount" and (item.get(f) in (None, "") or _pick(obj, f) is None))
-            and not _equal(f, item.get(f), _pick(obj, f), tol)
+            and not _equal(f, _pdf_value(item, f), _pick(obj, f), tol, f"{f}_as_printed" in item)
         )
 
     # Pair repeated SKUs best-first, so one missing or reordered line doesn't shift
@@ -212,23 +277,28 @@ def compare(pdf_parsed: dict, json_text: str, tolerance: str = "0.01") -> dict:
         sku = item.get("part_number") or item.get("description") or ""
         obj = paired.get(index)
         if obj is None:
-            lines.append({"sku": sku, "status": "only_pdf", "fields": {
-                f: {"pdf": _show(item.get(f)), "json": "", "match": None} for f in COMPARED_FIELDS}})
+            lines.append({"sku": sku, "status": "only_pdf", "comments": [NOT_IN_JSON], "fields": {
+                f: {"pdf": _show(item.get(f)), "json": "", "match": None, "comment": NOT_IN_JSON}
+                for f in COMPARED_FIELDS}})
             continue
         fields = {}
         for f in COMPARED_FIELDS:
-            pdf_value, json_value = item.get(f), _pick(obj, f)
+            exact = f"{f}_as_printed" in item
+            pdf_value, json_value = _pdf_value(item, f), _pick(obj, f)
             if f == "amount" and (pdf_value in (None, "") or json_value is None):
                 continue
-            fields[f] = {"pdf": _show(pdf_value), "json": _show(json_value),
-                         "match": _equal(f, pdf_value, json_value, tol)}
+            match = _equal(f, pdf_value, json_value, tol, exact)
+            fields[f] = {"pdf": _show(pdf_value), "json": _show(json_value), "match": match,
+                         "comment": "" if match else _field_comment(f, pdf_value, json_value, tol, exact)}
         status = "match" if all(v["match"] for v in fields.values()) else "mismatch"
-        lines.append({"sku": sku, "status": status, "fields": fields})
+        comments = [v["comment"] for v in fields.values() if v["comment"]]
+        lines.append({"sku": sku, "status": status, "comments": comments, "fields": fields})
 
     for sku, leftover in json_by_sku.items():
         for obj in leftover:
-            lines.append({"sku": _show(_pick(obj, "sku")), "status": "only_json", "fields": {
-                f: {"pdf": "", "json": _show(_pick(obj, f)), "match": None} for f in COMPARED_FIELDS}})
+            lines.append({"sku": _show(_pick(obj, "sku")), "status": "only_json", "comments": [NOT_IN_PDF], "fields": {
+                f: {"pdf": "", "json": _show(_pick(obj, f)), "match": None, "comment": NOT_IN_PDF}
+                for f in COMPARED_FIELDS}})
 
     header = []
     json_header = {_norm_key(k): (k, v) for k, v in _json_header(data).items()}
@@ -237,8 +307,36 @@ def compare(pdf_parsed: dict, json_text: str, tolerance: str = "0.01") -> dict:
         hit = next((json_header[c] for c in candidates if c in json_header), None)
         if hit is None or pdf_value in (None, ""):
             continue
+        match = _header_equal(key, pdf_value, hit[1], tol)
         header.append({"field": key, "json_key": hit[0], "pdf": _show(pdf_value), "json": _show(hit[1]),
-                       "match": _header_equal(key, pdf_value, hit[1], tol)})
+                       "match": match, "comment": "" if match else _header_comment(key, pdf_value, hit[1])})
+
+    # Every other header field in the JSON is listed too, so a field the PDF does not carry
+    # (or that is empty in the JSON) is visible rather than silently skipped. These rows
+    # have no PDF value to compare, so they are not counted as matches or mismatches.
+    compared_keys = {_norm_key(row["json_key"]) for row in header}
+    for norm, (json_key, json_value) in json_header.items():
+        if norm in compared_keys or norm in JSON_ENVELOPE_KEYS:
+            continue
+        empty = json_value in (None, "")
+        header.append({
+            "field": json_key, "json_key": json_key, "pdf": "", "json": _show(json_value),
+            "match": None, "side": "only_json",
+            "comment": "Empty in the JSON, and the PDF has no value for it" if empty
+            else "In the JSON only: the PDF has no value for this field",
+        })
+
+    # PDF fields that have a value but no counterpart in the JSON: listed too, so "Only in
+    # PDF" shows them. Like the rows above they have nothing to compare against.
+    listed_fields = {row["field"] for row in header}
+    for key, pdf_value in pdf_parsed.get("fields", {}).items():
+        if key in listed_fields or pdf_value in (None, ""):
+            continue
+        header.append({
+            "field": key, "json_key": "", "pdf": _show(pdf_value), "json": "",
+            "match": None, "side": "only_pdf",
+            "comment": "In the PDF only: the JSON has no field for this value",
+        })
 
     count = lambda status: sum(1 for line in lines if line["status"] == status)
     return {
@@ -249,8 +347,11 @@ def compare(pdf_parsed: dict, json_text: str, tolerance: str = "0.01") -> dict:
             "mismatched": count("mismatch"),
             "only_in_pdf": count("only_pdf"),
             "only_in_json": count("only_json"),
-            "header_compared": len(header),
-            "header_mismatched": sum(1 for h in header if not h["match"]),
+            "header_compared": sum(1 for h in header if h["match"] is not None),
+            "header_mismatched": sum(1 for h in header if h["match"] is False),
+            "header_not_compared": sum(1 for h in header if h["match"] is None),
+            "header_only_in_pdf": sum(1 for h in header if h.get("side") == "only_pdf"),
+            "header_only_in_json": sum(1 for h in header if h.get("side") == "only_json"),
         },
         "lines": lines,
         "header": header,

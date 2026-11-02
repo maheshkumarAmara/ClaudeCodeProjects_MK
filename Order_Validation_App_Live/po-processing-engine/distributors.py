@@ -95,7 +95,13 @@ REGISTRY: tuple[Distributor, ...] = (
         generator=_G + "innocom_ltd:generate_innocom_ltd_po",
         sf_mapper="salesforce_client:_map_fields_innocom_ltd",
     ),
-    Distributor("iValue InfoSolutions Limited", "iValue InfoSolutions Limited"),
+    Distributor(
+        "iValue InfoSolutions Limited",
+        "iValue InfoSolutions Limited",
+        parser=_P + "ivalue_infosolutions_limited:parse_template",
+        generator=_G + "ivalue_infosolutions_limited:generate_ivalue_infosolutions_limited_po",
+        sf_mapper="salesforce_client:_map_fields_ivalue_infosolutions_limited",
+    ),
     Distributor(
         "Networld Corporation",
         "Networld Corporation",

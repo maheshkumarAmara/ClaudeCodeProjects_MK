@@ -7,3 +7,4 @@ data/uploads/*
 !data/uploads/.gitkeep
 data/generated/**/*
 !data/generated/**/.gitkeep
+data/po_history.json

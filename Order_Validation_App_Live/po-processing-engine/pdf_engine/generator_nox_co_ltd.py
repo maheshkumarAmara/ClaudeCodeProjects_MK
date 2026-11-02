@@ -3,14 +3,16 @@
 The template is a one-page "ORDER SHEET": a label/value block (reference,
 shipment, payment, end user, quote no, the two notification emails) whose
 values carry a drawn underline, a bill-to block, a boxed items table with 8
-fixed rows, the total, the freight forwarder lines and a footer. Nothing
-flows, so there is nothing to paginate: this module keeps the template page,
-covers each value with a white box that stays clear of the surrounding rules,
-and redraws the new text. The items table is redrawn row by row.
+fixed rows, the total, the freight forwarder lines and a footer. Each value
+is covered with a white box that stays clear of the surrounding rules, and the
+new text is redrawn. The items table is redrawn row by row.
 
 Behaviors worth knowing:
-  - The table has 8 printed rows. More rows than that are rejected with a clear
-    error rather than silently dropped or drawn over the TOTAL line.
+  - The table has 8 printed rows. A PO with more lines is split across several
+    sheets: each sheet is a copy of the template with the header and footer
+    filled in and the next 8 lines in the table. The page label reads "1/3",
+    "2/3", and so on, and the TOTAL is printed on the last sheet only, covering
+    every line. A PO with 8 lines or fewer stays a single sheet.
   - A row's description shrinks to fit its cell, as the sample's own long
     descriptions do (items 5 and 6 print at 3.6-4.1pt).
   - Amounts print the way the sample does ("$20,306.52"): the line amount is
@@ -47,6 +49,9 @@ MIN_FONT_SIZE = 3.0
 
 WHITE = (1.0, 1.0, 1.0)
 BLACK = (0.0, 0.0, 0.0)
+# The ORDER SHEET band is light gray (sampled at 219/255), so anything drawn over
+# it is covered in that gray rather than white.
+BAND_GRAY = (219 / 255,) * 3
 UNDERLINE_WIDTH = 0.6
 
 # --- Single-line text fields -------------------------------------------------
@@ -130,12 +135,18 @@ _ITEM_SIZE = 7.0
 _PAD = 1.6
 _COVER_INSET = 0.9  # keep covers clear of the 0.5pt column rules
 
-# TOTAL.
+# TOTAL. Covers the "Total" label and the amount, for sheets that don't print it.
 _TOTAL_TEXT_RIGHT = 576.5
 _TOTAL_TOP = 460.8
 _TOTAL_COVER = (521.0, 461.0, 580.0, 471.5)
+_TOTAL_ROW_COVER = (460.0, 461.0, 580.0, 471.5)
 # Shipping term, "Shipping Term: FCA Origin" in italic; label stays.
 _SHIPPING_TERM = (92.2, 462.0, 91.0, 461.3, 300.0, 470.5, 7.9)
+# Sheet number, "1/1", at the right of the ORDER SHEET band.
+_PAGE_LABEL_RIGHT = 562.7
+_PAGE_LABEL_TOP = 56.6
+_PAGE_LABEL_SIZE = 10.0
+_PAGE_LABEL_COVER = (545.0, 55.0, 564.5, 67.5)
 
 
 def _fit(text: str, font: str, size: float, max_width: float) -> float:
@@ -146,9 +157,17 @@ def _clip(text: str, font: str, size: float, max_width: float) -> str:
     return clip_text(text, font, size, max_width)
 
 
-def _cover(c: canvas.Canvas, page_height: float, left: float, top: float, right: float, bottom: float) -> None:
+def _cover(
+    c: canvas.Canvas,
+    page_height: float,
+    left: float,
+    top: float,
+    right: float,
+    bottom: float,
+    color: tuple[float, float, float] = WHITE,
+) -> None:
     c.saveState()
-    c.setFillColorRGB(*WHITE)
+    c.setFillColorRGB(*color)
     c.rect(left, page_height - bottom, right - left, bottom - top, fill=1, stroke=0)
     c.restoreState()
 
@@ -267,8 +286,15 @@ def _format_money(value: Decimal) -> str:
     return f"{sign}${int(whole):,}.{fraction}"
 
 
-def _draw_items(c: canvas.Canvas, page_height: float, items: list[dict]) -> Decimal:
-    grand_total = Decimal("0")
+def _line_amount(item: dict) -> Decimal:
+    qty = _to_decimal(item.get("qty"))
+    unit_price = _to_decimal(item.get("unit_cost"))
+    return (qty * unit_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def _draw_items(c: canvas.Canvas, page_height: float, items: list[dict], first_position: int) -> None:
+    """Draws one sheet's rows. `first_position` is the number printed on the
+    sheet's first row, so position numbers carry on across sheets."""
     for index in range(ITEM_ROWS):
         row_top, row_bottom = ROW_EDGES[index]
         # Clear each cell's text, staying clear of the column rules.
@@ -297,7 +323,7 @@ def _draw_items(c: canvas.Canvas, page_height: float, items: list[dict]) -> Deci
             # eight numbered rows even when fewer are filled.
             pos_left, pos_right = _COLS["pos"]
             _draw_text(
-                c, page_height, str(index + 1), (pos_left + pos_right) / 2, FIRST_TEXT_TOP + TEXT_PITCH * index, _ITEM_SIZE, align="center"
+                c, page_height, str(first_position + index), (pos_left + pos_right) / 2, FIRST_TEXT_TOP + TEXT_PITCH * index, _ITEM_SIZE, align="center"
             )
             continue
 
@@ -305,12 +331,11 @@ def _draw_items(c: canvas.Canvas, page_height: float, items: list[dict]) -> Deci
         text_top = FIRST_TEXT_TOP + TEXT_PITCH * index
         qty = _to_decimal(item.get("qty"))
         unit_price = _to_decimal(item.get("unit_cost"))
-        amount = (qty * unit_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        grand_total += amount
+        amount = _line_amount(item)
 
         # Position number, centered in its narrow column.
         pos_left, pos_right = _COLS["pos"]
-        _draw_text(c, page_height, str(index + 1), (pos_left + pos_right) / 2, text_top, _ITEM_SIZE, align="center")
+        _draw_text(c, page_height, str(first_position + index), (pos_left + pos_right) / 2, text_top, _ITEM_SIZE, align="center")
 
         part_left, part_right = _COLS["part_number"]
         part = str(item.get("part_number") or "")
@@ -337,13 +362,28 @@ def _draw_items(c: canvas.Canvas, page_height: float, items: list[dict]) -> Deci
         _draw_text(c, page_height, _format_money(unit_price), _UNIT_PRICE_COL[1] - 0.6, text_top, _ITEM_SIZE, align="right")
         _draw_text(c, page_height, f"{qty.normalize():f}", _QTY_COL[1] - 1.0, text_top, _ITEM_SIZE, align="right")
         _draw_text(c, page_height, _format_money(amount), _COLS["amount"][1] - 0.8, text_top, _ITEM_SIZE, align="right")
-    return grand_total
 
 
-def _draw_total(c: canvas.Canvas, page_height: float, grand_total: Decimal) -> None:
+def _draw_total(c: canvas.Canvas, page_height: float, grand_total: Decimal, show: bool) -> None:
+    """Prints the TOTAL on the last sheet. Earlier sheets have the printed
+    "Total" label and amount covered, so the total only appears once."""
+    if not show:
+        left, top, right, bottom = _TOTAL_ROW_COVER
+        _cover(c, page_height, left, top, right, bottom)
+        return
     left, top, right, bottom = _TOTAL_COVER
     _cover(c, page_height, left, top, right, bottom)
     _draw_text(c, page_height, _format_money(grand_total), _TOTAL_TEXT_RIGHT, _TOTAL_TOP, 10.0, align="right")
+
+
+def _draw_page_label(c: canvas.Canvas, page_height: float, sheet_number: int, sheet_count: int) -> None:
+    """Replaces the template's "1/1" with this sheet's "n/N". A single sheet
+    keeps the template's own label untouched."""
+    if sheet_count == 1:
+        return
+    left, top, right, bottom = _PAGE_LABEL_COVER
+    _cover(c, page_height, left, top, right, bottom, color=BAND_GRAY)
+    _draw_text(c, page_height, f"{sheet_number}/{sheet_count}", _PAGE_LABEL_RIGHT, _PAGE_LABEL_TOP, _PAGE_LABEL_SIZE, align="right")
 
 
 def _draw_shipping_term(c: canvas.Canvas, page_height: float, fields: dict) -> None:
@@ -366,7 +406,16 @@ def _draw_order_date(c: canvas.Canvas, page_height: float, fields: dict) -> None
     _draw_text(c, page_height, text, x, top, _fit(text, FONT, size, cover_right - x - 1.0))
 
 
-def _draw(c: canvas.Canvas, page_height: float, fields: dict, items: list[dict]) -> None:
+def _draw(
+    c: canvas.Canvas,
+    page_height: float,
+    fields: dict,
+    sheet_items: list[dict],
+    first_position: int,
+    sheet_number: int,
+    sheet_count: int,
+    grand_total: Decimal,
+) -> None:
     for key, spec in _TEXT_FIELDS.items():
         if key in fields:
             _replace_text(c, page_height, str(fields[key] or ""), spec)
@@ -374,8 +423,14 @@ def _draw(c: canvas.Canvas, page_height: float, fields: dict, items: list[dict])
     _draw_underlined(c, page_height, fields)
     _draw_bill_to(c, page_height, fields)
     _draw_shipping_term(c, page_height, fields)
-    grand_total = _draw_items(c, page_height, items)
-    _draw_total(c, page_height, grand_total)
+    _draw_page_label(c, page_height, sheet_number, sheet_count)
+    _draw_items(c, page_height, sheet_items, first_position)
+    _draw_total(c, page_height, grand_total, show=sheet_number == sheet_count)
+
+
+def _sheet_count(item_count: int) -> int:
+    """One sheet per ITEM_ROWS lines; an empty PO still gets its one sheet."""
+    return max(1, -(-item_count // ITEM_ROWS))
 
 
 def generate_nox_co_ltd_po(fields: dict, line_items: list[dict]) -> bytes:
@@ -384,20 +439,32 @@ def generate_nox_co_ltd_po(fields: dict, line_items: list[dict]) -> bytes:
         raise FileNotFoundError(f"No template PDF found for distributor '{SLUG}'")
 
     items = [i for i in line_items if i and (i.get("part_number") or i.get("description"))]
-    if len(items) > ITEM_ROWS:
-        raise ValueError(
-            f"NOX's order sheet holds {ITEM_ROWS} line items; this PO has {len(items)}. "
-            "Remove some rows or split the order."
-        )
-
     pdf_bytes = path.read_bytes()
-    page = _fresh_page(pdf_bytes, 0)
-    width, height = float(page.mediabox.width), float(page.mediabox.height)
-    overlay = _render_overlay(width, height, lambda c: _draw(c, height, fields, items))
-    page.merge_page(overlay.pages[0])
+    sheet_count = _sheet_count(len(items))
+    grand_total = sum((_line_amount(item) for item in items), Decimal("0"))
 
     writer = PdfWriter()
-    writer.add_page(page)
+    for sheet_index in range(sheet_count):
+        first = sheet_index * ITEM_ROWS
+        page = _fresh_page(pdf_bytes, 0)
+        width, height = float(page.mediabox.width), float(page.mediabox.height)
+        overlay = _render_overlay(
+            width,
+            height,
+            lambda c, sheet_index=sheet_index, first=first: _draw(
+                c,
+                height,
+                fields,
+                items[first : first + ITEM_ROWS],
+                first + 1,
+                sheet_index + 1,
+                sheet_count,
+                grand_total,
+            ),
+        )
+        page.merge_page(overlay.pages[0])
+        writer.add_page(page)
+
     output = io.BytesIO()
     writer.write(output)
     pdf_output = output.getvalue()

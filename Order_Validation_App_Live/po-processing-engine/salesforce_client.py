@@ -251,6 +251,17 @@ def _map_fields_innocom_ltd(quote: dict, account: dict, order: dict) -> dict:
     return fields
 
 
+def _map_fields_ivalue_infosolutions_limited(quote: dict, account: dict, order: dict) -> dict:
+    # end_customer is one multi-line value whose first line is the end customer's
+    # company. The page replaces only that first line with the Quote's Account
+    # (SBQQ__Account__c) name, so the sample's address and contact lines stay in place.
+    fields = _map_fields_default(quote, account, order)
+    account_name = account.get("Name")
+    if account_name:
+        fields["end_customer"] = account_name
+    return fields
+
+
 def _map_fields_arrow_netherlands(quote: dict, account: dict, order: dict) -> dict:
     # The End User block's Company (end_user_company) is the Quote's Account
     # (SBQQ__Account__c) name.
@@ -305,25 +316,17 @@ def get_quote_data(quote_id: str, org: str = SF_ORG, slug: str | None = None) ->
     if not _SF_ID_RE.match(quote_id):
         raise ValueError(f"'{quote_id}' is not a valid Salesforce record Id.")
 
+    # One query for every distributor. SBQQ__NetTotal__c and the Opportunity Id are
+    # kept alongside the core fields: the NextGen line hook prints Salesforce's own
+    # line total, and the Order lookup (_get_order_data) is keyed on the Opportunity Id.
     soql = (
-        "select id,SBQQ__NetPrice__c,SBQQ__NetTotal__c,SBQQ__SubscriptionTerm__c,SBQQ__Product__r.Name,"
-        "SBQQ__Product__r.ProductCode,Printable_Product__c,SBQQ__Description__c,"
-        "SBQQ__Quantity__c,SBQQ__Quote__r.Name,SBQQ__Quote__r.SBQQ__NetAmount__c,"
+        "select id,SBQQ__NetPrice__c,SBQQ__NetTotal__c,SBQQ__SubscriptionTerm__c,Printable_Product__c,"
+        "SBQQ__Description__c,SBQQ__Quantity__c,SBQQ__Quote__r.Name,SBQQ__Quote__r.SBQQ__NetAmount__c,"
         "SBQQ__Quote__r.SBQQ__Account__r.Name,"
         "SBQQ__Quote__r.SBQQ__Opportunity2__r.Distributor_Lookup__c,"
         "SBQQ__Quote__r.SBQQ__Opportunity2__r.Distributor_Lookup__r.Name,"
         "SBQQ__Quote__r.SBQQ__Opportunity2__r.ContractManufacturer__c,"
-        "SBQQ__Quote__r.SBQQ__Opportunity2__r.Id,"
-        "SBQQ__Quote__r.SBQQ__PrimaryContact__r.Name,"
-        "SBQQ__Quote__r.SBQQ__PrimaryContact__r.Phone,"
-        "SBQQ__Quote__r.SBQQ__PrimaryContact__r.Email,"
-        "SBQQ__Quote__r.SBQQ__PaymentTerms__c,"
-        "SBQQ__Quote__r.SBQQ__ShippingName__c,"
-        "SBQQ__Quote__r.SBQQ__ShippingStreet__c,"
-        "SBQQ__Quote__r.SBQQ__ShippingCity__c,"
-        "SBQQ__Quote__r.SBQQ__ShippingState__c,"
-        "SBQQ__Quote__r.SBQQ__ShippingPostalCode__c,"
-        "SBQQ__Quote__r.SBQQ__ShippingCountry__c "
+        "SBQQ__Quote__r.SBQQ__Opportunity2__r.Id "
         "from SBQQ__QuoteLine__c "
         f"where SBQQ__Quote__r.Id ='{quote_id}' "
         "and SBQQ__Renewal__c!=true "
@@ -348,12 +351,11 @@ def get_quote_data(quote_id: str, org: str = SF_ORG, slug: str | None = None) ->
 
     line_items = []
     for rec in records:
-        product = rec.get("SBQQ__Product__r") or {}
         terms = rec.get("SBQQ__SubscriptionTerm__c")
         line_items.append(
             {
-                "part_number": rec.get("Printable_Product__c") or product.get("ProductCode") or product.get("Name") or "",
-                "description": rec.get("SBQQ__Description__c") or product.get("Name") or "",
+                "part_number": rec.get("Printable_Product__c") or "",
+                "description": rec.get("SBQQ__Description__c") or "",
                 "qty": str(rec.get("SBQQ__Quantity__c") or ""),
                 "unit_cost": str(rec.get("SBQQ__NetPrice__c") or ""),
                 "pct_disc": "",

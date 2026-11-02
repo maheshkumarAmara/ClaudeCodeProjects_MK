@@ -103,19 +103,9 @@ function el(tag, className, text) {
     return node;
 }
 
-function renderSummary(summary) {
-    const stats = [
-        ["PDF lines", summary.pdf_lines, ""],
-        ["JSON lines", summary.json_lines, ""],
-        ["Matched", summary.matched, "good"],
-        ["Mismatched", summary.mismatched, summary.mismatched ? "bad" : "good"],
-        ["Only in PDF", summary.only_in_pdf, summary.only_in_pdf ? "warn" : "good"],
-        ["Only in JSON", summary.only_in_json, summary.only_in_json ? "warn" : "good"],
-    ];
-    if (summary.header_compared) {
-        stats.push(["Header mismatches", summary.header_mismatched, summary.header_mismatched ? "bad" : "good"]);
-    }
-    const box = document.getElementById("cmp-summary");
+// Fills one summary box with a row of stat tiles.
+function renderStats(boxId, stats) {
+    const box = document.getElementById(boxId);
     box.innerHTML = "";
     for (const [label, value, tone] of stats) {
         const stat = el("div", `compare-stat ${tone}`.trim());
@@ -125,7 +115,39 @@ function renderSummary(summary) {
     }
 }
 
-function fieldCell(info) {
+// Header section: its own count in the title, and its own summary tiles.
+function renderHeaderSummary(summary, header) {
+    // Rows with match === null are listed for visibility but have only one side to show.
+    const compared = header.filter((row) => row.match !== null);
+    const matched = compared.filter((row) => row.match).length;
+    const onlyPdf = header.filter((row) => headerStatus(row) === "only_pdf").length;
+    const onlyJson = header.filter((row) => headerStatus(row) === "only_json").length;
+    document.getElementById("cmp-header-count").textContent =
+        header.length ? `(${matched} of ${compared.length} compared fields matched)` : "";
+    renderStats("cmp-header-summary", [
+        ["Fields compared", compared.length, ""],
+        ["Fields matched", matched, "good"],
+        ["Mismatches", compared.length - matched, compared.length - matched ? "bad" : "good"],
+        ["Only in PDF", onlyPdf, onlyPdf ? "warn" : "good"],
+        ["Only in JSON / empty", onlyJson, onlyJson ? "warn" : "good"],
+    ]);
+}
+
+// Line-item section: its own count in the title, and its own summary tiles.
+function renderLineSummary(summary) {
+    document.getElementById("cmp-line-count").textContent =
+        `(${summary.matched} of ${summary.pdf_lines} PDF lines matched)`;
+    renderStats("cmp-line-summary", [
+        ["PDF line items", summary.pdf_lines, ""],
+        ["JSON line items", summary.json_lines, ""],
+        ["Lines matched", summary.matched, "good"],
+        ["Lines mismatched", summary.mismatched, summary.mismatched ? "bad" : "good"],
+        ["Only in PDF", summary.only_in_pdf, summary.only_in_pdf ? "warn" : "good"],
+        ["Only in JSON", summary.only_in_json, summary.only_in_json ? "warn" : "good"],
+    ]);
+}
+
+function fieldCell(info, alwaysShowBoth) {
     const td = el("td");
     if (!info) {
         td.textContent = "—";
@@ -136,16 +158,35 @@ function fieldCell(info) {
         td.textContent = info.pdf || info.json || "—";
         return td;
     }
-    if (info.match) {
+    if (info.match && !alwaysShowBoth) {
         td.textContent = info.pdf;
         return td;
     }
-    td.classList.add("compare-cell-bad");
+    // A mismatch is highlighted; a match is only listed in both columns when asked for.
+    if (!info.match) td.classList.add("compare-cell-bad");
     for (const [label, value] of [["PDF", info.pdf], ["JSON", info.json]]) {
         const row = el("span", "compare-pair");
         row.appendChild(el("small", "", label));
         row.appendChild(document.createTextNode(value || "(blank)"));
         td.appendChild(row);
+    }
+    if (alwaysShowBoth) {
+        // State the result on every line, so a match is not left for the reader to infer.
+        td.appendChild(el("span", `compare-badge compare-field-badge ${info.match ? "match" : "mismatch"}`,
+            info.match ? "Matched" : "Not matched"));
+    }
+    return td;
+}
+
+// Joins the reasons a line or header row differs into one readable cell.
+function commentCell(comments) {
+    const td = el("td", "compare-comment");
+    if (!comments || !comments.length) {
+        td.textContent = "—";
+        return td;
+    }
+    for (const comment of comments) {
+        td.appendChild(el("span", "compare-comment-line", comment));
     }
     return td;
 }
@@ -163,7 +204,7 @@ function renderLines() {
     if (!lines.length) {
         const tr = el("tr");
         const td = el("td", "compare-empty", "No lines to show for this filter.");
-        td.colSpan = 6;
+        td.colSpan = 7;
         tr.appendChild(td);
         body.appendChild(tr);
         return;
@@ -175,10 +216,25 @@ function renderLines() {
         status.appendChild(el("span", `compare-badge ${line.status}`, STATUS_LABELS[line.status]));
         tr.appendChild(status);
         for (const field of FIELD_COLUMNS) {
-            tr.appendChild(fieldCell(line.fields[field]));
+            tr.appendChild(fieldCell(line.fields[field], field === "unit_cost"));
         }
+        tr.appendChild(commentCell(line.comments));
         body.appendChild(tr);
     }
+}
+
+// A header row's status in the same terms as a line's: match, mismatch, or the side it is
+// only on (only_pdf / only_json), which the server sets on rows with nothing to compare.
+function headerStatus(row) {
+    if (row.match === null) return row.side || "only_json";
+    return row.match ? "match" : "mismatch";
+}
+
+function headerVisible(row) {
+    const status = headerStatus(row);
+    if (activeFilter === "all") return true;
+    if (activeFilter === "issues") return status !== "match";
+    return status === activeFilter;
 }
 
 function renderHeader(header) {
@@ -186,14 +242,27 @@ function renderHeader(header) {
     const body = document.getElementById("cmp-header-body");
     body.innerHTML = "";
     card.hidden = !header.length;
-    for (const row of header) {
+    const rows = header.filter(headerVisible);
+    if (header.length && !rows.length) {
+        const tr = el("tr");
+        const td = el("td", "compare-empty", "No header fields to show for this filter.");
+        td.colSpan = 5;
+        tr.appendChild(td);
+        body.appendChild(tr);
+        return;
+    }
+    for (const row of rows) {
         const tr = el("tr");
         tr.appendChild(el("td", "", row.field));
-        tr.appendChild(el("td", row.match ? "" : "compare-cell-bad", row.pdf));
-        tr.appendChild(el("td", row.match ? "" : "compare-cell-bad", row.json));
+        const badCell = row.match === false ? "compare-cell-bad" : "";
+        const state = headerStatus(row);
+        tr.appendChild(el("td", badCell, row.pdf || (state === "only_json" ? "—" : "")));
+        tr.appendChild(el("td", badCell, row.json || (state === "only_json" ? "(empty)" : "—")));
         const status = el("td");
-        status.appendChild(el("span", `compare-badge ${row.match ? "match" : "mismatch"}`, row.match ? "Match" : "Mismatch"));
+        const badgeText = { match: "Match", mismatch: "Mismatch", only_pdf: "Only in PDF", only_json: "Only in JSON" }[state];
+        status.appendChild(el("span", `compare-badge ${state}`, badgeText));
         tr.appendChild(status);
+        tr.appendChild(commentCell(row.comment ? [row.comment] : []));
         body.appendChild(tr);
     }
 }
@@ -205,14 +274,23 @@ function csvCell(value) {
 
 function downloadCsv() {
     if (!lastResult) return;
-    const header = ["SKU", "Status", "Field", "PDF value", "JSON value", "Field status"];
+    const header = ["SKU", "Status", "Field", "PDF value", "JSON value", "Field status", "Comments"];
     const rows = [header];
     for (const line of lastResult.lines) {
+        const lineComments = (line.comments || []).join("; ");
         for (const field of FIELD_COLUMNS) {
             const info = line.fields[field];
             if (!info) continue;
             const fieldStatus = info.match === null ? "n/a" : info.match ? "match" : "mismatch";
-            rows.push([line.sku, STATUS_LABELS[line.status], FIELD_LABELS[field], info.pdf, info.json, fieldStatus]);
+            rows.push([line.sku, STATUS_LABELS[line.status], FIELD_LABELS[field], info.pdf, info.json, fieldStatus, info.comment || lineComments]);
+        }
+    }
+    if (lastResult.header.length) {
+        rows.push([]);
+        rows.push(["Header field", "Status", "", "PDF value", "JSON value", "", "Comments"]);
+        for (const row of lastResult.header) {
+            const status = { match: "Match", mismatch: "Mismatch", only_pdf: "Only in PDF", only_json: "Only in JSON" }[headerStatus(row)];
+            rows.push([row.field, status, "", row.pdf, row.json, "", row.comment || ""]);
         }
     }
     const blob = new Blob([rows.map((r) => r.map(csvCell).join(",")).join("\n")], { type: "text/csv" });
@@ -253,9 +331,10 @@ async function runCompare() {
         for (const b of document.querySelectorAll("#cmp-filters button")) {
             b.classList.toggle("active", b.dataset.filter === "all");
         }
-        renderSummary(body.summary);
-        renderLines();
+        renderHeaderSummary(body.summary, body.header);
         renderHeader(body.header);
+        renderLineSummary(body.summary);
+        renderLines();
         document.getElementById("cmp-results").hidden = false;
         if (!body.summary.json_lines) {
             showMessage("No line items with a SKU-like key (partNumber, sku, productCode…) were found in the JSON.", true);
@@ -286,6 +365,8 @@ document.getElementById("cmp-filters").addEventListener("click", (event) => {
     for (const b of document.querySelectorAll("#cmp-filters button")) {
         b.classList.toggle("active", b === button);
     }
+    // One filter for the whole result: the header and the line items follow it together.
+    if (lastResult) renderHeader(lastResult.header);
     renderLines();
 });
 

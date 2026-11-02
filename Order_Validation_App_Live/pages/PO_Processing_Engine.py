@@ -59,6 +59,58 @@ def _log_tail(lines: int = 30) -> str:
         return "(no log yet)"
 
 
+# Renders the "Open in a new tab" link. The tab reference is kept on the Streamlit
+# page (window.parent), which the iframe can reach because Streamlit sandboxes
+# components with allow-same-origin. That keeps the reference across reruns, so a
+# second click focuses the open tab instead of opening another one. A pagehide
+# listener on the main page closes the tab when the main page closes.
+OPEN_TAB_HTML = """
+<style>
+  html, body { margin: 0; background: transparent; }
+  a { color: #7dd3fc; font-family: "Source Sans Pro", sans-serif; font-size: 1rem; }
+</style>
+<a id="po-open" href="__URL__" target="_blank" rel="noopener">Open in a new tab ↗</a>
+<script>
+  (function () {
+    var url = "__URL__";
+    var KEY = "poEngineTab";
+    var localTab = null;
+
+    function storedTab() {
+      try { return window.parent[KEY] || null; } catch (e) { return localTab; }
+    }
+
+    function storeTab(tab) {
+      localTab = tab;
+      try { window.parent[KEY] = tab; } catch (e) { /* fall back to localTab */ }
+    }
+
+    function closeTabWithPage() {
+      var tab = storedTab();
+      if (tab && !tab.closed) { tab.close(); }
+    }
+
+    document.getElementById("po-open").addEventListener("click", function (event) {
+      event.preventDefault();
+      var tab = storedTab();
+      if (tab && !tab.closed) { tab.focus(); return; }
+      var opened = window.open(url, "_blank");
+      if (opened) { storeTab(opened); }
+    });
+
+    try {
+      var previous = window.parent[KEY + "Hook"];
+      if (previous) { window.parent.removeEventListener("pagehide", previous); }
+      window.parent[KEY + "Hook"] = closeTabWithPage;
+      window.parent.addEventListener("pagehide", closeTabWithPage);
+    } catch (e) {
+      window.addEventListener("pagehide", closeTabWithPage);
+    }
+  })();
+</script>
+"""
+
+
 apply_theme("po")
 
 st.caption(
@@ -79,7 +131,7 @@ else:
                 break
 
     if _port_is_listening(PORT):
-        st.markdown(f"[Open in a new tab ↗]({server_url})")
+        components.html(OPEN_TAB_HTML.replace("__URL__", server_url), height=32)
         components.iframe(server_url, height=1100, scrolling=True)
     else:
         st.error("PO Processing Engine did not start in time. Recent log output:")
