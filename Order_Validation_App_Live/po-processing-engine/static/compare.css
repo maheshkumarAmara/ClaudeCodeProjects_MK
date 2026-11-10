@@ -179,3 +179,27 @@ a.app-tag:hover {
         grid-template-columns: 1fr 1fr;
     }
 }
+
+/* Stage PO field (from the mapping sheet) under a column heading or in a header row */
+.compare-stage-field {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    color: #6f9bb8;
+    word-break: break-all;
+}
+
+.compare-req {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.compare-req.must { background: rgba(255, 138, 138, 0.14); color: #ff8a8a; }
+.compare-req.optional { background: rgba(111, 155, 184, 0.16); color: #6f9bb8; }
+.compare-req.not-required { background: rgba(160, 160, 160, 0.14); color: #a0a0a0; }

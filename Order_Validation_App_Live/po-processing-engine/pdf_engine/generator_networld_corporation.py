@@ -18,12 +18,11 @@ Behaviors worth knowing:
     while the label / value block still fits under it; beyond that the grid
     continues on extra pages that repeat the heading, the logo and the column
     header, and the Total row and the label / value block go on the last page only.
-  - Net Price is recomputed: qty x unit_cost, where unit_cost is the whole-term
-    price per unit (the parser derives it as printed Net Price / qty). "terms" is a
-    display value and does not enter the maths. An unedited loaded row reprints its
-    original printed "amount" exactly (see "amount_basis"); editing its qty, unit
-    cost or terms recomputes it. The Total is always the sum of the rows. A row's
-    "% disc." (if any) reduces its Net Price.
+  - Net Total Price is the row's unit_cost (Salesforce SBQQ__NetPrice__c), not
+    qty x unit_cost; the parser reads the printed figure straight back as unit_cost.
+    "terms" is a display value and does not enter the maths. The Total row is
+    Sum(qty x Net Total Price) over the rows. A row's "% disc." (if any) reduces
+    its Net Total Price.
   - Values print as "$1,234.56".
   - Blue values (emails, end user, PO#) are underlined like the template's, and
     email addresses are rebuilt as mailto links (the template has none). The
@@ -318,12 +317,12 @@ class _Row:
         self.unit_cost = _to_decimal(item.get("unit_cost"))
         self.terms = str(item.get("terms") or "").strip()
         pct = _to_decimal(item.get("pct_disc"))
-        basis = f"{item.get('qty', '')}|{item.get('unit_cost', '')}|{item.get('terms', '')}"
-        if item.get("amount") not in (None, "") and item.get("amount_basis") == basis and not pct:
-            amount = _to_decimal(item["amount"])  # untouched loaded row: reprint its own figure
-        else:
-            amount = self.qty * self.unit_cost * (Decimal("1") - pct / Decimal("100"))
+        # The Net Total Price column prints the row's unit cost (Salesforce SBQQ__NetPrice__c),
+        # not qty x unit cost, so it is the same figure however the quantity changes.
+        amount = self.unit_cost * (Decimal("1") - pct / Decimal("100"))
         self.amount = amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        # The Total row is the sum of qty x that printed price, one term per row.
+        self.line_total = (self.qty * self.amount).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         self.desc_lines = wrap_text(self.description, DESC_ROOM, TEXT_SIZE) if self.description else [""]
 
     @property
@@ -387,7 +386,9 @@ def _paginate(rows: list[_Row]) -> list[dict]:
 
     # Pad page 1 to the template's 8 slots only when it is the last page.
     min_end = ROW_TOP0 + ROW_PITCH * TEMPLATE_ROWS if page["first"] else page["cursor"]
-    end = max(page["cursor"], min_end)
+    # One empty row is always left between the last product and the Total row (a short PO's
+    # padding to the template's slots already includes one).
+    end = max(page["cursor"] + ROW_PITCH, min_end)
     if end + tail <= PAGE_H or (not rows and page["first"]):
         page["block"] = True
         page["cursor"] = end
@@ -399,6 +400,8 @@ def _paginate(rows: list[_Row]) -> list[dict]:
         page["cursor"] -= moved.height
         last["rows"].append((moved, last["cursor"]))
         last["cursor"] += moved.height
+    # The same one empty row between the last product and the Total row as above.
+    last["cursor"] += ROW_PITCH
     last["block"] = True
     return pages
 
@@ -439,7 +442,7 @@ def generate_networld_corporation_po(fields: dict, line_items: list[dict]) -> by
         raise FileNotFoundError(f"No template PDF found for distributor '{SLUG}'")
 
     rows = [_Row(i) for i in line_items if i and (i.get("part_number") or i.get("description"))]
-    total = sum((r.amount for r in rows), Decimal("0"))
+    total = sum((r.line_total for r in rows), Decimal("0"))
     pages = _paginate(rows)
 
     template_bytes = path.read_bytes()
@@ -455,8 +458,9 @@ def generate_networld_corporation_po(fields: dict, line_items: list[dict]) -> by
         block_dy = round(total_top - TEMPLATE_TOTAL_TOP, 1) if spec["block"] else 0.0
 
         def draw(c: canvas.Canvas, spec=spec, number=number, grid_bottom=grid_bottom, total_top=total_top, block_dy=block_dy) -> None:
-            if spec["first"]:
-                _draw_heading(c, fields)
+            # Every page is cut from the template's one page, so each carries its "Details of PO#"
+            # and "Quote#" heading; draw the new values on all of them, not just the first.
+            _draw_heading(c, fields)
             for row, top in spec["rows"]:
                 _draw_row(c, row, top)
             # Row separators and the grid's closing rule.

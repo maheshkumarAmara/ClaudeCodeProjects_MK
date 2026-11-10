@@ -10,15 +10,12 @@ Words are positioned by x-offset and print with no real spaces between some of
 them, so the page is read with a tight x tolerance and re-joined with single
 spaces.
 
-The grid has no unit-price column: each row prints a Net Price, the extended
-amount. The editor's `unit_cost` is that Net Price divided by `qty` -- the whole-
-term price per unit, which is also what a Salesforce quote line carries. `terms`
-(the Term column) is a display value that does not enter the arithmetic, so a
-row's Net Price is always qty x unit_cost. A loaded row also keeps its printed
-`amount`, plus an `amount_basis` (qty|unit_cost|terms as loaded) so the generator
-can tell whether the printed figure still applies or the row was edited. Because
-`unit_cost` is rounded to 6 decimals, an unedited row reprints its original
-amount exactly.
+The grid has no unit-price column: each row prints a Net Total Price, which for
+Networld is the line's unit cost (Salesforce SBQQ__NetPrice__c), not qty x unit
+cost. The editor's `unit_cost` is therefore the printed figure itself. `terms`
+(the Term column) is a display value that does not enter the arithmetic. A loaded
+row also keeps its printed `amount`, plus an `amount_basis` (qty|unit_cost|terms
+as loaded).
 
 Static labels, the logo and the grid itself stay in the template. Not loaded: the
 Total row (recomputed from the rows) and the labels.
@@ -129,10 +126,9 @@ def _parse_items(words: list[dict]) -> tuple[list[dict], float]:
         qty = _plain(_text(_in_x(line, COL_QTY)))
         terms = _plain(_text(_in_x(line, COL_TERM)))
         amount = _plain(_text(_in_x(line, COL_AMOUNT)))
-        qty_d = _to_decimal(qty)
-        unit_cost = _money(_to_decimal(amount) / qty_d) if qty_d else ""
-        if unit_cost and "." in unit_cost:
-            unit_cost = f"{_to_decimal(amount) / qty_d:.6f}".rstrip("0").rstrip(".")
+        # The Net Total Price column is the line's unit cost (Salesforce SBQQ__NetPrice__c), so
+        # the editor's unit cost is the printed figure itself, not that figure divided by qty.
+        unit_cost = amount
         items.append(
             {
                 "part_number": code,

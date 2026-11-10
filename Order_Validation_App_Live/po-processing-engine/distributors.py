@@ -107,6 +107,7 @@ REGISTRY: tuple[Distributor, ...] = (
         "Networld Corporation",
         parser=_P + "networld_corporation:parse_template",
         generator=_G + "networld_corporation:generate_networld_corporation_po",
+        sf_mapper="salesforce_client:_map_fields_networld_corporation",
     ),
     Distributor(
         "NextGen Distribution Pty Ltd",
@@ -122,6 +123,12 @@ REGISTRY: tuple[Distributor, ...] = (
         parser=_P + "nox_co_ltd:parse_template",
         generator=_G + "nox_co_ltd:generate_nox_co_ltd_po",
         sf_mapper="salesforce_client:_map_fields_nox_co_ltd",
+    ),
+    Distributor(
+        "Carahsoft Technology Corp",
+        "Carahsoft Technology Corp",
+        parser=_P + "carahsoft_technology_corp:parse_template",
+        generator=_G + "carahsoft_technology_corp:generate_carahsoft_technology_corp_po",
     ),
 )
 

@@ -67,12 +67,13 @@ OPENER_PID=""
 # running, and only tabs whose URL starts with one of the prefixes below.
 PO_ENGINE_PORT="${PO_ENGINE_PORT:-8012}"
 SOQL_BUILDER_PORT="${SOQL_BUILDER_PORT:-4580}"
+JIRA_DASHBOARD_PORT="${JIRA_DASHBOARD_PORT:-8020}"
 
 close_browser_tabs() {
     command -v osascript >/dev/null 2>&1 || return 0
     prefixes=""
     for host in localhost 127.0.0.1; do
-        for port in "$STREAMLIT_PORT" "$PO_ENGINE_PORT" "$SOQL_BUILDER_PORT"; do
+        for port in "$STREAMLIT_PORT" "$PO_ENGINE_PORT" "$SOQL_BUILDER_PORT" "$JIRA_DASHBOARD_PORT"; do
             prefixes="$prefixes\"http://$host:$port/\", "
         done
     done
@@ -136,6 +137,6 @@ fi
 
 # Run Streamlit in the background and wait on it, so the trap above fires
 # immediately on Ctrl+C / terminal close instead of after Streamlit exits.
-streamlit run Order_Validation_App.py --server.port "$STREAMLIT_PORT" --server.headless true --server.enableCORS false --server.enableXsrfProtection false &
+streamlit run Home.py --server.port "$STREAMLIT_PORT" --server.headless true --server.enableCORS false --server.enableXsrfProtection false &
 STREAMLIT_PID=$!
 wait "$STREAMLIT_PID"

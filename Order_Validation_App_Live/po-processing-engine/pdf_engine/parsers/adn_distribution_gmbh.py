@@ -109,6 +109,32 @@ def _delivery_address(page) -> list[str]:
     return text_lines
 
 
+# The "Invoice address" block sits in the left column of the first page, below its label
+# (about top 336 to 387, x from 56 to 226).
+INVOICE_X_RANGE = (54.0, 226.0)
+INVOICE_TOP_RANGE = (333.0, 396.0)
+
+
+def _invoice_address(page) -> list[str]:
+    """Lines of the Invoice address block, top to bottom."""
+    words = [
+        w
+        for w in page.extract_words()
+        if INVOICE_TOP_RANGE[0] <= w["top"] <= INVOICE_TOP_RANGE[1]
+        and INVOICE_X_RANGE[0] <= w["x0"] <= INVOICE_X_RANGE[1]
+    ]
+    lines: dict[float, list[dict]] = {}
+    for w in words:
+        lines.setdefault(round(w["top"]), []).append(w)
+    text_lines = []
+    for top in sorted(lines):
+        text = " ".join(w["text"] for w in sorted(lines[top], key=lambda w: w["x0"]))
+        if text.startswith("Invoice"):
+            continue
+        text_lines.append(text)
+    return text_lines
+
+
 def _delivery_fields(lines: list[str]) -> dict[str, str]:
     """Splits the delivery block into the ship-to fields, in the order ADN prints them:
     company (may wrap onto a second line), street, then 'postcode city', then country."""
@@ -209,6 +235,7 @@ def parse_template(path: Path) -> dict:
         # a white box), so read it from the unfiltered page.
         with pdfplumber.open(path) as raw:
             delivery_lines = _delivery_address(raw.pages[0])
+            invoice_lines = _invoice_address(raw.pages[0])
             raw_header_text = raw.pages[0].extract_text() or ""
             raw_full_text = "\n".join(page.extract_text() or "" for page in raw.pages)
 
@@ -216,6 +243,10 @@ def parse_template(path: Path) -> dict:
     fields = _search(HEADER_PATTERNS, page_texts[0])
     fields["licensee_address"] = licensee_address
     fields.update(_delivery_fields(delivery_lines))
+    # The Invoice and Delivery blocks as editable multi-line values, the way the generator
+    # redraws them (the ship_to_* fields above are only used to compare against a JSON).
+    fields["invoice_address"] = "\n".join(invoice_lines)
+    fields["delivery_address"] = "\n".join(delivery_lines)
     # "Processed by" and the first "E-mail:" line sit in the same unfiltered header text.
     contact_email = _search(
         {

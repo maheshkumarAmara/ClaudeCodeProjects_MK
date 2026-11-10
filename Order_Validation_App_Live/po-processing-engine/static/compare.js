@@ -237,6 +237,31 @@ function headerVisible(row) {
     return status === activeFilter;
 }
 
+// Stage PO field name(s) for a mapping, or "—" when the sheet gives none.
+function stageFieldText(mapping) {
+    return mapping && mapping.stage_fields.length ? mapping.stage_fields.join(", ") : "—";
+}
+
+function requirementCell(mapping) {
+    const td = el("td");
+    if (!mapping) {
+        td.textContent = "—";
+        return td;
+    }
+    const tone = mapping.requirement.toLowerCase().replace(/\s+/g, "-");
+    const badge = el("span", `compare-req ${tone}`, mapping.requirement);
+    if (mapping.note) badge.title = mapping.note;
+    td.appendChild(badge);
+    return td;
+}
+
+// Writes each line-item column's Stage PO field under its heading.
+function renderLineMapping(lineMapping) {
+    for (const small of document.querySelectorAll("small[data-map]")) {
+        small.textContent = stageFieldText((lineMapping || {})[small.dataset.map]);
+    }
+}
+
 function renderHeader(header) {
     const card = document.getElementById("cmp-header-card");
     const body = document.getElementById("cmp-header-body");
@@ -246,7 +271,7 @@ function renderHeader(header) {
     if (header.length && !rows.length) {
         const tr = el("tr");
         const td = el("td", "compare-empty", "No header fields to show for this filter.");
-        td.colSpan = 5;
+        td.colSpan = 7;
         tr.appendChild(td);
         body.appendChild(tr);
         return;
@@ -254,6 +279,10 @@ function renderHeader(header) {
     for (const row of rows) {
         const tr = el("tr");
         tr.appendChild(el("td", "", row.field));
+        const stageCell = el("td", "", stageFieldText(row.mapping));
+        if (row.mapping && row.mapping.note) stageCell.title = row.mapping.note;
+        tr.appendChild(stageCell);
+        tr.appendChild(requirementCell(row.mapping));
         const badCell = row.match === false ? "compare-cell-bad" : "";
         const state = headerStatus(row);
         tr.appendChild(el("td", badCell, row.pdf || (state === "only_json" ? "—" : "")));
@@ -274,23 +303,26 @@ function csvCell(value) {
 
 function downloadCsv() {
     if (!lastResult) return;
-    const header = ["SKU", "Status", "Field", "PDF value", "JSON value", "Field status", "Comments"];
+    const header = ["SKU", "Status", "Field", "Stage PO field", "PDF value", "JSON value", "Field status", "Comments"];
     const rows = [header];
+    const lineMapping = lastResult.line_mapping || {};
     for (const line of lastResult.lines) {
         const lineComments = (line.comments || []).join("; ");
         for (const field of FIELD_COLUMNS) {
             const info = line.fields[field];
             if (!info) continue;
             const fieldStatus = info.match === null ? "n/a" : info.match ? "match" : "mismatch";
-            rows.push([line.sku, STATUS_LABELS[line.status], FIELD_LABELS[field], info.pdf, info.json, fieldStatus, info.comment || lineComments]);
+            rows.push([line.sku, STATUS_LABELS[line.status], FIELD_LABELS[field], stageFieldText(lineMapping[field]),
+                info.pdf, info.json, fieldStatus, info.comment || lineComments]);
         }
     }
     if (lastResult.header.length) {
         rows.push([]);
-        rows.push(["Header field", "Status", "", "PDF value", "JSON value", "", "Comments"]);
+        rows.push(["Header field", "Status", "Requirement", "Stage PO field", "PDF value", "JSON value", "", "Comments"]);
         for (const row of lastResult.header) {
             const status = { match: "Match", mismatch: "Mismatch", only_pdf: "Only in PDF", only_json: "Only in JSON" }[headerStatus(row)];
-            rows.push([row.field, status, "", row.pdf, row.json, "", row.comment || ""]);
+            rows.push([row.field, status, row.mapping ? row.mapping.requirement : "", stageFieldText(row.mapping),
+                row.pdf, row.json, "", row.comment || ""]);
         }
     }
     const blob = new Blob([rows.map((r) => r.map(csvCell).join(",")).join("\n")], { type: "text/csv" });
@@ -331,6 +363,7 @@ async function runCompare() {
         for (const b of document.querySelectorAll("#cmp-filters button")) {
             b.classList.toggle("active", b.dataset.filter === "all");
         }
+        renderLineMapping(body.line_mapping);
         renderHeaderSummary(body.summary, body.header);
         renderHeader(body.header);
         renderLineSummary(body.summary);

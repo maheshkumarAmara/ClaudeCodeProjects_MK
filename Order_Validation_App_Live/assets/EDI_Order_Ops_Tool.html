@@ -1683,8 +1683,8 @@ How to Use This EDI Generator
 <li>
 <strong>Split/Merge Quote Line Items:</strong>
 <ul class="list-disc list-inside ml-4 mt-1">
-    <li><strong>-PA products (Dual Split):</strong> For items ending in "-PA" with term > 1, two buttons appear: <strong style="color:#22c55e;">T+</strong> (Term Split — splits by subscription term with pro-rated prices) and <strong style="color:#3b82f6;">Q+</strong> (Quantity Split — splits by quantity, unit price unchanged). Choose based on your scenario.</li>
-    <li><strong>-PM products (Dual Split):</strong> For items ending in "-PM" with term > 1, two buttons appear: <strong style="color:#22c55e;">T+</strong> (Term Split — splits by subscription term with pro-rated prices) and <strong style="color:#3b82f6;">Q+</strong> (Quantity Split — splits by quantity, unit price unchanged). Choose based on your scenario.</li>
+    <li><strong>Quantity Split (all products):</strong> Every line item has a <strong style="color:#3b82f6;">Q+</strong> button (Quantity Split — splits by quantity, unit price unchanged), whatever the SKU or term.</li>
+    <li><strong>-PA / -PM products (Term Split):</strong> For items ending in "-PA" or "-PM" with term > 1, a <strong style="color:#22c55e;">T+</strong> button also appears (Term Split — splits by subscription term with pro-rated prices). Choose between T+ and Q+ based on your scenario.</li>
     <li>Hover over the <strong>(+)</strong> button to see remaining term/quantity available for splitting.</li>
 </ul>
 </li>
@@ -6181,7 +6181,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const usedTerm = group.rows.reduce((sum, r) => sum + (parseFloat(r.querySelector('.line-sub-term')?.value) || 0), 0);
             const remaining = group.originalTerm - usedTerm;
             group.rows.forEach(row => {
-                const splitBtn = row.querySelector('.split-item-btn, .split-term-btn, .split-qty-btn');
+                const splitBtn = row.querySelector('.split-item-btn, .split-term-btn');
                 if (splitBtn) splitBtn.title = `Original: ${group.originalTerm} | Used: ${usedTerm} | Remaining: ${remaining}`;
             });
         });
@@ -6362,12 +6362,14 @@ document.addEventListener('DOMContentLoaded', () => {
             newRow.dataset.originalPrice = unitPrice.replace(/\$/g, '').trim() || '0';
 
             let actionsCellContent = '';
+            // T+ (term split) is a pay-annual concept: only -PA / -PM / PAYGO lines with term > 1.
             if (parseInt(subscriptionTerm, 10) > 1) {
                 if (productId.endsWith('-PA') || productId.endsWith('-PM') || productId === 'RS-PAYGO-C' || productId === 'RS-PAYGO-NC') {
                     actionsCellContent += `<button class="split-term-btn action-button small-button" style="background-color: #22c55e; margin-right:2px;" title="Term Split">T+</button>`;
-                    actionsCellContent += `<button class="split-qty-btn action-button small-button" style="background-color: #3b82f6;" title="Quantity Split">Q+</button>`;
                 }
             }
+            // Q+ (quantity split) applies to every SKU, whatever its product type or term.
+            actionsCellContent += `<button class="split-qty-btn action-button small-button" style="background-color: #3b82f6;" title="Quantity Split">Q+</button>`;
             actionsCellContent += ` <button class="delete-item-btn action-button small-button" style="background-color: #ef4444; margin-left: 4px;">X</button>`;
 
             newRow.innerHTML = `
@@ -6468,8 +6470,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             segments.push(`REF~TA~${ediData.transactionTotal}`);
-            segments.push(`REF~PI~1`);
-            segments.push(`REF~PC~1`);
+            // Split PO: PI is this PO's index and PC the total number of POs (same as Ingram).
+            segments.push(`REF~PI~${poIndex || 1}`);
+            segments.push(`REF~PC~${ediData.expectedPOs || 1}`);
 
             if (getEl('noteContingency').value === 'Yes') {
                 const todayFormatted = formatDate(today.toISOString().slice(0, 10), 'DD/MM/YYYY');

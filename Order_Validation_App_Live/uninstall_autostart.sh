@@ -17,9 +17,9 @@ else
     echo "   (no plist found — already removed)"
 fi
 
-# Stop any processes still holding the relevant ports (gateway 8501,
+# Stop any processes still holding the relevant ports (gateway 8501 or 8502,
 # internal Streamlit 8510, bridge 3001).
-for PORT in 8501 8510 3001; do
+for PORT in 8501 8502 8510 3001; do
     PIDS=$(lsof -i :$PORT -sTCP:LISTEN -t 2>/dev/null || true)
     if [ -n "$PIDS" ]; then
         echo "🛑 Stopping process(es) on port $PORT: $PIDS"

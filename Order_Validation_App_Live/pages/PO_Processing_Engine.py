@@ -90,13 +90,34 @@ OPEN_TAB_HTML = """
       if (tab && !tab.closed) { tab.close(); }
     }
 
+    // Opens the engine in a new tab, or focuses the one that is already open. Returns true when a
+    // tab is open afterwards, false when the browser blocked the new one.
+    function openEngineTab() {
+      var tab = storedTab();
+      if (tab && !tab.closed) { tab.focus(); return true; }
+      var opened = window.open(url, "poEngineWin");
+      if (opened) { storeTab(opened); return true; }
+      return false;
+    }
+
     document.getElementById("po-open").addEventListener("click", function (event) {
       event.preventDefault();
-      var tab = storedTab();
-      if (tab && !tab.closed) { tab.focus(); return; }
-      var opened = window.open(url, "_blank");
-      if (opened) { storeTab(opened); }
+      openEngineTab();
     });
+
+    // Opens the tab by itself when the page is shown. Streamlit re-creates this component on every
+    // rerun of the page, so two things stop that from opening more tabs: an engine tab that is
+    // already open is only focused (see openEngineTab), and an attempt made in the last few seconds
+    // is not repeated. Browsers often block a tab opened without a click: then nothing opens and
+    // the link above still works with one click.
+    var AUTO_KEY = "poEngineAutoOpenAt";
+    var RETRY_AFTER_MS = 5000;
+    var lastTry = 0;
+    try { lastTry = window.parent[AUTO_KEY] || 0; } catch (e) { lastTry = 0; }
+    if (Date.now() - lastTry > RETRY_AFTER_MS) {
+      try { window.parent[AUTO_KEY] = Date.now(); } catch (e) { /* no stamp: may retry on the next rerun */ }
+      try { openEngineTab(); } catch (e) { /* blocked: the link is the fallback */ }
+    }
 
     try {
       var previous = window.parent[KEY + "Hook"];

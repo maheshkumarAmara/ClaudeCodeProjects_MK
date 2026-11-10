@@ -203,4 +203,7 @@ def parse_template(path: Path) -> dict:
         fields.update(_parse_details(page))
         fields.update(_parse_shipping(page))
         items = _parse_items(page)
+    # The template prints the closing "... ACCEPTS ALL ADDITIONAL TERMS ..." sentence, so the
+    # contingency note starts as true; the form can switch it to false to leave the sentence off.
+    fields["contingency_note"] = "true"
     return {"fields": fields, "line_items": items}

@@ -74,6 +74,53 @@ def _log_tail(lines: int = 30) -> str:
         return "(no log yet)"
 
 
+# "Open in a new tab" link. The tab reference is kept on the Streamlit page (window.parent) so a
+# second click focuses the open tab, and Home.py can close it when the user goes back Home.
+# Same approach as pages/PO_Processing_Engine.py, without the auto-open.
+OPEN_TAB_HTML = """
+<style>
+  html, body { margin: 0; background: transparent; }
+  a { color: #7dd3fc; font-family: "Source Sans Pro", sans-serif; font-size: 1rem; }
+</style>
+<a id="soql-open" href="__URL__" target="_blank" rel="noopener">Open in a new tab ↗</a>
+<script>
+  (function () {
+    var url = "__URL__";
+    var KEY = "soqlBuilderTab";
+    var localTab = null;
+
+    function storedTab() {
+      try { return window.parent[KEY] || null; } catch (e) { return localTab; }
+    }
+    function storeTab(tab) {
+      localTab = tab;
+      try { window.parent[KEY] = tab; } catch (e) { /* fall back to localTab */ }
+    }
+    function closeTabWithPage() {
+      var tab = storedTab();
+      if (tab && !tab.closed) { tab.close(); }
+    }
+
+    document.getElementById("soql-open").addEventListener("click", function (event) {
+      event.preventDefault();
+      var tab = storedTab();
+      if (tab && !tab.closed) { tab.focus(); return; }
+      var opened = window.open(url, "soqlBuilderWin");
+      if (opened) { storeTab(opened); }
+    });
+
+    try {
+      var previous = window.parent[KEY + "Hook"];
+      if (previous) { window.parent.removeEventListener("pagehide", previous); }
+      window.parent[KEY + "Hook"] = closeTabWithPage;
+      window.parent.addEventListener("pagehide", closeTabWithPage);
+    } catch (e) {
+      window.addEventListener("pagehide", closeTabWithPage);
+    }
+  })();
+</script>
+"""
+
 apply_theme("soql")
 
 st.caption(
@@ -98,7 +145,7 @@ else:
                     break
 
     if _port_is_listening(PORT):
-        st.markdown(f"[Open in a new tab ↗]({server_url})")
+        components.html(OPEN_TAB_HTML.replace("__URL__", server_url), height=32)
         components.iframe(server_url, height=1000, scrolling=True)
     else:
         st.error("SOQL Builder server did not start in time. Recent log output:")

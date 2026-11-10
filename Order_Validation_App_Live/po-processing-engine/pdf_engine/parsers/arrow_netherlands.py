@@ -141,30 +141,93 @@ def _parse_items_page(page) -> list[dict]:
     return items
 
 
+# First-page Ship To / Billing panels (x ranges) and the band their address lines sit in.
+SHIP_TO_X = (219.6, 413.0)
+BILLING_X = (418.0, 612.0)
+ADDRESS_TOP = (90.0, 172.0)
+# The Ship To panel's contact rows sit below its address; values start right of the label.
+SHIP_TO_CONTACT_TOP = (170.0, 225.0)
+SHIP_TO_VALUE_X = 257.0
+SHIP_TO_CONTACT_KEYS = {
+    "Contact:": "ship_to_contact",
+    "Phone:": "ship_to_phone",
+    "E-mail:": "ship_to_email",
+}
+# Complementary page's Special Information panel (x0 range, and below its title).
+SPECIAL_X = (366.0, 820.0)
+SPECIAL_TOP = (80.0, 327.0)
+
+
+def _block_lines(words: list[dict]) -> list[str]:
+    return [" ".join(w["text"] for w in sorted(line, key=lambda w: w["x0"])) for line in _cluster_lines(words)]
+
+
+def _parse_header_blocks(page) -> dict[str, str]:
+    """Ship To / Billing addresses and the Ship To contact rows on the first page."""
+    words = page.extract_words()
+    values: dict[str, str] = {}
+    for key, (x0, x1) in (("ship_to_block", SHIP_TO_X), ("bill_to_block", BILLING_X)):
+        in_block = [w for w in words if x0 <= w["x0"] < x1 and ADDRESS_TOP[0] < w["top"] < ADDRESS_TOP[1]]
+        values[key] = "\n".join(_block_lines(in_block))
+    contact_words = [
+        w
+        for w in words
+        if SHIP_TO_X[0] <= w["x0"] < SHIP_TO_X[1] and SHIP_TO_CONTACT_TOP[0] <= w["top"] < SHIP_TO_CONTACT_TOP[1]
+    ]
+    for key in SHIP_TO_CONTACT_KEYS.values():
+        values[key] = ""
+    for line in _cluster_lines(contact_words):
+        ordered = sorted(line, key=lambda w: w["x0"])
+        label = " ".join(w["text"] for w in ordered if w["x0"] < SHIP_TO_VALUE_X)
+        value = " ".join(w["text"] for w in ordered if w["x0"] >= SHIP_TO_VALUE_X)
+        key = SHIP_TO_CONTACT_KEYS.get(label)
+        if key:
+            values[key] = value
+    return values
+
+
 def _parse_complementary_page(page) -> dict[str, str]:
-    """Reseller / end-user / shipping blocks on the final page.
+    """Reseller / end-user / special-information blocks on the final page.
 
     Labels sit at x<100 and values start at x=105, so each value is the text
-    to the right of its label on the same printed line.
+    to the right of its label on the same printed line. A Street value that wraps
+    prints its continuation on an unlabelled line, which is folded back in.
     """
-    left_words = [w for w in page.extract_words() if w["x0"] < 360]
+    words = page.extract_words()
+    left_words = [w for w in words if w["x0"] < 360]
     values: dict[str, str] = {}
     section = "reseller"
+    street_key = None
     for line in _cluster_lines(left_words):
         label = " ".join(w["text"] for w in sorted(line, key=lambda w: w["x0"]) if w["x0"] < 100)
         value = " ".join(w["text"] for w in sorted(line, key=lambda w: w["x0"]) if w["x0"] >= 100)
         if label.startswith("End User Information"):
             section = "end_user"
+            street_key = None
             continue
         key = {
             "Company:": "company",
+            "Street:": "street",
+            "ZipCode, City:": "zip_city",
+            "Country:": "country",
             "Contact name:": "contact",
             "Contact:": "contact",
             "Email:": "email",
             "Phone:": "phone",
+            "Order Reference:": "order_reference",
         }.get(label)
         if key:
             values[f"{section}_{key}"] = value
+            street_key = f"{section}_street" if key == "street" else None
+        elif not label and value and street_key:
+            values[street_key] += f"\n{value}"
+
+    special_words = [
+        w
+        for w in words
+        if SPECIAL_X[0] <= w["x0"] < SPECIAL_X[1] and SPECIAL_TOP[0] < w["top"] < SPECIAL_TOP[1]
+    ]
+    values["special_information"] = "\n".join(_block_lines(special_words))
     return values
 
 
@@ -176,9 +239,11 @@ def parse_template(path: Path) -> dict:
         # is an items page.
         for page in pdf.pages[:-1]:
             items.extend(_parse_items_page(page))
+        header_blocks = _parse_header_blocks(pdf.pages[0])
         complementary = _parse_complementary_page(pdf.pages[-1])
 
     fields = _search(HEADER_PATTERNS, page_texts[0])
+    fields.update(header_blocks)
     fields.update(_search(TOTAL_PATTERNS, "\n".join(page_texts)))
     fields.update(complementary)
     return {"fields": fields, "line_items": items}

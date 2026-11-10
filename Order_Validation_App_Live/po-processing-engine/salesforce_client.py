@@ -262,6 +262,15 @@ def _map_fields_ivalue_infosolutions_limited(quote: dict, account: dict, order: 
     return fields
 
 
+def _map_fields_networld_corporation(quote: dict, account: dict, order: dict) -> dict:
+    # The "End User Name" row (end_user_name) is the Quote's Account (SBQQ__Account__c) name.
+    fields = _map_fields_default(quote, account, order)
+    account_name = account.get("Name")
+    if account_name:
+        fields["end_user_name"] = account_name
+    return fields
+
+
 def _map_fields_arrow_netherlands(quote: dict, account: dict, order: dict) -> dict:
     # The End User block's Company (end_user_company) is the Quote's Account
     # (SBQQ__Account__c) name.
@@ -291,20 +300,17 @@ def _map_fields_exclusive_networks_norway(quote: dict, account: dict, order: dic
 def _apply_nextgen_pricing(item: dict, rec: dict) -> None:
     """Adapts a pulled line to NextGen's price convention.
 
-    NextGen's PDF prints Unit Price as a *per-month* rate and computes
-    amount = qty x unit price x term months, whereas Salesforce's
-    SBQQ__NetPrice__c is already the whole-term price -- using it as-is
-    multiplies the term in twice. So convert it to a monthly rate, and carry
-    Salesforce's own line total (SBQQ__NetTotal__c) as the row's printed
-    amount so the PDF's Order Total adds up to the Quote's Net Amount instead
-    of drifting by the monthly rate's rounding. (amount_basis is what the
-    generator compares to decide the amount is still valid for this
-    qty/unit price/terms; editing any of them makes it recompute.)
+    The row's Unit cost stays Salesforce's SBQQ__NetPrice__c, which is the
+    whole-term price. NextGen's own sample prices per month and multiplies by the
+    term months, so a pulled row is marked price_basis = "term": the generator and
+    the page's Total (Ext) then skip the months multiplier for it, and the amount
+    is qty x unit cost. Salesforce's own line total (SBQQ__NetTotal__c) is carried
+    as the row's printed amount so the PDF's Order Total adds up to the Quote's
+    Net Amount. (amount_basis is what the generator compares to decide the amount
+    is still valid for this qty/unit price/terms; editing any of them makes it
+    recompute.)
     """
-    term = rec.get("SBQQ__SubscriptionTerm__c")
-    net_price = rec.get("SBQQ__NetPrice__c")
-    if net_price is not None and term:
-        item["unit_cost"] = f"{Decimal(str(net_price)) / Decimal(str(term)):.4f}"
+    item["price_basis"] = "term"
     net_total = rec.get("SBQQ__NetTotal__c")
     if net_total is not None:
         item["amount"] = f"{Decimal(str(net_total)):.2f}"
@@ -344,7 +350,11 @@ def get_quote_data(quote_id: str, org: str = SF_ORG, slug: str | None = None) ->
     opportunity = quote.get("SBQQ__Opportunity2__r") or {}
     distributor = (opportunity.get("Distributor_Lookup__r") or {}).get("Name")
     suggested_slug = match_distributor(distributor)
-    effective_slug = slug or suggested_slug
+    # The page switches to the quote's own distributor whenever one is recognised, so the
+    # fields and price hook must be that distributor's. The slug the page sent (whatever
+    # was loaded before) only applies when the quote's distributor isn't recognised;
+    # otherwise an Arrow quote pulled while NextGen was on screen got NextGen's mapping.
+    effective_slug = suggested_slug or slug
     map_fields = distributors.get_sf_mapper(effective_slug) or _map_fields_default
     line_hook = distributors.get_sf_line_hook(effective_slug)
     order = _get_order_data(opportunity.get("Id"), org)

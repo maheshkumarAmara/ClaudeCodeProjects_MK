@@ -29,6 +29,7 @@ KEYWORDS: dict[str, tuple[str, ...]] = {
     "Networld Corporation": ("networldcorp", "networld"),
     "NextGen Distribution Pty Ltd": ("nextgen",),
     "NOX Co.,LTD.": ("noxco", "nox.co"),
+    "Carahsoft Technology Corp": ("carahsoft",),
 }
 
 # Where the JSON states the distributor, most specific first.

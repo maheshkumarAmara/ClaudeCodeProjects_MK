@@ -233,6 +233,35 @@ def _draw_licensee_address(c: canvas.Canvas, page_height: float, fields: dict) -
             y += LICENSEE_PITCH
 
 
+# The Invoice address (left) and Delivery / Effort address (middle) blocks, below their labels
+# and above the rule at about y=399. Both print in the template's 7pt text at an 8.5pt pitch,
+# so at most this many lines fit before the rule.
+ADDRESS_FIRST_TOP = 336.0
+ADDRESS_PITCH = 8.5
+ADDRESS_SIZE = 7.0
+ADDRESS_MAX_LINES = 7
+# (field key, cover box x0/top/x1/bottom, text x, wrap width)
+ADDRESS_BLOCKS = (
+    ("invoice_address", (54.0, 334.0, 226.0, 397.0), 56.7, 222.0 - 56.7),
+    ("delivery_address", (226.0, 334.0, 396.0, 397.0), 228.2, 393.0 - 228.2),
+)
+
+
+def _draw_address_blocks(c: canvas.Canvas, page_height: float, fields: dict) -> None:
+    """Invoice and Delivery / Effort address blocks of the first page. The template's own
+    lines sit under a white cover so only the edited address shows; long lines wrap inside
+    their column. A block whose field isn't supplied keeps the template's text."""
+    for key, (x0, top, x1, bottom), text_x, room in ADDRESS_BLOCKS:
+        if key not in fields:
+            continue
+        _whiteout(c, page_height, x0, top, x1, bottom)
+        lines: list[str] = []
+        for raw in str(fields.get(key) or "").split("\n"):
+            lines.extend(wrap_text(raw.strip(), room, ADDRESS_SIZE) if raw.strip() else [])
+        for i, line in enumerate(lines[:ADDRESS_MAX_LINES]):
+            _text(c, page_height, text_x, ADDRESS_FIRST_TOP + ADDRESS_PITCH * i, line, ADDRESS_SIZE)
+
+
 def _draw_header_values(c: canvas.Canvas, page_height: float, fields: dict) -> None:
     """Values on the first page's header block, which only prints once."""
     _whiteout(c, page_height, 433.0, 156.5, 566.0, 165.5)
@@ -256,12 +285,18 @@ def _draw_header_values(c: canvas.Canvas, page_height: float, fields: dict) -> N
     _whiteout(c, page_height, 56.0, 463.5, 566.0, 472.5)
     _text(c, page_height, 56.7, 464.8, f"Enduser-PO: {fields.get('enduser_po', '')}", 6.8)
 
-    accepts_line = (
-        f"ADN Distribution GmbH ACCEPTS ALL ADDITIONAL TERMS ON "
-        f"{fields.get('quote_number', '')} DATED {fields.get('quote_date', '')}"
-    )
+    # The contingency note is editable: print whatever the user supplied, and nothing at
+    # all when they cleared it. Only when the field isn't supplied is the default built.
+    if "contingency_note" in fields:
+        accepts_line = str(fields.get("contingency_note") or "").strip()
+    else:
+        accepts_line = (
+            f"ADN Distribution GmbH ACCEPTS ALL ADDITIONAL TERMS ON "
+            f"{fields.get('quote_number', '')} DATED {fields.get('quote_date', '')}"
+        )
     _whiteout(c, page_height, 56.0, 472.0, 566.0, 480.0)
-    _text(c, page_height, 56.7, 473.0, accepts_line, 6.75)
+    if accepts_line:
+        _text(c, page_height, 56.7, 473.0, accepts_line, 6.75)
 
 
 def _draw_totals(c: canvas.Canvas, page_height: float, fields: dict, grand_total: Decimal) -> None:
@@ -310,6 +345,7 @@ def _draw_page(
     if t == TEMPLATE_FIRST:
         _draw_header_values(c, page_height, fields)
         _draw_licensee_address(c, page_height, fields)
+        _draw_address_blocks(c, page_height, fields)
 
     y = FIRST_TOP if t == TEMPLATE_FIRST else CONT_TOP
     for block in spec.blocks:

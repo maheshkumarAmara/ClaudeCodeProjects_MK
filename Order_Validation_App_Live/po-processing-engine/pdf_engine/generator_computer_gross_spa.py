@@ -469,15 +469,24 @@ _FOOTER_SIZE = 11.0
 _FOOTER_CENTER_X = (92.05 + 622.3) / 2
 
 
+def _contingency_note_on(fields: dict) -> bool:
+    """The CONTINGENCY_NOTE switch: true prints the closing sentence, false leaves it off. A
+    request without the field keeps the sentence, as before the switch existed."""
+    if "contingency_note" not in fields:
+        return True
+    return str(fields.get("contingency_note")).strip().lower() in {"true", "yes", "1", "y", "on"}
+
+
 def _draw_footer_sentence(c: canvas.Canvas, page_height: float, fields: dict, dy: float) -> None:
-    if "quote_number" not in fields and "quote_date" not in fields:
+    if "quote_number" not in fields and "quote_date" not in fields and "contingency_note" not in fields:
         return
     quote_number = str(fields.get("quote_number") or "").strip()
     quote_date = str(fields.get("quote_date") or "").strip()
-    distributor = str(fields.get("distributor_company") or "COMPUTER GROSS SPA").strip().upper()
-    text = f"{distributor} ACCEPTS ALL ADDITIONAL TERMS ON RUBRIK QUOTE {quote_number} DATED {quote_date}".upper()
     left, top, right, bottom = _FOOTER_COVER
     _cover(c, page_height, left, top + dy, right, bottom + dy)
+    if not _contingency_note_on(fields):
+        return
+    text = f"Computer Gross Spa Accepts all additional terms on rubrik quote {quote_number} Dated on {quote_date}"
     size = _fit(text, FONT, _FOOTER_SIZE, right - left - 2 * _TEXT_PAD)
     _draw_text(c, page_height, text, _FOOTER_CENTER_X, _FOOTER_TEXT_TOP + dy, size, align="center")
 

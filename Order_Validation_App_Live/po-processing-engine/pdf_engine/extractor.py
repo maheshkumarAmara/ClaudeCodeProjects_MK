@@ -217,20 +217,71 @@ def _is_white(color) -> bool:
 _visible_only: contextvars.ContextVar[bool] = contextvars.ContextVar("visible_only", default=False)
 
 
-def _visible_page(page):
-    """The page without the original text that a generated PO hides under white boxes.
+def _covered_by_later_fill(page) -> set[int]:
+    """ids of the page's chars that a filled box drawn after them paints over.
 
-    A PO this engine generated draws new text (Helvetica) over white boxes that cover
-    the template's original text (Arial, Verdana, ...) but leaves that original text in
-    the file, so reading every character doubles each value. When a page has both, keep
-    only the Helvetica text and any text that no white box covers. A page with no
-    Helvetica text, such as a PO straight from a distributor, is returned unchanged.
+    Reads the page in paint order (pdfplumber lists chars and rects in content-stream
+    order), so it needs no font or position guess: a char is hidden when a LATER filled
+    box covers its centre. This catches a template run that only partly sits under the
+    box, such as the "Q-" of "Quote number : Q-" under a regenerated quote number, and
+    boxes that are panel grey rather than white (the PO date). Spaces are kept so the
+    words around a replaced value still read as separate words.
+    """
+    from pdfminer.layout import LTChar, LTRect
+
+    chars = iter(page.chars)
+    sequence = []  # ("char", dict) / ("box", bounds) in paint order
+    for obj in page.layout:
+        if isinstance(obj, LTChar):
+            sequence.append(("char", next(chars, None)))
+        elif isinstance(obj, LTRect) and obj.fill:
+            sequence.append(("box", (obj.x0, page.height - obj.y1, obj.x1, page.height - obj.y0)))
+    hidden: set[int] = set()
+    later_boxes: list[tuple] = []
+    for kind, item in reversed(sequence):
+        if kind == "box":
+            later_boxes.append(item)
+        elif item is not None and item["text"].strip():
+            if any(_covers_char(box, item) for box in later_boxes):
+                hidden.add(id(item))
+    return hidden
+
+
+def _covers_char(box: tuple, char: dict) -> bool:
+    """True if the box is a patch over the char: it holds the char's centre and spans most
+    of its height. A hairline rule (drawn as a filled rectangle) or a panel far taller than
+    the text is artwork, not a cover, and the text beside it stays visible."""
+    x0, top, x1, bottom = box
+    cx = (char["x0"] + char["x1"]) / 2
+    height = char["bottom"] - char["top"]
+    box_height = bottom - top
+    if not (x0 <= cx <= x1 and top - 1 <= char["top"] and char["bottom"] <= bottom + 1):
+        return False
+    return box_height <= 3 * height
+
+
+def _visible_page(page):
+    """The page without the original text that a generated PO hides under boxes.
+
+    A PO this engine generated draws new text over boxes that cover the template's
+    original text but leaves that original text in the file, so reading every character
+    doubles each value ("Q-960271" reads "QQ--960271"). On a page with Helvetica text
+    (the generators' font) two rules find the covered text: any char that a filled box
+    drawn after it covers (paint order), and any non-Helvetica char under a white box.
+    A page with no Helvetica text, such as a PO straight from a distributor, is
+    returned unchanged.
     """
     if not any("Helvetica" in c["fontname"] for c in page.chars):
         return page
+    try:
+        covered = _covered_by_later_fill(page)
+    except Exception:  # an unusual page: fall back to the font rule alone
+        covered = set()
     whites = [r for r in page.rects if r.get("fill") and _is_white(r.get("non_stroking_color"))]
 
     def hidden(c) -> bool:
+        if id(c) in covered:
+            return True
         if "Helvetica" in c["fontname"]:
             return False
         cx, cy = (c["x0"] + c["x1"]) / 2, (c["top"] + c["bottom"]) / 2

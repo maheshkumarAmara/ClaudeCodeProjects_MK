@@ -589,6 +589,18 @@ a.app-tag[href="/compare"]:hover {
     width: 100%;
 }
 
+/* Total (Ext): a read-only figure worked out from qty, unit cost, % disc. and terms. */
+.line-items-table .total-col {
+    white-space: nowrap;
+    text-align: right;
+}
+
+.line-items-table td.total-col {
+    padding-top: 14px;
+    font-variant-numeric: tabular-nums;
+    color: #d6e8f5;
+}
+
 #add-row-btn {
     margin-top: 0.8rem;
 }

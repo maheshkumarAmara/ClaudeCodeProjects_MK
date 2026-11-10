@@ -1,5 +1,6 @@
 import json
 import tempfile
+import time
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, Response, UploadFile
@@ -36,6 +37,24 @@ async def index(request: Request):
 @app.get("/compare")
 async def compare_page(request: Request):
     return templates.TemplateResponse(request, "compare.html", {})
+
+
+# The Streamlit app's Home page asks any open engine tab to close itself. The tab polls
+# GET /api/close-request and calls window.close() once the time below is later than the
+# server time it saw when it loaded. Plain in-memory state; nothing is stored.
+_close_requested_at = 0.0
+
+
+@app.post("/api/close-request")
+async def request_tab_close():
+    global _close_requested_at
+    _close_requested_at = time.time()
+    return {"ok": True}
+
+
+@app.get("/api/close-request")
+async def get_close_request():
+    return {"now": time.time(), "closeRequestedAt": _close_requested_at}
 
 
 @app.post("/api/compare/detect")
@@ -137,6 +156,14 @@ async def get_distributor_template(slug: str):
     try:
         template = extractor.parse_template(slug)
         template["fields"] = sandbox_fields(template["fields"])
+        # Networld only: a CRSD (customer requested ship date) field, typed as a Date on the
+        # page, and a BILL_TO_BLOCK text area that starts as the BILL TO text the CRSD template
+        # prints on page 1 (the CRSD PDF's BILL TO block follows whatever is typed there).
+        if slug == "Networld Corporation":
+            from pdf_engine.generator_networld_crsd import template_bill_to_block
+
+            template["fields"]["crsd"] = ""
+            template["fields"]["bill_to_block"] = template_bill_to_block()
         return template
     except LookupError as exc:
         raise HTTPException(status_code=501, detail=str(exc)) from exc
@@ -149,12 +176,46 @@ class GenerateRequest(BaseModel):
     line_items: list[dict]
 
 
+# Distributors whose template needs strip_hidden_text's per-operator mode.
+_STRIP_PER_SHOW = {"NextGen Distribution Pty Ltd", "NOX Co.,LTD.", "Exclusive Networks (Norway)"}
+# Distributors whose generator hides template text behind a clipping rectangle.
+_STRIP_CLIPPED = {"Computer Gross spa", "Exclusive Networks (Norway)", "Networld Corporation"}
+# Pixels a removal may change in strip_hidden_text's render check. Computer Gross paints its own
+# cell backgrounds, so removing the old value under one shifts a pixel or two at a cell edge. Those
+# few pixels add up across the page's ~45 removals (about 8 in all), and the check that all removals
+# together still look the same then threw away the last one, the old closing sentence under the
+# CONTINGENCY_NOTE cover, so 12 leaves room for them.
+_STRIP_TOLERANCE = {"Computer Gross spa": 12}
+# Extra background fills (besides white) a generator paints over old text. Networld's PO number
+# sits in a pale green band, which it covers with that green before drawing the new number.
+# Arrow (Netherlands) covers its info-page values with INFO_GREY and its first-page header values with
+# PANEL_GREY (generator_arrow_netherlands.py); keep these two greys in step with those constants.
+# ADN covers some values with a grey (0.827) and NOX covers its footer values with a grey (0.859);
+# text left under those boxes is removed the same way.
+_STRIP_COVER_COLORS = {
+    "Networld Corporation": ((0.886, 0.937, 0.855),),
+    "Arrow (Netherlands)": ((0.961, 0.961, 0.961), (0.827, 0.827, 0.827)),
+    "ADN Distribution GmbH": ((0.827, 0.827, 0.827),),
+    "NOX Co.,LTD.": ((0.859, 0.859, 0.859),),
+}
+# Distributors whose generator draws the template as a Form XObject (pypdf's merge_page wraps a
+# clipped template page that way), so its hidden text sits inside the form, not the page stream.
+_STRIP_FORMS = {"Innocom Ltd"}
+
+
 def _build_po_pdf(slug: str, body: GenerateRequest) -> bytes:
     """The finished PO PDF for `body`: generated, sandboxed and stripped of hidden text.
     Shared by the PDF download and the Convert & Download formats, so they all start from
     exactly what Generate & download PDF delivers."""
     custom = distributors.get_generator(slug)
     fields = sandbox_fields(body.fields)
+    # Networld only: a filled CRSD date selects the CRSD layout ("4700738674 .pdf"); with no
+    # CRSD the ordinary layout ("4700670275 Details .pdf") is used as before.
+    crsd_layout = slug == "Networld Corporation" and bool(str(body.fields.get("crsd") or "").strip())
+    if crsd_layout:
+        from pdf_engine.generator_networld_crsd import generate_networld_crsd_po
+
+        custom = generate_networld_crsd_po
     try:
         if custom is not None:
             pdf_bytes = custom(fields, body.line_items)
@@ -172,7 +233,20 @@ def _build_po_pdf(slug: str, body: GenerateRequest) -> bytes:
 
     # The generators cover the template's values with white boxes and draw new text over
     # them, leaving the old text in the file. Remove it, so the PDF holds only what shows.
-    return strip_hidden_text(pdf_bytes)
+    # NextGen's template keeps a whole page of text in one block, so its covered rows are
+    # only found by judging each text operator on its own (other distributors are unchanged).
+    # Computer Gross cuts bands out of the whole template page with a clipping rectangle, so
+    # the rest of that page's text is hidden by the clip and needs the clip-aware pass.
+    # The CRSD layout's first page is one big text block (the Japanese PO), so, like NextGen's,
+    # its covered CRSD line is only found by judging each text operator on its own.
+    return strip_hidden_text(
+        pdf_bytes,
+        per_show=slug in _STRIP_PER_SHOW or crsd_layout,
+        clipped=slug in _STRIP_CLIPPED,
+        tolerance=_STRIP_TOLERANCE.get(slug, 0),
+        cover_colors=_STRIP_COVER_COLORS.get(slug, ()),
+        forms=slug in _STRIP_FORMS,
+    )
 
 
 def _po_basename(slug: str, body: GenerateRequest) -> str:

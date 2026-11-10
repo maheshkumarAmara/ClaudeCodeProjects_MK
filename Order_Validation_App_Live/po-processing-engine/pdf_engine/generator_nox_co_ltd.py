@@ -96,6 +96,16 @@ _UNDERLINED_FIELDS = {
 }
 _UNDERLINE_TEXT_SIZE = 7.9
 
+# --- Footer terms sentence, "■Nox accepts all additional terms mentioned on Q-801256 dated 12/01/2025".
+# Everything up to "on" stays; the quote and the date after it are replaced, so they are covered
+# from where the quote starts and drawn again after "on". The label's own font is a CID font that
+# can't take new characters, so the replacement is Helvetica at the sentence's size.
+_TERMS_QUOTE_X = 252.9   # where the old quote starts (just after "on", which ends at 247.9)
+_TERMS_TOP = 596.3
+_TERMS_COVER = (251.0, 595.7, 400.0, 607.6)  # left, top, right, bottom: the old quote and date only
+_TERMS_SIZE = 10.0
+_TERMS_RIGHT = 400.0  # nothing else prints on this line to the right of the date
+
 # --- Order date, "Order Date:Dec 03 2025" (label stays; only the date is replaced)
 _ORDER_DATE = (505.5, 23.1, 503.0, 22.6, 578.0, 33.4, 10.0)  # text x, top, cover l/t/r/b, size
 
@@ -406,6 +416,21 @@ def _draw_order_date(c: canvas.Canvas, page_height: float, fields: dict) -> None
     _draw_text(c, page_height, text, x, top, _fit(text, FONT, size, cover_right - x - 1.0))
 
 
+def _draw_terms_sentence(c: canvas.Canvas, page_height: float, fields: dict) -> None:
+    """The footer's "... mentioned on <quote> dated <date>": swaps in the form's quote number and
+    quote date. A value the form doesn't have keeps the template's, so a request without
+    either leaves the sentence exactly as printed."""
+    if "quote_number" not in fields and "quote_date" not in fields:
+        return
+    quote = str(fields.get("quote_number") or "").strip()
+    date = str(fields.get("quote_date") or "").strip()
+    _cover(c, page_height, *_TERMS_COVER)
+    text = " ".join(part for part in (quote, f"dated {date}" if date else "") if part)
+    room = _TERMS_RIGHT - _TERMS_QUOTE_X - 1.0
+    size = _fit(text, FONT, _TERMS_SIZE, room)
+    _draw_text(c, page_height, _clip(text, FONT, size, room), _TERMS_QUOTE_X, _TERMS_TOP, size)
+
+
 def _draw(
     c: canvas.Canvas,
     page_height: float,
@@ -420,6 +445,7 @@ def _draw(
         if key in fields:
             _replace_text(c, page_height, str(fields[key] or ""), spec)
     _draw_order_date(c, page_height, fields)
+    _draw_terms_sentence(c, page_height, fields)
     _draw_underlined(c, page_height, fields)
     _draw_bill_to(c, page_height, fields)
     _draw_shipping_term(c, page_height, fields)

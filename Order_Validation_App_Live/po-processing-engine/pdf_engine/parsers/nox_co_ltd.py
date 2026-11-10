@@ -40,6 +40,10 @@ COL_DESCRIPTION = (172, 410)
 COL_TERM = (410, 440)
 COL_UNIT_PRICE = (440, 500)
 COL_QTY = (500, 540)
+# The qty and amount columns are right-aligned, so a long amount ("$6,037,200.00")
+# starts left of x=540 and would be read into QTY by its left edge. Qty ends by
+# about x=523, the amount at about x=580, so QTY also requires the right edge here.
+COL_QTY_RIGHT_MAX = 530
 ITEMS_TOP = (348.0, 459.0)
 # A row's TERM value prints about a point above its position number.
 ROW_TOP_SLACK = 3.0
@@ -69,6 +73,13 @@ def _cluster_lines(words: list[dict]) -> list[list[dict]]:
 def _text(words: list[dict], x_range: tuple[float, float]) -> str:
     return " ".join(
         w["text"] for w in sorted(words, key=lambda w: w["x0"]) if x_range[0] <= w["x0"] < x_range[1]
+    )
+
+
+def _qty_text(words: list[dict]) -> str:
+    return _text(
+        [w for w in words if w["x1"] <= COL_QTY_RIGHT_MAX],
+        COL_QTY,
     )
 
 
@@ -162,7 +173,7 @@ def _parse_items(page) -> list[dict]:
             {
                 "part_number": part_number,
                 "description": _text(row, COL_DESCRIPTION),
-                "qty": _plain_number(_text(row, COL_QTY)),
+                "qty": _plain_number(_qty_text(row)),
                 "unit_cost": _plain_number(_text(row, COL_UNIT_PRICE)),
                 "pct_disc": "",
                 "terms": _text(row, COL_TERM),

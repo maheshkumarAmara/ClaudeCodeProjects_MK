@@ -269,7 +269,10 @@ def _build_rows(line_items: list[dict]) -> list[_Row]:
         if item.get("amount") not in (None, "") and item.get("amount_basis") == _amount_basis(item):
             amount = _num(item["amount"])
         else:
-            amount = qty * unit_price * term.months
+            # A row pulled from Salesforce carries the whole-term price (price_basis "term"),
+            # so its amount is qty x unit price; the sample's rows price per month instead.
+            months = Decimal("1") if item.get("price_basis") == "term" else term.months
+            amount = qty * unit_price * months
         amount = amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         rows.append(
             _Row(

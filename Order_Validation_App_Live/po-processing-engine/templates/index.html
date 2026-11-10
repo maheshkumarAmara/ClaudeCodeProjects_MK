@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PO Processing Engine</title>
-    <link rel="stylesheet" href="/static/style.css?v=8">
+    <link rel="stylesheet" href="/static/style.css?v=9">
 </head>
 <body>
     <div class="layout">
@@ -24,7 +24,7 @@
                 <p>Edit distributor purchase orders and regenerate the PDF</p>
             </div>
             <div class="app-header-tags">
-                <a class="app-tag" href="/compare">Compare PDF &amp; JSON</a>
+                <a class="app-tag" href="/compare" target="_blank" rel="noopener">Compare PDF &amp; JSON</a>
                 <span id="status" class="app-tag status">Checking server status&hellip;</span>
             </div>
         </header>
@@ -71,6 +71,7 @@
                                 <th>Unit cost</th>
                                 <th>% disc.</th>
                                 <th>Terms</th>
+                                <th class="total-col">Total (Ext)</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -96,6 +97,6 @@
         </section>
     </main>
     </div>
-    <script src="/static/script.js?v=13"></script>
+    <script src="/static/script.js?v=19"></script>
 </body>
 </html>

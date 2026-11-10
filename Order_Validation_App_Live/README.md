@@ -26,9 +26,16 @@ The first time, make the launcher executable: `chmod +x launch.sh`.
 
 | Page | File | What it does | Needs |
 |---|---|---|---|
-| **Order Validation** (main) | `Order_Validation_App.py` | Validates one or more orders against the business rules, with booking line item checks | `sf` CLI |
+| **Home** (entry) | `Home.py` | Card landing page; each card opens one of the pages below | none |
+| **Order Validation** | `pages/Order_Validation.py` | Validates one or more orders against the business rules, with booking line item checks | `sf` CLI |
 | **EDI Validator** | `pages/EDI_Validator.py` | Embeds `assets/EDI_Order_Ops_Tool.html`, which queries order/quote data through the local bridge server (`bridge/sf-bridge-server.js`) | `sf` CLI, Node.js |
 | **Developer Console** | `pages/Developer_Console.py` | Runs Anonymous Apex and SOQL against QA/UAT through `sf`. Statements that look like DML ask for confirmation first. Keeps a run history | `sf` CLI |
+| **PO_Agent Validation** | `pages/PO_Validation.py` | Saves an uploaded PO (and optional JSON order file), then **Open in Claude Code** opens Terminal with Claude Code already running `/povAgent` on those files. You only approve its prompts there (your company's tool-validation policy requires a person to); the page then picks up the finished Excel report and Google Sheet link from `claude_outputs/povAgent_outputs` by itself. A copy-paste command is kept as a fallback. Salesforce QA/UAT only | Claude Code, `sf` CLI (aliases `rbkqa` / `rbkuat`), `~/venv` with `pypdf pdfplumber openpyxl` |
+| **PO_EDI Validation** | `pages/PO_Validation_EDI.py` | The same flow as PO_Agent Validation, but runs the `/pov_EDI` skill with an optional **X12 850 `.edi` file** (any file name ending in `.edi`) in place of the JSON file. Upload it here: the Claude Code editor refuses to attach `.edi` files. Outputs go to `claude_outputs/pov_EDI_outputs`. Shares `pov_page.py` | Claude Code, `sf` CLI (aliases `rbkqa` / `rbkuat`), `~/venv` with `pypdf pdfplumber openpyxl` |
+| **PO Validation** | `pages/PO_Validation_POV.py` | The same flow as PO_Agent Validation, but runs the `/pov` skill: PO only, no JSON order file. Outputs go to `claude_outputs/pov_outputs`. Both pages share `pov_page.py` | Claude Code, `sf` CLI (aliases `rbkqa` / `rbkuat`), `~/venv` with `pypdf pdfplumber openpyxl` |
+| **Marketplace Email** | `pages/Marketplace_Email.py` | Fill in the form, then **Send Email** renders the real email, shows To / CC / Subject and a preview, and on confirm opens Terminal with Claude Code already running `/MarketPlaceAutomation`: you only approve the Gmail send there (your company's tool-validation policy requires a person to). **Create draft** puts the email in your Gmail drafts in the background with no prompt; you press Send in Gmail. If the page can't be reached, the form falls back to the old copy-the-command dialog. Logic is in `marketplace_flow.py` | Claude Code, Gmail set up in your Claude config, `~/venv` |
+| **Test Case Review** | `pages/Test_Case_Review.py` | Enter a Jira story key or URL (and optionally paste a story or test cases), tick whether to post the Jira comment and Slack summary, then **Start review** opens Terminal straight away with Claude Code already running `/test-case-review`: you only approve its prompts there. The page then shows the verdict, coverage score and Google Doc link by itself. Each run is saved in `claude_outputs/tcr_runs`. Logic is in `tcr_flow.py` | Claude Code, Jira / Google Drive / Slack MCP servers, `jira-dashboard/.env` for the Jira comment (see the skill's README) |
+| **Go-Live Congrats** | `pages/Go_Live_Congrats.py` | The go-live message form (`assets/Go_Live_Congrats_UI.html`, a copy of the `/go-live-congrats` skill's form). **Send via Claude** shows the channels and the exact message under the form; on **Confirm and post** it opens Terminal with Claude Code already running `/go-live-congrats`, and you only approve the Slack post there (your company's tool-validation policy requires a person to). The page then shows "Posted" by itself. If the page can't be reached, the form falls back to copying the command. The form's own Send to Slack (bot token) and image-analysis (Anthropic key) features are unchanged and bypass this confirm step. Logic is in `golive_flow.py` | Claude Code, Slack MCP server |
 | **SOQL Builder** | `pages/SOQL_Builder.py` | Visual SOQL builder (`soql-builder/`), a local Node server started on demand | Node.js |
 | **PO Processing Engine** | `pages/PO_Processing_Engine.py` | Edit a distributor's purchase order and regenerate the PDF, optionally pre-filled from a Salesforce Quote. See [`po-processing-engine/README.md`](po-processing-engine/README.md) | `sf` CLI, Python deps |
 
@@ -103,7 +110,8 @@ Run history is kept in `data/history.json`. An uploaded scenario matrix is saved
 ## Repository layout
 
 ```
-Order_Validation_App.py   Main app (Order Validation page): sidebar, inputs and the validation/results UI
+Home.py                   Entry script: card landing page linking to every page
+pages/Order_Validation.py Order Validation page: sidebar, inputs and the validation/results UI
 ov/                       Helpers moved out of the main app, none of which call Streamlit:
                             sf_client (sf CLI queries), calc (dates, expected metrics),
                             booking_compare (booking header / line item checks),
@@ -143,8 +151,10 @@ Environment overrides: `GATEWAY_PORT`, `GATEWAY_BACKEND_PORT`, `GATEWAY_BRIDGE_P
 
 **Install (one-time):**
 ```bash
-bash install_autostart.sh
+bash install_autostart.sh                      # gateway on http://localhost:8501
+GATEWAY_PORT=8502 bash install_autostart.sh    # or on http://localhost:8502
 ```
+To change the port later, run the installer again with the new `GATEWAY_PORT`.
 This registers the gateway as a per-user `launchd` agent so it also starts
 automatically at login. The agent points at the folder you run the script from,
 so re-run it if you move or copy this folder.

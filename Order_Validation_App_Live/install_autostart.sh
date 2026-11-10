@@ -10,6 +10,8 @@ PROJECT_DIR="$(pwd)"
 PLIST_NAME="com.rubrik.order-validation-gateway"
 PLIST_PATH="$HOME/Library/LaunchAgents/${PLIST_NAME}.plist"
 NODE_BIN="$(command -v node)"
+# Port the gateway listens on (the URL you open). Default 8501; e.g. GATEWAY_PORT=8502 bash install_autostart.sh
+GATEWAY_PORT="${GATEWAY_PORT:-8501}"
 
 if [ -z "$NODE_BIN" ]; then
     echo "❌ node not found on PATH — install Node.js first."
@@ -42,6 +44,8 @@ cat > "$PLIST_PATH" <<EOF
     <dict>
         <key>PATH</key>
         <string>${GATEWAY_PATH}</string>
+        <key>GATEWAY_PORT</key>
+        <string>${GATEWAY_PORT}</string>
     </dict>
     <key>RunAtLoad</key>
     <true/>
@@ -65,7 +69,8 @@ launchctl bootout "gui/$(id -u)" "$PLIST_PATH" >/dev/null 2>&1 || true
 launchctl bootstrap "gui/$(id -u)" "$PLIST_PATH"
 
 echo "✅ Gateway installed and started."
-echo "   It will now auto-start at login and listen on http://localhost:8501"
+echo "   It will now auto-start at login and listen on http://localhost:${GATEWAY_PORT}"
+echo "   The app starts on the first visit and stops after 15 minutes with no open connection."
 echo "   Logs: $PROJECT_DIR/logs/gateway.log (app activity) and logs/launchd.log (launchd-level)"
 echo ""
 echo "Check status with:"

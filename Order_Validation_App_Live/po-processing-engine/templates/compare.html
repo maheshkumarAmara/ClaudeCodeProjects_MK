@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Compare PDF &amp; JSON — PO Processing Engine</title>
     <link rel="stylesheet" href="/static/style.css?v=2">
-    <link rel="stylesheet" href="/static/compare.css?v=3">
+    <link rel="stylesheet" href="/static/compare.css?v=4">
 </head>
 <body>
     <main class="container">
@@ -72,7 +72,7 @@
                 <div class="table-wrap">
                     <table class="line-items-table compare-table">
                         <thead>
-                            <tr><th>Field</th><th>PDF</th><th>JSON</th><th>Status</th><th>Comments</th></tr>
+                            <tr><th>Field</th><th>Stage PO field</th><th>Requirement</th><th>PDF</th><th>JSON</th><th>Status</th><th>Comments</th></tr>
                         </thead>
                         <tbody id="cmp-header-body"></tbody>
                     </table>
@@ -88,12 +88,12 @@
                     <table class="line-items-table compare-table">
                         <thead>
                             <tr>
-                                <th>SKU</th>
+                                <th>SKU<small class="compare-stage-field" data-map="sku"></small></th>
                                 <th>Status</th>
-                                <th>Quantity</th>
-                                <th>Unit price</th>
-                                <th>Term</th>
-                                <th>Amount</th>
+                                <th>Quantity<small class="compare-stage-field" data-map="qty"></small></th>
+                                <th>Unit price<small class="compare-stage-field" data-map="unit_cost"></small></th>
+                                <th>Term<small class="compare-stage-field" data-map="terms"></small></th>
+                                <th>Amount<small class="compare-stage-field" data-map="amount"></small></th>
                                 <th>Comments</th>
                             </tr>
                         </thead>
@@ -103,6 +103,6 @@
             </div>
         </section>
     </main>
-    <script src="/static/compare.js?v=8"></script>
+    <script src="/static/compare.js?v=9"></script>
 </body>
 </html>

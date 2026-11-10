@@ -1,5 +1,7 @@
-const MULTILINE_FIELD_KEYS = new Set(["end_user_block", "reseller_block", "ship_to_block", "address_block", "delivery_address", "invoice_address", "licensee_address", "to_block", "supplier", "bill_to", "ship_to", "end_customer", "reseller", "freight_forwarder"]);
+const MULTILINE_FIELD_KEYS = new Set(["end_user_block", "reseller_block", "ship_to_block", "bill_to_block", "address_block", "delivery_address", "invoice_address", "licensee_address", "to_block", "supplier", "bill_to", "ship_to", "end_customer", "reseller", "freight_forwarder", "special_information", "reseller_street"]);
 const LINE_ITEM_COLUMNS = ["part_number", "description", "qty", "unit_cost", "pct_disc", "terms"];
+// Fields shown with a date picker instead of a text box. Their value is an ISO date (YYYY-MM-DD).
+const DATE_FIELD_KEYS = new Set(["crsd"]);
 
 let currentSlug = null;
 let currentLineItems = [];
@@ -90,25 +92,90 @@ function renderFields(fields, hiddenKeys) {
         wrapper.className = "field";
 
         const label = document.createElement("label");
-        label.textContent = key;
+        label.textContent = key === "crsd" ? "CRSD" : key;
         label.setAttribute("for", `field-${key}`);
 
-        const input = MULTILINE_FIELD_KEYS.has(key)
-            ? document.createElement("textarea")
-            : document.createElement("input");
+        // Computer Gross only: CONTINGENCY_NOTE is a true / false switch for the closing
+        // "Accepts all additional terms" sentence. (ADN's contingency_note is free text.)
+        const isSwitch = key === "contingency_note" && currentSlug === "Computer Gross spa";
+        const input = isSwitch
+            ? document.createElement("select")
+            : MULTILINE_FIELD_KEYS.has(key)
+                ? document.createElement("textarea")
+                : document.createElement("input");
         input.id = `field-${key}`;
         input.dataset.key = key;
-        input.value = value || "";
-        if (input.tagName === "TEXTAREA") {
+        if (isSwitch) {
+            for (const option of ["true", "false"]) {
+                const el = document.createElement("option");
+                el.value = option;
+                el.textContent = option;
+                input.appendChild(el);
+            }
+            input.value = String(value || "true").toLowerCase() === "false" ? "false" : "true";
+        } else {
+            input.value = value || "";
+        }
+        if (isSwitch) {
+            // nothing more to set: a select has no type or rows
+        } else if (input.tagName === "TEXTAREA") {
             input.rows = 4;
         } else {
-            input.type = "text";
+            input.type = DATE_FIELD_KEYS.has(key) ? "date" : "text";
         }
 
         wrapper.appendChild(label);
         wrapper.appendChild(input);
         grid.appendChild(wrapper);
     }
+}
+
+// Parses "1,234.50", "1.234,50", "10%" or 36 into a number; null when it isn't one.
+function parseLineNumber(value) {
+    let text = String(value ?? "").replace(/[^\d,.\-]/g, "");
+    if (!/\d/.test(text)) return null;
+    if (text.includes(",") && text.includes(".")) {
+        const decimalSep = text.lastIndexOf(",") > text.lastIndexOf(".") ? "," : ".";
+        const thousandsSep = decimalSep === "," ? "." : ",";
+        text = text.split(thousandsSep).join("").replace(decimalSep, ".");
+    } else if (text.includes(",")) {
+        text = /^-?\d{1,3}(,\d{3})+$/.test(text) ? text.replace(/,/g, "") : text.replace(",", ".");
+    } else if ((text.match(/\./g) || []).length > 1) {
+        text = text.replace(/\./g, "");
+    }
+    const number = Number(text);
+    return Number.isFinite(number) ? number : null;
+}
+
+// Distributors whose PDF takes the % disc. off the unit cost before extending.
+const DISCOUNTED_TOTAL_SLUGS = new Set([
+    "Exclusive Networks (Norway)", "iValue InfoSolutions Limited", "Innocom Ltd", "Networld Corporation",
+]);
+
+// The line's extended total, worked out the way the selected distributor's PDF does it:
+// qty x unit cost, less the % disc. for the distributors above, and times the term
+// in months for NextGen (whose unit price is a per-month rate), or just qty x unit cost
+// when it has no term. Display only.
+function lineTotal(item) {
+    const qty = parseLineNumber(item.qty);
+    const unit = parseLineNumber(item.unit_cost);
+    if (qty === null || unit === null) return "";
+    // Networld's Net Total Price column is the unit cost itself (Salesforce SBQQ__NetPrice__c), not qty x unit cost.
+    let total = currentSlug === "Networld Corporation" ? unit : qty * unit;
+    if (DISCOUNTED_TOTAL_SLUGS.has(currentSlug)) {
+        const pct = parseLineNumber(item.pct_disc) || 0;
+        total *= 1 - pct / 100;
+    }
+    // A row pulled from Salesforce carries the whole-term price (price_basis "term"), so the term
+    // is not multiplied in again.
+    if (currentSlug === "NextGen Distribution Pty Ltd" && item.price_basis !== "term") {
+        // Same reading as the PDF: a number (optionally "Months") is that many months; a
+        // blank term, "N/A" or any other unit counts as 1, so the total is just qty x unit cost.
+        const terms = String(item.terms ?? "").trim();
+        const match = terms.match(/^(\d+(?:\.\d+)?)(?:\s+(\S.*?))?\s*(?:\(.*\))?$/);
+        if (match && (!match[2] || /^month/i.test(match[2]))) total *= Number(match[1]);
+    }
+    return total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function renderLineItems() {
@@ -122,6 +189,9 @@ function renderLineItems() {
         serialCell.className = "serial-col";
         serialCell.textContent = String(index + 1);
         row.appendChild(serialCell);
+        const totalCell = document.createElement("td");
+        totalCell.className = "total-col";
+        totalCell.textContent = lineTotal(item);
         for (const col of LINE_ITEM_COLUMNS) {
             const cell = document.createElement("td");
             const input = document.createElement("input");
@@ -131,10 +201,14 @@ function renderLineItems() {
             input.value = item[col] || "";
             input.addEventListener("input", () => {
                 currentLineItems[index][col] = input.value;
+                totalCell.textContent = lineTotal(currentLineItems[index]);
             });
             cell.appendChild(input);
             row.appendChild(cell);
         }
+        // Display-only, like the S.No: recalculated on every edit and never stored
+        // on the line item, so it isn't sent to /generate.
+        row.appendChild(totalCell);
         const removeCell = document.createElement("td");
         const removeBtn = document.createElement("button");
         removeBtn.type = "button";
@@ -589,7 +663,30 @@ document.getElementById("add-row-btn").addEventListener("click", addEmptyRow);
 document.getElementById("preview-btn").addEventListener("click", previewPdf);
 document.getElementById("generate-btn").addEventListener("click", generateAndDownload);
 
+// When the Streamlit app's Home page asks (see /api/close-request in main.py), close this tab.
+// Only in a tab of its own: the copy embedded in the Streamlit page must stay.
+function watchForCloseRequest() {
+    if (window.top !== window) return;
+    let loadedAt = null;
+    const poll = async () => {
+        try {
+            const res = await fetch("/api/close-request");
+            const data = await res.json();
+            if (loadedAt === null) loadedAt = data.now;
+            if (data.closeRequestedAt > loadedAt) {
+                window.close();
+                // Still here: the browser only lets a script close tabs a script opened.
+                console.warn("PO Processing Engine: Home asked this tab to close, but the browser did not allow it (tab was not opened by the app).");
+                loadedAt = data.closeRequestedAt;
+            }
+        } catch (e) { /* server busy or gone; try again next time */ }
+    };
+    poll();
+    setInterval(poll, 2000);
+}
+
 checkHealth();
 loadDistributors();
 loadSalesforceOrgs();
 loadHistory();
+watchForCloseRequest();

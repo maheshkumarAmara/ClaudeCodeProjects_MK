@@ -6,6 +6,7 @@ before it, because set_page_config has to be the first Streamlit call.
 
 The CSS for each page is the same as it was when it was inlined in that page:
   - "main"  : the Order Validation page (its own large stylesheet).
+  - "home"  : the card landing page (Home.py).
   - "po", "soql", "edi" : the embed pages, assembled from the shared fragments
     below plus a few page-specific rules.
 css_for(page) returns the stylesheet text without touching Streamlit.
@@ -13,6 +14,10 @@ css_for(page) returns the stylesheet text without touching Streamlit.
   - "devconsole" : the Developer Console page: the "main" stylesheet plus a few
     rules for main-area secondary/download buttons.
 """
+
+import json
+from datetime import datetime, timedelta
+from pathlib import Path
 
 import streamlit as st
 
@@ -482,6 +487,39 @@ iframe { height: 92vh !important; min-height: 700px; border: none !important; ou
 """
 )
 
+# ── Marketplace Email page (full-bleed iframe below Streamlit's fixed header) ──
+# Same as the EDI page, except the frame starts under the 3.75rem header and fills the rest
+# of the viewport, so the tool's own title bar is not hidden and there is no dead strip below.
+
+MARKETPLACE_CSS = (
+    EDI_CSS
+    + """
+.block-container,
+[data-testid="stAppViewBlockContainer"] { padding-top: 3.75rem !important; padding-bottom: 2rem !important; }
+iframe { height: auto !important; min-height: 0 !important; }
+.st-key-mkt_form iframe { height: calc(100vh - 3.75rem) !important; min-height: 0 !important; }
+.st-key-mkt_panel { padding: 1.25rem 2rem 0.5rem 2rem; max-width: 1100px; margin: 0 auto; }
+.st-key-mkt_panel, .st-key-mkt_panel p, .st-key-mkt_panel li, .st-key-mkt_panel label,
+.st-key-mkt_panel [data-testid="stMarkdownContainer"], .st-key-mkt_panel [data-testid="stCaptionContainer"] {
+    color: #c4daea !important;
+}
+.st-key-mkt_panel h2, .st-key-mkt_panel h3 { color: #e8f4fc !important; margin-top: 0; }
+.st-key-mkt_panel [data-testid="stExpander"] { background: #102238; border: 1px solid rgba(255,255,255,0.09); border-radius: 10px; }
+.st-key-mkt_panel [data-testid="stExpander"] summary { color: #e8f4fc !important; background: transparent !important; }
+.st-key-mkt_panel iframe { height: 420px !important; min-height: 0 !important; border-radius: 8px; background: #ffffff; }
+.st-key-golive_form iframe { height: calc(100vh - 3.75rem) !important; min-height: 0 !important; }
+.st-key-golive_panel { padding: 1.25rem 2rem 0.5rem 2rem; max-width: 1100px; margin: 0 auto; }
+.st-key-golive_panel, .st-key-golive_panel p, .st-key-golive_panel li, .st-key-golive_panel label,
+.st-key-golive_panel [data-testid="stMarkdownContainer"], .st-key-golive_panel [data-testid="stCaptionContainer"] {
+    color: #c4daea !important;
+}
+.st-key-golive_panel h2, .st-key-golive_panel h3 { color: #e8f4fc !important; margin-top: 0; }
+.st-key-golive_panel [data-testid="stExpander"] { background: #102238; border: 1px solid rgba(255,255,255,0.09); border-radius: 10px; }
+.st-key-golive_panel [data-testid="stExpander"] summary { color: #e8f4fc !important; background: transparent !important; }
+.st-key-golive_panel iframe { height: 420px !important; min-height: 0 !important; border-radius: 8px; background: #ffffff; }
+"""
+)
+
 # ── SOQL Builder page ─────────────────────────────────────────────────────────
 
 SOQL_CSS = (
@@ -610,12 +648,62 @@ DEVCONSOLE_EXTRA_CSS = """
 
 DEVCONSOLE_CSS = MAIN_CSS + DEVCONSOLE_EXTRA_CSS
 
+# ── Home (card landing page) ──────────────────────────────────────────────────
+
+HOME_CSS = (
+    CHROME_HIDE
+    + BACKGROUND
+    + HEADER_TOOLBAR_TEXT
+    + MAIN_TEXT
+    + SIDEBAR_BASE
+    + """
+.block-container { max-width: 1280px !important; padding-top: 3rem !important; }
+.home-hero { text-align: center; margin: 1rem 0 2.2rem 0; }
+.home-hero h1 { font-size: 2.1rem; font-weight: 800; color: #e8f4fc !important; margin: 0 0 0.4rem 0; padding: 0; }
+.home-hero p { font-size: 1.05rem; color: #8ab4cc !important; margin: 0; }
+[class*="st-key-home_card_"] {
+    position: relative;
+    background: #102238 !important;
+    border: 1px solid rgba(255,255,255,0.09) !important;
+    border-radius: 14px !important;
+    transition: border-color .15s, background .15s, transform .15s;
+}
+[class*="st-key-home_card_"]:hover {
+    background: #14304d !important;
+    border-color: #7dd3fc !important;
+    transform: translateY(-1px);
+}
+.home-card { display: flex; gap: 1rem; align-items: flex-start; min-height: 6.4rem; }
+.home-card-icon {
+    flex: 0 0 auto; width: 2.9rem; height: 2.9rem; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(125,211,252,0.10); font-size: 1.5rem;
+}
+.home-card-title { font-size: 1.05rem; font-weight: 700; color: #e8f4fc !important; margin-bottom: 0.3rem; }
+.home-card-desc { font-size: 0.9rem; line-height: 1.45; color: #9db9cc !important; }
+/* The whole card is the click target: a small script in Home.py forwards a click anywhere on
+   the card to the real Streamlit page link below, which is kept in the page but not shown. */
+[class*="st-key-home_card_"] { cursor: pointer; }
+[class*="st-key-home_card_"] [data-testid="stPageLink"] {
+    position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; opacity: 0;
+}
+"""
+)
+
 _PAGE_CSS = {
     "main": MAIN_CSS,
     "po": PO_CSS,
     "edi": EDI_CSS,
+    "marketplace": MARKETPLACE_CSS,
+    "golive": MARKETPLACE_CSS,
     "soql": SOQL_CSS,
+    "jira": SOQL_CSS,
+    "home": HOME_CSS,
     "devconsole": DEVCONSOLE_CSS,
+    "povalidation": DEVCONSOLE_CSS,
+    "povedi": DEVCONSOLE_CSS,
+    "pov": DEVCONSOLE_CSS,
+    "tcr": DEVCONSOLE_CSS,
 }
 
 
@@ -627,6 +715,166 @@ def css_for(page: str) -> str:
         raise ValueError(f"Unknown theme page '{page}'. Valid pages: {', '.join(_PAGE_CSS)}.") from None
 
 
+# Brand header at the top of the sidebar, above the page links. Streamlit builds that
+# list itself, so the two lines are CSS pseudo-elements (title before the nav, subtitle
+# before its first item) instead of markup. Appended for every page by apply_theme.
+SIDEBAR_BRAND = """
+[data-testid="stSidebarNav"]::before {
+    content: "ProdOps";
+    display: block;
+    padding: 1.1rem 1.2rem 0 1.2rem;
+    font-size: 1.45rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    color: #4fc3d9 !important;
+}
+/* The automatic page list is not shown: the Home cards and the "← Home" link cover navigation. */
+[data-testid="stSidebarNavItems"],
+[data-testid="stSidebarNavSeparator"],
+[data-testid="stSidebarNav"] button { display: none !important; }
+[data-testid="stSidebarNav"]::after {
+    content: "PRODOPS TEST AUTOMATION";
+    display: block;
+    padding: 0.15rem 1.2rem 1rem 1.2rem;
+    margin: 0 0 0.6rem 0;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    color: #7f9db3 !important;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+"""
+
+
+BACK_HOME_CSS = """
+/* Floats above the header bar on every page, so it never depends on a page's own top padding
+   (some pages have none) and never moves the page layout. Top right, clear of the sidebar toggle. */
+.st-key-back_home {
+    position: fixed !important; top: 0.6rem !important; left: auto !important; bottom: auto !important;
+    right: 6rem !important; z-index: 1000002; margin: 0 !important; padding: 0 !important;
+    width: auto !important; height: auto !important; transform: none !important;
+}
+.st-key-back_home [data-testid="stPageLink"] { margin: 0 !important; padding: 0 !important; }
+.st-key-back_home [data-testid="stPageLink"] a {
+    display: inline-flex; height: 2rem; line-height: 1; align-items: center;
+    padding: 0 0.8rem !important; border-radius: 8px; white-space: nowrap;
+    border: 1px solid rgba(125,211,252,0.35); background: rgba(125,211,252,0.08) !important;
+}
+.st-key-back_home [data-testid="stPageLink"] a,
+.st-key-back_home [data-testid="stPageLink"] a * { color: #7dd3fc !important; font-weight: 600; font-size: 0.9rem; }
+.st-key-back_home [data-testid="stPageLink"] a:hover { background: rgba(125,211,252,0.18) !important; }
+"""
+
+
+# ── Recent tools (sidebar) ────────────────────────────────────────────────────
+# The tools the user has opened, newest first, with the date. Kept in data/recent_tools.json
+# (local, git-ignored). apply_theme records a visit on every tool page and shows the list.
+
+RECENT_FILE = Path(__file__).resolve().parent / "data" / "recent_tools.json"
+RECENT_MAX = 8
+RECENT_MIN_GAP_SECONDS = 60  # don't rewrite the file on every Streamlit rerun
+
+# page key -> (icon, title, page file); same tools as the cards on Home.py
+RECENT_TOOLS = {
+    "main": ("📋", "Order Validation", "pages/Order_Validation.py"),
+    "po": ("📄", "PO Processing Engine", "pages/PO_Processing_Engine.py"),
+    "soql": ("🔍", "SOQL Builder", "pages/SOQL_Builder.py"),
+    "jira": ("📊", "Jira Dashboard", "pages/Jira_Dashboard.py"),
+    "edi": ("🧾", "EDI Validator", "pages/EDI_Validator.py"),
+    "marketplace": ("✉️", "Marketplace Email", "pages/Marketplace_Email.py"),
+    "golive": ("🎉", "Go-Live Congrats", "pages/Go_Live_Congrats.py"),
+    "devconsole": ("💻", "Developer Console", "pages/Developer_Console.py"),
+    "povalidation": ("📑", "PO_Agent Validation", "pages/PO_Validation.py"),
+    "povedi": ("📨", "PO_EDI Validation", "pages/PO_Validation_EDI.py"),
+    "pov": ("🗂️", "PO Validation", "pages/PO_Validation_POV.py"),
+    "tcr": ("🧪", "Test Case Review", "pages/Test_Case_Review.py"),
+}
+
+SIDEBAR_RECENT = """
+.st-key-recent_tools { padding: 0.2rem 0.4rem 0 0.4rem; }
+.recent-label {
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+    color: #7f9db3 !important; margin: 0.4rem 0 0.4rem 0.8rem;
+}
+.st-key-recent_tools [data-testid="stPageLink"] { margin: 0; }
+.st-key-recent_tools [data-testid="stPageLink"] a { padding: 0.3rem 0.8rem 0 0.8rem; border-radius: 8px 8px 0 0; min-height: 0; }
+.st-key-recent_tools [data-testid="stPageLink"] a:hover { background: rgba(125,211,252,0.10) !important; }
+.recent-date {
+    font-size: 0.78rem; color: #7f9db3 !important; margin: -0.55rem 0 0.35rem 2.75rem; line-height: 1.2;
+}
+"""
+
+
+def _load_recent() -> list:
+    try:
+        data = json.loads(RECENT_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(data, list):
+        return []
+    return [e for e in data if isinstance(e, dict) and e.get("key") in RECENT_TOOLS and e.get("opened")]
+
+
+def _record_visit(page: str, now: datetime = None) -> None:
+    """Move the page to the top of the recent list (skipped if it was just recorded)."""
+    if page not in RECENT_TOOLS:
+        return
+    now = now or datetime.now()
+    entries = _load_recent()
+    if entries and entries[0]["key"] == page:
+        try:
+            if (now - datetime.fromisoformat(entries[0]["opened"])).total_seconds() < RECENT_MIN_GAP_SECONDS:
+                return
+        except ValueError:
+            pass
+    entries = [e for e in entries if e["key"] != page]
+    entries.insert(0, {"key": page, "opened": now.isoformat(timespec="seconds")})
+    try:
+        RECENT_FILE.parent.mkdir(exist_ok=True)
+        RECENT_FILE.write_text(json.dumps(entries[:RECENT_MAX], indent=2), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def _date_label(opened: str, now: datetime = None) -> str:
+    """Return "Today", "Yesterday", otherwise dd/mm/yyyy."""
+    now = now or datetime.now()
+    try:
+        day = datetime.fromisoformat(opened).date()
+    except ValueError:
+        return ""
+    if day == now.date():
+        return "Today"
+    if day == (now - timedelta(days=1)).date():
+        return "Yesterday"
+    return day.strftime("%d/%m/%Y")
+
+
+def _render_recent() -> None:
+    entries = _load_recent()
+    if not entries:
+        return
+    with st.sidebar:
+        with st.container(key="recent_tools"):
+            st.markdown('<div class="recent-label">Recent</div>', unsafe_allow_html=True)
+            for entry in entries[:RECENT_MAX]:
+                icon, title, page_file = RECENT_TOOLS[entry["key"]]
+                st.page_link(page_file, label=title, icon=icon)
+                st.markdown(f'<div class="recent-date">{_date_label(entry["opened"])}</div>', unsafe_allow_html=True)
+
+
 def apply_theme(page: str) -> None:
-    """Inject a page's stylesheet. Call after st.set_page_config()."""
-    st.markdown("<style>" + css_for(page) + "</style>", unsafe_allow_html=True)
+    """Inject a page's stylesheet. Call after st.set_page_config().
+
+    Every page except Home also gets a "← Home" link at the top of the main area and is
+    recorded in the sidebar's Recent list, which every page shows.
+    """
+    st.markdown(
+        "<style>" + css_for(page) + SIDEBAR_BRAND + BACK_HOME_CSS + SIDEBAR_RECENT + "</style>",
+        unsafe_allow_html=True,
+    )
+    if page != "home":
+        with st.container(key="back_home"):
+            st.page_link("Home.py", label="← Home")
+        _record_visit(page)
+    _render_recent()

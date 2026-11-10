@@ -11,6 +11,8 @@ import json
 import re
 from decimal import Decimal, InvalidOperation
 
+from . import field_map
+
 # Canonical field -> key names accepted in the JSON, compared case-insensitively
 # with spaces, dashes and underscores ignored.
 KEY_ALIASES = {
@@ -338,6 +340,12 @@ def compare(pdf_parsed: dict, json_text: str, tolerance: str = "0.01") -> dict:
             "comment": "In the PDF only: the JSON has no field for this value",
         })
 
+    # Where each header field lands on the Stage PO, from the mapping sheet.
+    for row in header:
+        mapping = field_map.header_mapping(
+            row["json_key"], row["field"], *HEADER_ALIASES.get(row["field"], ()))
+        row["mapping"] = mapping
+
     count = lambda status: sum(1 for line in lines if line["status"] == status)
     return {
         "summary": {
@@ -355,4 +363,5 @@ def compare(pdf_parsed: dict, json_text: str, tolerance: str = "0.01") -> dict:
         },
         "lines": lines,
         "header": header,
+        "line_mapping": field_map.line_mapping(),
     }

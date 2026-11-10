@@ -243,4 +243,8 @@ def parse_template(path: Path) -> dict:
             _parse_items_page(page, items, pending)
 
         fields.update(_parse_footer(pdf.pages[-1].extract_text() or ""))
+    # The Quote the PO is for, as an editable field. A pulled Salesforce Quote fills it, and the
+    # generator prints it as every row's Quote ID and in the comment line. Without a field of its
+    # own the page had nowhere to keep the pulled value, so the sample's Quote kept printing.
+    fields["quote_number"] = next((i["quote_id"] for i in items if i.get("quote_id")), "")
     return {"fields": fields, "line_items": items}

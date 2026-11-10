@@ -104,8 +104,44 @@ INFO_VALUES = [
     ("end_user_contact", 104.5, 276.9),
     ("end_user_email", 104.5, 288.4),
     ("end_user_phone", 104.5, 299.9),
+    ("reseller_zip_city", 105.0, 116.1),
+    ("reseller_country", 105.0, 127.6),
+    ("reseller_order_reference", 104.8, 178.8),
+    ("end_user_zip_city", 105.0, 250.0),
+    ("end_user_country", 105.0, 259.0),
+    ("end_user_order_reference", 105.0, 311.5),
 ]
 INFO_VALUE_RIGHT = 361.0
+
+# Multi-line address blocks on the first page: (field key, text x, first line top, extra gap
+# after the first line, max lines, cover box x0/top/x1/bottom, cover fill). The template's
+# first address line sits a little higher than the rest, which are 9pt apart.
+ADDRESS_PITCH = 9.0
+ADDRESS_BLOCKS = [
+    ("ship_to_block", 221.2, 91.6, 2.5, 9, (220.5, 90.5, 411.5, 172.0), PANEL_GREY),
+    ("bill_to_block", 419.6, 92.2, 2.6, 9, (419.0, 90.5, 610.5, 172.0), PANEL_GREY),
+]
+# Ship To contact rows: (key, text x, text top). Values start after the bold label.
+SHIP_TO_CONTACT_VALUES = [
+    ("ship_to_contact", 258.7, 178.5),
+    ("ship_to_phone", 258.7, 196.5),
+    ("ship_to_email", 258.7, 208.0),
+]
+SHIP_TO_CONTACT_RIGHT = 411.5
+# Street values on the Complementary page: (key, text x, first line top, max lines). The
+# reseller's street wraps onto a second line in the sample; the end user's has room for one
+# line only, so it shrinks to fit instead.
+INFO_STREETS = [
+    ("reseller_street", 105.0, 98.1, 2),
+    ("end_user_street", 105.0, 241.0, 1),
+]
+# Terms of payment / Delivery terms values on the totals page.
+X_TERMS_VALUE = 141.8
+TERMS_RIGHT = 826.0
+TERMS_FIRST_TOP = 265.4
+TERMS_GAP = 13.9  # Delivery terms sits this far under Terms of payment in the template
+# Special Information panel: (key, text x, first line top, line pitch, cover box).
+SPECIAL_BLOCK = ("special_information", 374.5, 90.6, 9.0, (370.0, 88.5, 817.5, 325.0))
 
 
 @dataclass
@@ -312,6 +348,67 @@ def _draw_header_values(c: canvas.Canvas, page_height: float, fields: dict) -> N
         )
 
 
+def _wrapped_lines(text: str, width: float) -> list[str]:
+    """Each line the user typed, word-wrapped to the width; blank lines are dropped."""
+    lines: list[str] = []
+    for raw in str(text or "").split("\n"):
+        if raw.strip():
+            lines.extend(wrap_text(raw.strip(), width, FONT_SIZE))
+    return lines
+
+
+def _draw_address_blocks(c: canvas.Canvas, page_height: float, fields: dict) -> None:
+    """Ship To / Billing addresses and the Ship To contact rows on the first page. The
+    template's own lines sit under a grey cover so only the edited text shows. A block
+    whose field isn't supplied keeps the template's text."""
+    for key, x, first_top, gap, max_lines, cover, fill in ADDRESS_BLOCKS:
+        if key not in fields:
+            continue
+        _whiteout(c, page_height, *cover, fill)
+        lines = _wrapped_lines(fields.get(key), cover[2] - x - 1)
+        for i, line in enumerate(lines[:max_lines]):
+            top = first_top if i == 0 else first_top + gap + ADDRESS_PITCH * i
+            _text(c, page_height, x, top, line)
+    for key, x, top in SHIP_TO_CONTACT_VALUES:
+        if key not in fields:
+            continue
+        _replace_value(
+            c,
+            page_height,
+            str(fields[key] or ""),
+            x,
+            top,
+            (x - 1.5, top - 0.6, SHIP_TO_CONTACT_RIGHT, top + 8.6),
+            PANEL_GREY,
+        )
+
+
+def _wrap_bold(text: str, max_width: float) -> list[str]:
+    """Word-wraps bold text (wider than regular, so wrap_text can't measure it); a single
+    word wider than the line falls back to character wrapping."""
+    lines: list[str] = []
+    current = ""
+    for word in text.split():
+        candidate = f"{current} {word}".strip()
+        if stringWidth(candidate, FONT_BOLD, FONT_SIZE) <= max_width:
+            current = candidate
+            continue
+        if current:
+            lines.append(current)
+            current = ""
+        if stringWidth(word, FONT_BOLD, FONT_SIZE) <= max_width:
+            current = word
+        else:
+            for ch in word:
+                if stringWidth(current + ch, FONT_BOLD, FONT_SIZE) > max_width:
+                    lines.append(current)
+                    current = ""
+                current += ch
+    if current:
+        lines.append(current)
+    return lines or [""]
+
+
 def _draw_totals(c: canvas.Canvas, page_height: float, fields: dict, grand_total: Decimal) -> None:
     total_text = _money(grand_total)
 
@@ -327,12 +424,30 @@ def _draw_totals(c: canvas.Canvas, page_height: float, fields: dict, grand_total
     _text(c, page_height, 818.7, 242.6, total_text, bold=True, align="right")
     _text(c, page_height, 819.9, 242.6, "$")
 
-    for key, top in (("payment_terms", 265.4), ("delivery_terms", 279.3)):
+    # Terms values are bold and can be long, so they wrap inside the page's right margin. The
+    # template puts Delivery terms 13.9pt under Terms of payment; each extra payment line
+    # pushes it down one more line so the two never overlap.
+    top = TERMS_FIRST_TOP
+    # The template's own values sit at two fixed heights; clear both rows once so no old
+    # text is left showing between the redrawn lines, whatever the new lines' heights.
+    for key, row_top in (("payment_terms", TERMS_FIRST_TOP), ("delivery_terms", TERMS_FIRST_TOP + TERMS_GAP)):
+        if key in fields:
+            _whiteout(c, page_height, X_TERMS_VALUE - 1.8, row_top - 0.5, 828.0, row_top + 9.0)
+    for key, template_gap in (("payment_terms", TERMS_GAP), ("delivery_terms", 0.0)):
         if key not in fields:
+            top += template_gap
             continue
-        text = str(fields[key] or "")
-        _whiteout(c, page_height, 140.0, top - 0.5, 420.0, top + 8.5)
-        _text(c, page_height, 141.8, top, text, bold=True)
+        lines = _wrap_bold(str(fields[key] or ""), TERMS_RIGHT - X_TERMS_VALUE)
+        _whiteout(c, page_height, X_TERMS_VALUE - 1.8, top - 0.5, 828.0, top + LINE_HEIGHT * max(len(lines), 1) - 0.5)
+        for i, line in enumerate(lines):
+            _text(c, page_height, X_TERMS_VALUE, top + LINE_HEIGHT * i, line, bold=True)
+        top += template_gap + LINE_HEIGHT * max(len(lines) - 1, 0)
+        if key == "payment_terms" and len(lines) > 1:
+            # The Delivery terms label is template text at its original height; cover it and
+            # draw it again beside the value's new position.
+            label_top = TERMS_FIRST_TOP + TERMS_GAP
+            _whiteout(c, page_height, 20.0, label_top - 0.5, X_TERMS_VALUE - 1.8, label_top + 9.0)
+            _text(c, page_height, 26.9, top, "Delivery terms:", bold=True)
 
 
 def _draw_po_number(c: canvas.Canvas, page_height: float, fields: dict) -> None:
@@ -362,6 +477,7 @@ def _draw_items_page(
 
     if spec.template == TEMPLATE_FIRST:
         _draw_header_values(c, page_height, fields)
+        _draw_address_blocks(c, page_height, fields)
 
     y = FIRST_TOP if spec.template == TEMPLATE_FIRST else CONT_TOP
     for block in spec.blocks:
@@ -385,6 +501,28 @@ def _draw_info_page(c: canvas.Canvas, page_height: float, fields: dict) -> None:
             (x - 1.5, top - 0.6, INFO_VALUE_RIGHT, top + 8.6),
             INFO_GREY,
         )
+
+    for key, x, top, max_lines in INFO_STREETS:
+        if key not in fields:
+            continue
+        lines = _wrapped_lines(fields.get(key), INFO_VALUE_RIGHT - x - 1)
+        # The cover spans every line the street can use.
+        cover = (x - 1.5, top - 0.6, INFO_VALUE_RIGHT, top + 9.0 * (max_lines - 1) + 8.6)
+        if max_lines == 1:
+            _replace_value(c, page_height, " ".join(lines), x, top, cover, INFO_GREY)
+            continue
+        _whiteout(c, page_height, *cover, INFO_GREY)
+        for i, line in enumerate(lines[:max_lines]):
+            _text(c, page_height, x, top + 9.0 * i, line)
+
+    key, x, first_top, pitch, cover = SPECIAL_BLOCK
+    if key in fields:
+        _whiteout(c, page_height, *cover, INFO_GREY)
+        for i, line in enumerate(_wrapped_lines(fields.get(key), cover[2] - x - 1)):
+            top = first_top + pitch * i
+            if top + 8.0 > cover[3]:
+                break
+            _text(c, page_height, x, top, line)
 
 
 def generate_arrow_netherlands_po(fields: dict, line_items: list[dict]) -> bytes:
