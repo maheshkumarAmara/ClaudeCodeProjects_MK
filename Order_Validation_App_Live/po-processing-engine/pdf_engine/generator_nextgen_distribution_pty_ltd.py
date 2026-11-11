@@ -47,7 +47,7 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
 import config
-from pdf_engine.common import fit_size, money_2dp, qty_text
+from pdf_engine.common import column_boxes, fit_size, money_2dp, order_columns, qty_text
 from pdf_engine.extractor import find_template_path
 from pdf_engine.generator import _fresh_page, _render_overlay
 from pdf_engine.paginate import wrap_chars, wrap_text
@@ -123,6 +123,72 @@ X_TERM_UNIT = 500.4
 X_BILLING = 554.4
 R_UNIT_PRICE = 717.8
 R_TOTAL = 800.0
+
+# --- Column order ------------------------------------------------------------------
+# The table has no ruled cells, so each column gets a slot (its width below) and a value sits
+# at its template x plus how far its slot has moved from the template order. The template's
+# own order is the default: with no (or the form's untouched) `column_order` nothing here
+# changes and the page is drawn exactly as before. The header labels are template artwork, so a
+# reordered table whites them out and draws its own (see _draw_table_header).
+COLUMNS = ("part", "description", "start", "end", "qty", "term_qty", "term_unit", "billing", "unit_price", "total")
+# The form's columns that have one here (sno and pct_disc have none and are ignored). Terms
+# stands for the whole term block below, which moves as one.
+FORM_KEYS = {"part_number": "part", "description": "description", "qty": "qty",
+             "unit_cost": "unit_price", "terms": "term_qty", "total": "total"}
+# The form's own default order (of the columns above): the template layout, not this one, is
+# printed for it, so an untouched form changes nothing.
+FORM_DEFAULT = ("part_number", "description", "qty", "unit_cost", "terms", "total")
+# Columns read from the row's `terms` text (and the billing term), printed together.
+TERM_BLOCK = ("start", "end", "term_qty", "term_unit", "billing")
+TABLE_X0 = 24.4
+COL_WIDTHS = {"part": 72.0, "description": 216.0, "start": 48.0, "end": 48.0, "qty": 56.0, "term_qty": 32.0,
+              "term_unit": 54.0, "billing": 124.0, "unit_price": 48.0, "total": 79.6}
+BODY_X = {"part": (X_PART, "left"), "description": (X_DESCRIPTION, "left"), "start": (X_START, "left"),
+          "end": (X_END, "left"), "qty": (R_QTY, "right"), "term_qty": (R_TERM_QTY, "right"),
+          "term_unit": (X_TERM_UNIT, "left"), "billing": (X_BILLING, "left"),
+          "unit_price": (R_UNIT_PRICE, "right"), "total": (R_TOTAL, "right")}
+# Header labels as the template prints them (x of the left or right edge, and the lines).
+HEADER_X = {"part": 26.4, "description": 98.4, "start": 314.4, "end": 362.4, "qty": 462.2, "term_qty": 494.4,
+            "term_unit": 500.4, "billing": 554.4, "unit_price": 717.9, "total": 800.2}
+HEADER_LABELS = {"part": ("Part No.",), "description": ("Description",), "start": ("Start Date",),
+                 "end": ("End Date",), "qty": ("Qty",), "term_qty": ("Term", "Qty"),
+                 "term_unit": ("Term", "Description"), "billing": ("Billing", "Term"),
+                 "unit_price": ("Unit Price",), "total": ("Total ( Ext )",)}
+HEADER_SIZE = 7.8
+HEADER_LINE_PITCH = 11.3
+HEADER_TOP_FIRST = 308.5  # first line of the labels on page 1 / on the other pages
+HEADER_TOP_CONT = 23.5
+HEADER_COVER_FIRST = (306.5, 331.0)  # top, bottom of the band to white out
+HEADER_COVER_CONT = (21.5, 45.0)
+
+
+class _Columns:
+    """Where each column sits for one PO: `order` is the left-to-right column keys, `default`
+    is True for the template order, and `x(key)` / `header_x(key)` the x a value / label is
+    drawn at (the template's x, shifted by how far the column's slot moved)."""
+
+    def __init__(self, column_order: list[str] | None) -> None:
+        mapped = [k for k in (column_order or []) if k in FORM_KEYS]
+        mapped = list(dict.fromkeys(mapped))
+        self.default = not mapped or mapped == list(FORM_DEFAULT)
+        if self.default:
+            self.order = list(COLUMNS)
+        else:
+            core = order_columns([FORM_KEYS[k] for k in mapped], ("part", "description", "qty", "term_qty", "unit_price", "total"))
+            self.order = [c for key in core for c in (TERM_BLOCK if key == "term_qty" else (key,))]
+        self.boxes = column_boxes(TABLE_X0, COL_WIDTHS, self.order)
+        self._template_boxes = column_boxes(TABLE_X0, COL_WIDTHS, list(COLUMNS))
+
+    def _shift(self, key: str) -> float:
+        side = 0 if BODY_X[key][1] == "left" else 1
+        return self.boxes[key][side] - self._template_boxes[key][side]
+
+    def x(self, key: str) -> float:
+        return BODY_X[key][0] + self._shift(key)
+
+    def header_x(self, key: str) -> float:
+        return HEADER_X[key] + self._shift(key)
+
 
 PART_WIDTH = 63.6  # "RS-BT-NDA-PE-PP" (63.2) fits on one line; "RA-PS-CON-RMOT" (64.0) wraps
 DESCRIPTION_WIDTH = 187.0  # longest line the sample keeps whole is 185.7; shortest it wraps is 188.9
@@ -435,22 +501,34 @@ def _draw_invoice_block(c: canvas.Canvas, page_height: float, fields: dict) -> N
             _fitted_text(c, page_height, INVOICE_X, line_top, value, BLOCK_TEXT_SIZE, room)
 
 
-def _draw_row(c: canvas.Canvas, page_height: float, row: _Row, top: float) -> None:
+def _draw_table_header(c: canvas.Canvas, page_height: float, cols: _Columns, is_first: bool) -> None:
+    """The column labels in the chosen order. They are template artwork, so the template's
+    own band is whited out first. Only used for a reordered table."""
+    cover_top, cover_bottom = HEADER_COVER_FIRST if is_first else HEADER_COVER_CONT
+    _cover(c, page_height, CLEAR_LEFT, cover_top, CLEAR_RIGHT, cover_bottom)
+    top = HEADER_TOP_FIRST if is_first else HEADER_TOP_CONT
+    for key in cols.order:
+        align = BODY_X[key][1]
+        for index, line in enumerate(HEADER_LABELS[key]):
+            _text(c, page_height, cols.header_x(key), top + index * HEADER_LINE_PITCH, line, HEADER_SIZE, font=FONT_BOLD, align=align)
+
+
+def _draw_row(c: canvas.Canvas, page_height: float, row: _Row, top: float, cols: _Columns) -> None:
     for index, line in enumerate(row.part_lines):
-        _text(c, page_height, X_PART, top + 0.5 + index * LINE_HEIGHT, line)
+        _text(c, page_height, cols.x("part"), top + 0.5 + index * LINE_HEIGHT, line)
     for index, line in enumerate(row.description_lines):
-        _text(c, page_height, X_DESCRIPTION, top + 1.0 + index * LINE_HEIGHT, line)
+        _text(c, page_height, cols.x("description"), top + 1.0 + index * LINE_HEIGHT, line)
 
     term = row.term
-    _fitted_text(c, page_height, X_START, top, term.start, ITEM_SIZE, DATE_WIDTH)
-    _fitted_text(c, page_height, X_END, top, term.end, ITEM_SIZE, DATE_WIDTH)
-    _text(c, page_height, R_QTY, top, _qty_text(row.qty), align="right")
-    _text(c, page_height, R_TERM_QTY, top, term.qty, align="right")
-    _fitted_text(c, page_height, X_TERM_UNIT, top, term.unit, ITEM_SIZE, TERM_UNIT_WIDTH)
+    _fitted_text(c, page_height, cols.x("start"), top, term.start, ITEM_SIZE, DATE_WIDTH)
+    _fitted_text(c, page_height, cols.x("end"), top, term.end, ITEM_SIZE, DATE_WIDTH)
+    _text(c, page_height, cols.x("qty"), top, _qty_text(row.qty), align="right")
+    _text(c, page_height, cols.x("term_qty"), top, term.qty, align="right")
+    _fitted_text(c, page_height, cols.x("term_unit"), top, term.unit, ITEM_SIZE, TERM_UNIT_WIDTH)
     billing = str(row.item.get("billing_term") or DEFAULT_BILLING_TERM)
-    _fitted_text(c, page_height, X_BILLING, top, billing, ITEM_SIZE, BILLING_WIDTH)
-    _text(c, page_height, R_UNIT_PRICE, top, _unit_price_text(row.unit_price), align="right")
-    _text(c, page_height, R_TOTAL, top, _money(row.amount), align="right")
+    _fitted_text(c, page_height, cols.x("billing"), top, billing, ITEM_SIZE, BILLING_WIDTH)
+    _text(c, page_height, cols.x("unit_price"), top, _unit_price_text(row.unit_price), align="right")
+    _text(c, page_height, cols.x("total"), top, _money(row.amount), align="right")
 
 
 def _footer_texts(fields: dict) -> dict[str, str]:
@@ -532,6 +610,7 @@ def _draw_page(
     total_pages: int,
     fields: dict,
     grand_total: Decimal,
+    cols: _Columns,
 ) -> None:
     is_first = number == 1
     is_last = number == total_pages
@@ -546,11 +625,13 @@ def _draw_page(
     if is_last and is_first:
         clear_bottom = BAR_TOP - 0.5
     _cover(c, page_height, CLEAR_LEFT, clear_top, CLEAR_RIGHT, clear_bottom)
+    if not cols.default:
+        _draw_table_header(c, page_height, cols, is_first)
 
     for index, (row, top) in enumerate(zip(spec.rows, spec.tops)):
         if index in spec.heading_tops:
             _text(c, page_height, 25.4, spec.heading_tops[index], row.heading or "")
-        _draw_row(c, page_height, row, top)
+        _draw_row(c, page_height, row, top, cols)
 
     if is_last:
         _draw_footer(c, page_height, fields, spec.footer_top)
@@ -558,7 +639,8 @@ def _draw_page(
     _draw_page_number(c, page_height, number, total_pages)
 
 
-def generate_nextgen_distribution_pty_ltd_po(fields: dict, line_items: list[dict]) -> bytes:
+def generate_nextgen_distribution_pty_ltd_po(fields: dict, line_items: list[dict], column_order: list[str] | None = None) -> bytes:
+    cols = _Columns(column_order)
     path = find_template_path(SLUG)
     if path is None:
         raise FileNotFoundError(f"No template PDF found for distributor '{SLUG}'")
@@ -581,7 +663,7 @@ def generate_nextgen_distribution_pty_ltd_po(fields: dict, line_items: list[dict
         overlay = _render_overlay(
             width,
             height,
-            lambda c, s=spec, n=number, h=height: _draw_page(c, h, s, n, len(pages), fields, grand_total),
+            lambda c, s=spec, n=number, h=height: _draw_page(c, h, s, n, len(pages), fields, grand_total, cols),
         )
         page.merge_page(overlay.pages[0])
         writer.add_page(page)

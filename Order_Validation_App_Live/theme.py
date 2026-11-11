@@ -648,6 +648,18 @@ DEVCONSOLE_EXTRA_CSS = """
 
 DEVCONSOLE_CSS = MAIN_CSS + DEVCONSOLE_EXTRA_CSS
 
+# ── PO validation pages (/pov, /povAgent, /pov_EDI) ───────────────────────────
+# The developer-console style, but using the full page width instead of the main stylesheet's
+# 1440px column, which left an empty band on the right of wide screens.
+
+POV_CSS = (
+    DEVCONSOLE_CSS
+    + """
+.main .block-container,
+[data-testid="stAppViewBlockContainer"] { max-width: 100% !important; }
+"""
+)
+
 # ── Home (card landing page) ──────────────────────────────────────────────────
 
 HOME_CSS = (
@@ -690,6 +702,23 @@ HOME_CSS = (
 """
 )
 
+# ── Jira Dashboard page ───────────────────────────────────────────────────────
+# SOQL_CSS plus a brighter, larger intro caption: the dashboard below it is a white panel, and the
+# default caption (small, muted blue on the dark bar) is hard to read next to it.
+
+JIRA_CSS = (
+    SOQL_CSS
+    + """
+[data-testid="stCaptionContainer"],
+[data-testid="stCaptionContainer"] *,
+[data-testid="stCaptionContainer"] p {
+    color: #e8f4fc !important;
+    font-size: 1rem !important;
+    line-height: 1.5 !important;
+}
+"""
+)
+
 _PAGE_CSS = {
     "main": MAIN_CSS,
     "po": PO_CSS,
@@ -697,12 +726,12 @@ _PAGE_CSS = {
     "marketplace": MARKETPLACE_CSS,
     "golive": MARKETPLACE_CSS,
     "soql": SOQL_CSS,
-    "jira": SOQL_CSS,
+    "jira": JIRA_CSS,
     "home": HOME_CSS,
     "devconsole": DEVCONSOLE_CSS,
-    "povalidation": DEVCONSOLE_CSS,
-    "povedi": DEVCONSOLE_CSS,
-    "pov": DEVCONSOLE_CSS,
+    "povalidation": POV_CSS,
+    "povedi": POV_CSS,
+    "pov": POV_CSS,
     "tcr": DEVCONSOLE_CSS,
 }
 

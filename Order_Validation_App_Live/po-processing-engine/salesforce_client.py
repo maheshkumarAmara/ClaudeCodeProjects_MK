@@ -317,6 +317,15 @@ def _apply_nextgen_pricing(item: dict, rec: dict) -> None:
         item["amount_basis"] = f"{item['qty']}|{item['unit_cost']}|{item['terms']}"
 
 
+def _discount_text(value) -> str:
+    """SBQQ__Discount__c as the column's text: 77.8 -> "77.8", 100 -> "100"; blank when the line has
+    no discount (null or zero), so those rows look exactly as before."""
+    if value is None:
+        return ""
+    amount = Decimal(str(value))
+    return "" if amount == 0 else f"{amount.normalize():f}"
+
+
 def get_quote_data(quote_id: str, org: str = SF_ORG, slug: str | None = None) -> dict:
     quote_id = quote_id.strip()
     if not _SF_ID_RE.match(quote_id):
@@ -326,7 +335,7 @@ def get_quote_data(quote_id: str, org: str = SF_ORG, slug: str | None = None) ->
     # kept alongside the core fields: the NextGen line hook prints Salesforce's own
     # line total, and the Order lookup (_get_order_data) is keyed on the Opportunity Id.
     soql = (
-        "select id,SBQQ__NetPrice__c,SBQQ__NetTotal__c,SBQQ__SubscriptionTerm__c,Printable_Product__c,"
+        "select id,SBQQ__NetPrice__c,SBQQ__NetTotal__c,SBQQ__Discount__c,SBQQ__SubscriptionTerm__c,Printable_Product__c,"
         "SBQQ__Description__c,SBQQ__Quantity__c,SBQQ__Quote__r.Name,SBQQ__Quote__r.SBQQ__NetAmount__c,"
         "SBQQ__Quote__r.SBQQ__Account__r.Name,"
         "SBQQ__Quote__r.SBQQ__Opportunity2__r.Distributor_Lookup__c,"
@@ -362,13 +371,19 @@ def get_quote_data(quote_id: str, org: str = SF_ORG, slug: str | None = None) ->
     line_items = []
     for rec in records:
         terms = rec.get("SBQQ__SubscriptionTerm__c")
+        discount = _discount_text(rec.get("SBQQ__Discount__c"))
         line_items.append(
             {
                 "part_number": rec.get("Printable_Product__c") or "",
                 "description": rec.get("SBQQ__Description__c") or "",
                 "qty": str(rec.get("SBQQ__Quantity__c") or ""),
                 "unit_cost": str(rec.get("SBQQ__NetPrice__c") or ""),
-                "pct_disc": "",
+                # Salesforce's own discount %. The unit cost above (SBQQ__NetPrice__c) is already net
+                # of it, so it is shown but not applied to the amount: pct_disc_sf marks the pulled
+                # value, and main.py / the page ignore a pct_disc that still equals it. Typing a
+                # different % in the column applies that one as before.
+                "pct_disc": discount,
+                "pct_disc_sf": discount,
                 "terms": str(terms) if terms is not None else "",
             }
         )

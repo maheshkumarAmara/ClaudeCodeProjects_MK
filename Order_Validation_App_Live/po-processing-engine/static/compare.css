@@ -1,3 +1,7 @@
+/* The Compare page opens in its own tab, so it uses the full browser width instead of the shared
+ * 1440px column from style.css. */
+.container { max-width: none; }
+
 .compare-form {
     display: grid;
     grid-template-columns: 1.2fr 1.4fr 1.4fr 0.6fr auto;

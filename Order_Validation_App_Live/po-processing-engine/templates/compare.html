@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Compare PDF &amp; JSON — PO Processing Engine</title>
     <link rel="stylesheet" href="/static/style.css?v=2">
-    <link rel="stylesheet" href="/static/compare.css?v=4">
+    <link rel="stylesheet" href="/static/compare.css?v=5">
 </head>
 <body>
     <main class="container">
@@ -16,7 +16,7 @@
                 <p>Check a purchase order PDF against a JSON file, SKU by SKU</p>
             </div>
             <div class="app-header-tags">
-                <a class="app-tag" href="/">&larr; Back to PO Processing Engine</a>
+                <a class="app-tag" id="back-link" href="/">&larr; Back to PO Processing Engine</a>
             </div>
         </header>
 
@@ -104,5 +104,18 @@
         </section>
     </main>
     <script src="/static/compare.js?v=9"></script>
+    <script>
+        // This page opens in its own tab from the PO Processing Engine. Going "back" closes this tab
+        // so the original engine tab is shown again, instead of opening a second engine tab. If the
+        // browser won't close it (the page was opened directly), the link navigates as usual.
+        document.getElementById("back-link").addEventListener("click", function (event) {
+            if (!window.opener || window.opener.closed) return;
+            event.preventDefault();
+            try { window.opener.focus(); } catch (e) { /* cross-window focus can be blocked */ }
+            window.close();
+            // window.close() is silently ignored for tabs a script didn't open.
+            setTimeout(function () { window.location.href = "/"; }, 150);
+        });
+    </script>
 </body>
 </html>

@@ -1,3 +1,4 @@
+import inspect
 import json
 import tempfile
 import time
@@ -14,6 +15,7 @@ import history
 import salesforce_client
 from sandbox_email import sandbox_fields
 from pdf_engine import compare, convert, detect, extractor, generator
+from pdf_engine.common import untouched_order, without_pulled_discount
 from pdf_engine.sandbox_pdf import sandbox_pdf_emails
 from pdf_engine.strip_hidden import strip_hidden_text
 
@@ -174,10 +176,26 @@ async def get_distributor_template(slug: str):
 class GenerateRequest(BaseModel):
     fields: dict[str, str]
     line_items: list[dict]
+    # Order of the Line items table's columns as the user arranged it (keys: sno, part_number,
+    # description, qty, unit_cost, pct_disc, terms, total). Generators that can lay their PDF
+    # table out in that order take it as a `column_order` argument; the rest ignore it.
+    column_order: list[str] | None = None
+
+
+def _accepts_column_order(fn) -> bool:
+    try:
+        return "column_order" in inspect.signature(fn).parameters
+    except (TypeError, ValueError):
+        return False
 
 
 # Distributors whose template needs strip_hidden_text's per-operator mode.
 _STRIP_PER_SHOW = {"NextGen Distribution Pty Ltd", "NOX Co.,LTD.", "Exclusive Networks (Norway)"}
+# Distributors that only need per-operator stripping when the user has reordered the columns:
+# the generator then covers the template's own column headings with a white box and redraws them,
+# and the old headings (part of a larger text block) are only found by judging each operator.
+# Left out of _STRIP_PER_SHOW so the default-order PDF is stripped exactly as before.
+_STRIP_PER_SHOW_REORDERED = {"Carahsoft Technology Corp"}
 # Distributors whose generator hides template text behind a clipping rectangle.
 _STRIP_CLIPPED = {"Computer Gross spa", "Exclusive Networks (Norway)", "Networld Corporation"}
 # Pixels a removal may change in strip_hidden_text's render check. Computer Gross paints its own
@@ -193,7 +211,8 @@ _STRIP_TOLERANCE = {"Computer Gross spa": 12}
 # ADN covers some values with a grey (0.827) and NOX covers its footer values with a grey (0.859);
 # text left under those boxes is removed the same way.
 _STRIP_COVER_COLORS = {
-    "Networld Corporation": ((0.886, 0.937, 0.855),),
+    # The second fill is the teal header band Networld repaints when its columns are reordered.
+    "Networld Corporation": ((0.886, 0.937, 0.855), (0.0, 0.698, 0.663)),
     "Arrow (Netherlands)": ((0.961, 0.961, 0.961), (0.827, 0.827, 0.827)),
     "ADN Distribution GmbH": ((0.827, 0.827, 0.827),),
     "NOX Co.,LTD.": ((0.859, 0.859, 0.859),),
@@ -201,6 +220,9 @@ _STRIP_COVER_COLORS = {
 # Distributors whose generator draws the template as a Form XObject (pypdf's merge_page wraps a
 # clipped template page that way), so its hidden text sits inside the form, not the page stream.
 _STRIP_FORMS = {"Innocom Ltd"}
+# Distributors whose generator only PRINTS pct_disc (never takes it off the amount), so a pulled
+# Salesforce discount reaches it unchanged: Arrow's Discount % column and its derived RRP.
+_SHOWS_PULLED_DISCOUNT = {"Arrow (Netherlands)"}
 
 
 def _build_po_pdf(slug: str, body: GenerateRequest) -> bytes:
@@ -216,11 +238,18 @@ def _build_po_pdf(slug: str, body: GenerateRequest) -> bytes:
         from pdf_engine.generator_networld_crsd import generate_networld_crsd_po
 
         custom = generate_networld_crsd_po
+    # A pulled row's % disc. is Salesforce's own SBQQ__Discount__c, which its unit cost is already
+    # net of; the generators that take pct_disc off the amount must not take it off again. Arrow
+    # only prints the figure (Discount % and RRP), so it gets the rows as they are.
+    line_items = body.line_items if slug in _SHOWS_PULLED_DISCOUNT else without_pulled_discount(body.line_items)
     try:
         if custom is not None:
-            pdf_bytes = custom(fields, body.line_items)
+            if _accepts_column_order(custom):
+                pdf_bytes = custom(fields, line_items, column_order=body.column_order)
+            else:
+                pdf_bytes = custom(fields, line_items)
         else:
-            pdf_bytes = generator.generate_po(slug, fields, body.line_items)
+            pdf_bytes = generator.generate_po(slug, fields, line_items)
     except LookupError as exc:
         raise HTTPException(status_code=501, detail=str(exc)) from exc
     except FileNotFoundError as exc:
@@ -241,7 +270,7 @@ def _build_po_pdf(slug: str, body: GenerateRequest) -> bytes:
     # its covered CRSD line is only found by judging each text operator on its own.
     return strip_hidden_text(
         pdf_bytes,
-        per_show=slug in _STRIP_PER_SHOW or crsd_layout,
+        per_show=slug in _STRIP_PER_SHOW or crsd_layout or (slug in _STRIP_PER_SHOW_REORDERED and untouched_order(body.column_order) is not None),
         clipped=slug in _STRIP_CLIPPED,
         tolerance=_STRIP_TOLERANCE.get(slug, 0),
         cover_colors=_STRIP_COVER_COLORS.get(slug, ()),

@@ -40,7 +40,7 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
 import config
-from pdf_engine.common import add_links, fit_size, money_2dp
+from pdf_engine.common import add_links, column_boxes, fit_size, money_2dp, order_columns, untouched_order
 from pdf_engine.extractor import find_template_path
 from pdf_engine.generator import _render_overlay
 from pdf_engine.paginate import _to_decimal
@@ -89,17 +89,38 @@ DESC_LINES = 2
 TEXT_TOP_OFFSET = 4.3  # first text line sits this far below the row's top rule
 SECOND_LINE_OFFSET = 4.6  # exchange rate / term line, below the first line
 DESC_LINE_PITCH = 9.3
-HEADER_LABELS = (
-    (0, "Line", None), (1, "Part Number", None), (2, "Part Description", None), (3, "Quantity", None),
-    (4, "Unit Price", None), (5, "Extended Price", None), (6, "Exchange", "Rate"), (7, "TERM", "(M)"),
-)
+# The table's columns, in the sample's order, keyed like the form's `column_order`
+# (the form's unit_cost / total / terms are this table's unit_price / amount / term).
+# "rate" has no form column of its own: it travels beside TERM.
+COLUMNS = ("line", "part_number", "description", "qty", "unit_price", "amount", "rate", "term")
+FORM_KEYS = {"sno": "line", "part_number": "part_number", "description": "description", "qty": "qty",
+             "unit_cost": "unit_price", "total": "amount", "terms": "term"}
+RATE_ANCHOR = {"rate": "term"}
+# A column keeps this width wherever it moves (the sample's own widths, from COL_EDGES).
+COL_WIDTHS = {key: COL_EDGES[i + 1] - COL_EDGES[i] for i, key in enumerate(COLUMNS)}
+HEADER_LABELS = {
+    "line": ("Line", None), "part_number": ("Part Number", None), "description": ("Part Description", None),
+    "qty": ("Quantity", None), "unit_price": ("Unit Price", None), "amount": ("Extended Price", None),
+    "rate": ("Exchange", "Rate"), "term": ("TERM", "(M)"),
+}
 
-# Right-hand text edges measured from the sample.
-QTY_X = 281.2
-UNIT_PRICE_RIGHT = 381.2
-AMOUNT_RIGHT = 495.6
-RATE_RIGHT = 547.4
-TERM_RIGHT = 581.1
+# How far inside its column's edge a value sits (measured from the sample).
+TEXT_PAD_LEFT = 3.0   # line, part number, description
+QTY_PAD_LEFT = 2.9
+NUM_PAD_RIGHT = 2.3   # right-aligned numbers: unit price, exchange rate, TERM
+AMOUNT_PAD_RIGHT = 2.4
+
+
+class _Columns:
+    """Where each column sits for one PO: `order` is the left-to-right column keys and
+    `boxes[key]` the (left, right) x edges. The default order reproduces the sample exactly."""
+
+    def __init__(self, column_order: list[str] | None) -> None:
+        requested = [FORM_KEYS[k] for k in (untouched_order(column_order) or []) if k in FORM_KEYS]
+        self.order = order_columns(requested, COLUMNS, RATE_ANCHOR)
+        self.boxes = column_boxes(COL_EDGES[0], COL_WIDTHS, self.order)
+        self.edges = [self.boxes[self.order[0]][0]] + [self.boxes[k][1] for k in self.order]
+        self.desc_room = COL_WIDTHS["description"] - 7.0
 
 # --- Totals box (top-origin; the box's top is placed under the last row) --------
 TOTALS_X0, TOTALS_MID, TOTALS_X1 = 355.6, 469.5, 584.0
@@ -263,15 +284,16 @@ class _Row:
             self.description_lines = _wrap(description, DESC_ROOM, SIZE, DESC_LINES)
 
 
-def _draw_header_row(c: canvas.Canvas, top: float) -> None:
+def _draw_header_row(c: canvas.Canvas, top: float, cols: _Columns) -> None:
     x0, x1 = COL_EDGES[0], COL_EDGES[-1]
     _rect(c, x0, top, x1, top + HEADER_BOTTOM - HEADER_TOP, GREY)
     _hrule(c, x0, x1, top)
     bottom = top + HEADER_BOTTOM - HEADER_TOP
-    for x in COL_EDGES:
+    for x in cols.edges:
         _vrule(c, x, top, bottom + RULE)
-    for index, first, second in HEADER_LABELS:
-        left, right = COL_EDGES[index], COL_EDGES[index + 1]
+    for key in cols.order:
+        first, second = HEADER_LABELS[key]
+        left, right = cols.boxes[key]
         centre = (left + right) / 2
         if second:
             _text(c, centre - stringWidth(first, FONT_BOLD, SIZE) / 2, top + 4.4, first, bold=True)
@@ -280,31 +302,35 @@ def _draw_header_row(c: canvas.Canvas, top: float) -> None:
             _text(c, centre - stringWidth(first, FONT_BOLD, SIZE) / 2, top + 9.1, first, bold=True)
 
 
-def _draw_row(c: canvas.Canvas, row: _Row, top: float, shaded: bool) -> None:
-    """One table row: its fill, rules and text lines."""
+def _draw_row(c: canvas.Canvas, row: _Row, top: float, shaded: bool, cols: _Columns) -> None:
+    """One table row: its fill, rules and text lines, each value in its column's current box."""
     bottom = top + ROW_PITCH
     x0, x1 = COL_EDGES[0], COL_EDGES[-1]
     _rect(c, x0, top, x1, bottom, GREY if shaded else WHITE)
     _hrule(c, x0, x1, top)
-    for x in COL_EDGES:
+    for x in cols.edges:
         _vrule(c, x, top, bottom + RULE)
     first = top + TEXT_TOP_OFFSET
-    edge = COL_EDGES
-    _text(c, edge[0] + 3.0, first, str(row.number))
-    part_room = edge[2] - edge[1] - 5.0
+    box = cols.boxes
+    _text(c, box["line"][0] + TEXT_PAD_LEFT, first, str(row.number))
+    part_left, part_right = box["part_number"]
+    part_room = part_right - part_left - 5.0
     if _fit(row.part_number, FONT, SIZE, part_room) >= PART_MIN_SIZE:
-        _text(c, edge[1] + 3.0, first, row.part_number, max_width=part_room)
+        _text(c, part_left + TEXT_PAD_LEFT, first, row.part_number, max_width=part_room)
     else:
         # Too long to read when shrunk to one line: wrap mid-token over the row's two lines.
         for i, piece in enumerate(_wrap_chars(row.part_number, part_room, PART_MIN_SIZE)[:2]):
-            _text(c, edge[1] + 3.0, first + DESC_LINE_PITCH * i, piece, PART_MIN_SIZE, max_width=part_room)
+            _text(c, part_left + TEXT_PAD_LEFT, first + DESC_LINE_PITCH * i, piece, PART_MIN_SIZE, max_width=part_room)
     for i, line in enumerate(row.description_lines):
-        _text(c, edge[2] + 3.0, first + DESC_LINE_PITCH * i, line)
-    _text(c, QTY_X, first, f"{_money(row.qty)} {row.unit}", max_width=edge[4] - QTY_X - 2.0)
-    _text(c, UNIT_PRICE_RIGHT, first, f"{row.currency} {_price_text(row.unit_price)}", align="right", max_width=edge[5] - edge[4] - 4.0)
-    _text(c, AMOUNT_RIGHT, first, _money(row.amount), align="right", max_width=edge[6] - edge[5] - 6.0)
-    _text(c, RATE_RIGHT, first + SECOND_LINE_OFFSET, row.exchange_rate, align="right")
-    _text(c, TERM_RIGHT, first + SECOND_LINE_OFFSET, row.term, align="right")
+        _text(c, box["description"][0] + TEXT_PAD_LEFT, first + DESC_LINE_PITCH * i, line)
+    qty_left, qty_right = box["qty"]
+    _text(c, qty_left + QTY_PAD_LEFT, first, f"{_money(row.qty)} {row.unit}", max_width=qty_right - (qty_left + QTY_PAD_LEFT) - 2.0)
+    price_left, price_right = box["unit_price"]
+    _text(c, price_right - NUM_PAD_RIGHT, first, f"{row.currency} {_price_text(row.unit_price)}", align="right", max_width=price_right - price_left - 4.0)
+    amount_left, amount_right = box["amount"]
+    _text(c, amount_right - AMOUNT_PAD_RIGHT, first, _money(row.amount), align="right", max_width=amount_right - amount_left - 6.0)
+    _text(c, box["rate"][1] - NUM_PAD_RIGHT, first + SECOND_LINE_OFFSET, row.exchange_rate, align="right")
+    _text(c, box["term"][1] - NUM_PAD_RIGHT, first + SECOND_LINE_OFFSET, row.term, align="right")
 
 
 # --- Head (page 1 of the template, drawn on every page) ---------------------------------
@@ -453,7 +479,8 @@ def _add_links(writer: PdfWriter, links: list) -> None:
     add_links(writer, links, PAGE_H)
 
 
-def generate_innocom_ltd_po(fields: dict, line_items: list[dict]) -> bytes:
+def generate_innocom_ltd_po(fields: dict, line_items: list[dict], column_order: list[str] | None = None) -> bytes:
+    cols = _Columns(column_order)
     path = find_template_path(SLUG)
     if path is None:
         raise FileNotFoundError(f"No template PDF found for distributor '{SLUG}'")
@@ -480,10 +507,10 @@ def generate_innocom_ltd_po(fields: dict, line_items: list[dict]) -> bytes:
         def draw(c: canvas.Canvas, spec=page_spec, page_rows=page_rows) -> None:
             _draw_head(c, fields, links)
             _draw_frame(c)
-            _draw_header_row(c, HEADER_TOP)
+            _draw_header_row(c, HEADER_TOP, cols)
             top = FIRST_ROW_TOP
             for i, row in enumerate(page_rows):
-                _draw_row(c, row, top, shaded=(row.number % 2 == 0))
+                _draw_row(c, row, top, shaded=(row.number % 2 == 0), cols=cols)
                 top += ROW_PITCH
             _hrule(c, COL_EDGES[0], COL_EDGES[-1], top)
             if spec["totals"]:

@@ -4,7 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PO Processing Engine</title>
-    <link rel="stylesheet" href="/static/style.css?v=9">
+    <script>
+        // Inside the ProdOps iframe, use the full page width. Standalone keeps its centered column.
+        try { if (window.self !== window.top) document.documentElement.classList.add("embedded"); }
+        catch (e) { document.documentElement.classList.add("embedded"); }
+    </script>
+    <link rel="stylesheet" href="/static/style.css?v=10">
 </head>
 <body>
     <div class="layout">
@@ -24,7 +29,7 @@
                 <p>Edit distributor purchase orders and regenerate the PDF</p>
             </div>
             <div class="app-header-tags">
-                <a class="app-tag" href="/compare" target="_blank" rel="noopener">Compare PDF &amp; JSON</a>
+                <a class="app-tag" href="/compare" target="_blank" rel="opener">Compare PDF &amp; JSON</a>
                 <span id="status" class="app-tag status">Checking server status&hellip;</span>
             </div>
         </header>
@@ -63,22 +68,14 @@
                 <div class="table-wrap">
                     <table id="line-items-table" class="line-items-table">
                         <thead>
-                            <tr>
-                                <th class="serial-col">S.No</th>
-                                <th>Part number</th>
-                                <th>Description</th>
-                                <th>Qty</th>
-                                <th>Unit cost</th>
-                                <th>% disc.</th>
-                                <th>Terms</th>
-                                <th class="total-col">Total (Ext)</th>
-                                <th></th>
-                            </tr>
+                            <tr id="line-items-head"></tr>
                         </thead>
                         <tbody id="line-items-body"></tbody>
                     </table>
                 </div>
                 <button id="add-row-btn" type="button" class="secondary">+ Add line item</button>
+                <button id="reset-columns-btn" type="button" class="secondary" title="Put the columns back in their default order">Reset column order</button>
+                <p class="hint">Drag a column heading (or use its arrows) to change the column order. The downloaded PDF uses the same order.</p>
             </div>
 
             <div class="actions">
@@ -97,6 +94,6 @@
         </section>
     </main>
     </div>
-    <script src="/static/script.js?v=19"></script>
+    <script src="/static/script.js?v=24"></script>
 </body>
 </html>

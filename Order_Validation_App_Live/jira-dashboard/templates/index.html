@@ -4,7 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JIRA Dashboard</title>
+    <script>
+        // Inside the ProdOps iframe, use the dark theme (static/dark.css). Standalone stays light.
+        try { if (window.self !== window.top) document.documentElement.classList.add("embedded"); }
+        catch (e) { document.documentElement.classList.add("embedded"); }
+    </script>
     <link rel="stylesheet" href="/static/style.css?v=45">
+    <link rel="stylesheet" href="/static/dark.css?v=2">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>

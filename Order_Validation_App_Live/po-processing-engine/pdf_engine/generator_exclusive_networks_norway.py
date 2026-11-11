@@ -45,7 +45,7 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
 import config
-from pdf_engine.common import add_links, fit_size, money_2dp, qty_text
+from pdf_engine.common import add_links, column_boxes, fit_size, money_2dp, order_columns, qty_text
 from pdf_engine.extractor import find_template_path
 from pdf_engine.generator import _render_overlay
 from pdf_engine.paginate import _to_decimal, wrap_chars, wrap_text
@@ -100,6 +100,60 @@ COL_AMOUNT_RIGHT = 569.0
 SKU_ROOM = COL_QUOTE_X - COL_SKU_X - 4.0
 SKU_MIN_SIZE = 6.5  # below this a SKU wraps onto extra lines instead of shrinking
 DESC_ROOM = 520.0 - COL_SKU_X
+
+# --- Column order ---------------------------------------------------------------
+# The grey header band is seven abutting template cells; the printed labels sit in them and the
+# values line up under them. The six printed columns, in the template's order, keyed like the
+# form's `column_order` (the form's part_number / unit_cost / pct_disc / total are this table's
+# sku / up / disc / amount). The form's S.No, Description and Terms have no column here: the
+# description and Terms lines, and the optional serial/contract block, are flowing text at the
+# left margin under each row, so they stay where they are. "quote_id" has no form column, so it
+# travels directly after SKU. "Disc." and "U.P Net" are one column (two template cells).
+COLUMNS = ("sku", "quote_id", "qty", "up", "disc", "amount")
+FORM_KEYS = {"part_number": "sku", "qty": "qty", "unit_cost": "up", "pct_disc": "disc", "total": "amount"}
+CELL_EDGES = (21.6, 138.3, 194.2, 255.7, 344.8, 484.3, 573.4)  # the template's band cells
+# A column keeps this width wherever it moves, so the table stays as wide as the template's.
+COL_WIDTHS = {key: CELL_EDGES[i + 1] - CELL_EDGES[i] for i, key in enumerate(COLUMNS)}
+BAND_GREY = (0.890196, 0.890196, 0.890196)
+BAND_PAGE1 = (358.8, 382.8)  # band's top and bottom on template page 1
+BAND_CONT = (120.1, 144.1)  # ... and on template page 2 (the continuation head)
+BAND_LABEL_OFFSET = 8.7  # label text top, below the band's top
+BAND_LABEL_SIZE = 8.0
+LABEL_PAD_LEFT, LABEL_PAD_RIGHT = 4.8, 4.7
+# Where a value sits inside its column: measured from the left edge (sku, quote) or the right
+# edge (the numbers), as in the template.
+SKU_PAD_LEFT = COL_SKU_X - CELL_EDGES[0]
+QUOTE_PAD_LEFT = COL_QUOTE_X - CELL_EDGES[1]
+QTY_PAD_RIGHT = CELL_EDGES[3] - COL_QTY_RIGHT
+UP_PAD_RIGHT = CELL_EDGES[4] - COL_UP_RIGHT
+DISC_PAD_RIGHT = CELL_EDGES[5] - COL_DISC_RIGHT
+AMOUNT_PAD_RIGHT = CELL_EDGES[6] - COL_AMOUNT_RIGHT
+BAND_LABELS = {"sku": "SKU", "quote_id": "Quote ID", "qty": "Qty", "up": "U.P", "disc": "Disc. U.P Net", "amount": "Amount in USD"}
+
+
+class _Columns:
+    """Where each value column sits for one PO. The default order uses the template's own
+    constants, so it reproduces the sample exactly (and its header band is the template's)."""
+
+    def __init__(self, column_order: list[str] | None) -> None:
+        requested = [FORM_KEYS[k] for k in (column_order or []) if k in FORM_KEYS]
+        movable = order_columns(requested, ("sku", "qty", "up", "disc", "amount"))
+        movable.insert(movable.index("sku") + 1, "quote_id")  # Quote ID follows SKU
+        self.order = movable
+        self.is_default = self.order == list(COLUMNS)
+        if self.is_default:
+            self.boxes = {key: (CELL_EDGES[i], CELL_EDGES[i + 1]) for i, key in enumerate(COLUMNS)}
+            self.sku_x, self.quote_x = COL_SKU_X, COL_QUOTE_X
+            self.qty_right, self.up_right = COL_QTY_RIGHT, COL_UP_RIGHT
+            self.disc_right, self.amount_right = COL_DISC_RIGHT, COL_AMOUNT_RIGHT
+        else:
+            self.boxes = column_boxes(CELL_EDGES[0], COL_WIDTHS, self.order)
+            self.sku_x = self.boxes["sku"][0] + SKU_PAD_LEFT
+            self.quote_x = self.boxes["quote_id"][0] + QUOTE_PAD_LEFT
+            self.qty_right = self.boxes["qty"][1] - QTY_PAD_RIGHT
+            self.up_right = self.boxes["up"][1] - UP_PAD_RIGHT
+            self.disc_right = self.boxes["disc"][1] - DISC_PAD_RIGHT
+            self.amount_right = self.boxes["amount"][1] - AMOUNT_PAD_RIGHT
 
 # --- Header values (cover box: left, top, right, bottom) -----------------------
 # key -> (x, text top, size, bold, cover box, align)
@@ -313,7 +367,21 @@ class _Row:
         return BLOCK_TO_ROW if self.block else 0.0
 
 
-def _draw_row(c: canvas.Canvas, row: _Row, top: float) -> None:
+def _draw_band(c: canvas.Canvas, band: tuple[float, float], cols: _Columns) -> None:
+    """The grey column-header band with its labels, drawn here for a non-default column
+    order (the default order keeps the template's own band and labels)."""
+    top, bottom = band
+    _cover(c, (CELL_EDGES[0], top, CELL_EDGES[-1], bottom), fill=BAND_GREY)
+    label_top = top + BAND_LABEL_OFFSET
+    for key in cols.order:
+        left, right = cols.boxes[key]
+        if key in ("sku", "quote_id"):
+            _text(c, left + LABEL_PAD_LEFT, label_top, BAND_LABELS[key], BAND_LABEL_SIZE, bold=True)
+        else:
+            _text(c, right - LABEL_PAD_RIGHT, label_top, BAND_LABELS[key], BAND_LABEL_SIZE, bold=True, align="right")
+
+
+def _draw_row(c: canvas.Canvas, row: _Row, top: float, cols: _Columns) -> None:
     """Draws one item with its first line (or its block) starting at `top`."""
     if row.block:
         for (text, bold), offset in zip(row.block, BLOCK_OFFSETS):
@@ -321,13 +389,13 @@ def _draw_row(c: canvas.Canvas, row: _Row, top: float) -> None:
         top += row.block_height
     for i, sku_line in enumerate(row.sku_lines):
         size = ITEM_TEXT if len(row.sku_lines) == 1 else SKU_MIN_SIZE
-        _text(c, COL_SKU_X, top + DESC_PITCH * i, sku_line, size, bold=True, max_width=SKU_ROOM)
+        _text(c, cols.sku_x, top + DESC_PITCH * i, sku_line, size, bold=True, max_width=SKU_ROOM)
     top_after_sku = top + row.sku_extra
-    _text(c, COL_QUOTE_X, top, row.quote_id, ITEM_TEXT)
-    _text(c, COL_QTY_RIGHT, top, _qty_text(row.qty), ITEM_TEXT, align="right")
-    _text(c, COL_UP_RIGHT, top, _unit_text(row.unit_price), ITEM_TEXT, align="right")
-    _text(c, COL_DISC_RIGHT, top, _unit_text(row.disc_price), ITEM_TEXT, align="right")
-    _text(c, COL_AMOUNT_RIGHT, top, _money(row.amount), ITEM_TEXT, align="right")
+    _text(c, cols.quote_x, top, row.quote_id, ITEM_TEXT)
+    _text(c, cols.qty_right, top, _qty_text(row.qty), ITEM_TEXT, align="right")
+    _text(c, cols.up_right, top, _unit_text(row.unit_price), ITEM_TEXT, align="right")
+    _text(c, cols.disc_right, top, _unit_text(row.disc_price), ITEM_TEXT, align="right")
+    _text(c, cols.amount_right, top, _money(row.amount), ITEM_TEXT, align="right")
     # The description and Terms lines start below the SKU's last line.
     y = top_after_sku
     for i, line in enumerate(row.description_lines):
@@ -451,7 +519,8 @@ def _refresh_comment(fields: dict, quote_number: str, quote_match) -> dict:
     return {**fields, "comment": comment.replace(quote_match.group(0), quote_number)}
 
 
-def generate_exclusive_networks_norway_po(fields: dict, line_items: list[dict]) -> bytes:
+def generate_exclusive_networks_norway_po(fields: dict, line_items: list[dict], column_order: list[str] | None = None) -> bytes:
+    cols = _Columns(column_order)
     path = find_template_path(SLUG)
     if path is None:
         raise FileNotFoundError(f"No template PDF found for distributor '{SLUG}'")
@@ -482,8 +551,10 @@ def generate_exclusive_networks_norway_po(fields: dict, line_items: list[dict]) 
         def draw(c: canvas.Canvas, spec=spec, is_first=is_first, number=number, totals_dy=totals_dy) -> None:
             if is_first:
                 _draw_header(c, fields, links)
+            if not cols.is_default:
+                _draw_band(c, BAND_PAGE1 if is_first else BAND_CONT, cols)
             for row, top in spec["rows"]:
-                _draw_row(c, row, top)
+                _draw_row(c, row, top, cols)
             if spec["totals"]:
                 _draw_totals(c, fields, subtotal, tax, total, totals_dy)
             _draw_footer(c, number, total_pages)
@@ -491,10 +562,12 @@ def generate_exclusive_networks_norway_po(fields: dict, line_items: list[dict]) 
         # (template page, clip top, clip bottom, dy down). Page 1 supplies the
         # full head; page 2 the repeated header band and the totals block.
         pieces: list[tuple[int, float, float, float]] = []
+        # A custom column order cuts the head off above the header band (which _draw_band then
+        # redraws), so the template's own labels never end up under the new ones.
         if is_first:
-            pieces.append((0, 0.0, HEAD1_BOTTOM, 0.0))
+            pieces.append((0, 0.0, HEAD1_BOTTOM if cols.is_default else BAND_PAGE1[0], 0.0))
         else:
-            pieces.append((1, CONT_HEAD_TOP, CONT_HEAD_BOTTOM, 0.0))
+            pieces.append((1, CONT_HEAD_TOP, CONT_HEAD_BOTTOM if cols.is_default else BAND_CONT[0], 0.0))
         if spec["totals"]:
             pieces.append((1, TOTALS_TOP, TOTALS_BOTTOM, totals_dy))
         pieces.append((0, FOOTER_TOP, PAGE_H, 0.0))

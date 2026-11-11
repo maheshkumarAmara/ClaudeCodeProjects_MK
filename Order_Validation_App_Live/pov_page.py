@@ -269,7 +269,9 @@ def render_page(st, cfg: PovConfig) -> None:
     with tab_prepare:
         run = state[run_key]
         if run is None:
-            left, right = st.columns([3, 2])
+            # The right column only holds the QA/UAT picker, so keep it narrow and let the uploads
+            # take the rest of the page width.
+            left, right = st.columns([5, 1])
             json_file = None   # the optional second file: JSON for /povAgent, an X12 850 .edi for /pov_EDI
             with left:
                 po_file = st.file_uploader("Purchase order", type=PO_TYPES, key=f"{cfg.key}_po",

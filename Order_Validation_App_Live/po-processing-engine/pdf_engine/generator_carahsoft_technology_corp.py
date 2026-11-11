@@ -40,7 +40,7 @@ from pypdf import PdfWriter
 from reportlab.pdfgen import canvas
 
 import config
-from pdf_engine.common import FONT, FONT_BOLD, WHITE, fit_size, money_2dp
+from pdf_engine.common import FONT, FONT_BOLD, WHITE, column_boxes, fit_size, money_2dp, order_columns, untouched_order
 from pdf_engine.extractor import find_template_path
 from pdf_engine.generator import _fresh_page, _render_overlay
 from pdf_engine.paginate import _to_decimal, wrap_text
@@ -143,6 +143,55 @@ RULE_WIDTH = 1.0
 # Carahsoft prints only the page number, centred (PAGE_NO_* above), so it is drawn there.
 PAGE_LABEL: tuple[float, float, float, tuple[float, float, float, float], tuple[float, float, float]] | None = None
 PAGE_LABEL_TEXT = "{n}/{total}"  # "Page {n} of {total}", "{n}/{total}", ...
+
+
+# --- Column order -----------------------------------------------------------------------
+# The table's columns in the sample's order, keyed like the form's `column_order` (the form's
+# unit_cost / total are this table's unit_price / amount). The form's terms and pct_disc have no
+# column here (a term prints inside the description), so they are ignored.
+COLUMNS = ("part_number", "line", "description", "qty", "unit_price", "amount")
+FORM_KEYS = {"sno": "line", "part_number": "part_number", "description": "description", "qty": "qty",
+             "unit_cost": "unit_price", "total": "amount"}
+TABLE_X0, TABLE_X1 = 36.8, 583.5
+COL_EDGES = (TABLE_X0, 143.0, 169.9, 388.6, 454.9, 512.8, TABLE_X1)  # the sample's vertical rules
+# A column keeps this width wherever it moves, so the wrap widths above stay valid.
+COL_WIDTHS = {key: COL_EDGES[i + 1] - COL_EDGES[i] for i, key in enumerate(COLUMNS)}
+# How far inside its column a value sits: from the left edge (part number, description) or from
+# the right edge (the numbers), as measured from the sample.
+PART_PAD = X_PART_NUMBER - COL_EDGES[0]
+DESC_PAD = X_DESCRIPTION - COL_EDGES[2]
+LINE_PAD_RIGHT = COL_EDGES[2] - R_LINE_NO
+QTY_PAD_RIGHT = COL_EDGES[4] - R_QTY
+UNIT_PAD_RIGHT = COL_EDGES[5] - R_UNIT_PRICE
+AMOUNT_PAD_RIGHT = COL_EDGES[6] - R_AMOUNT
+# The column headings are template artwork. They are only redrawn when the columns have moved:
+# the band is whited out inside the table frame, then each heading is centred in its column.
+HEADINGS = {"part_number": "Item Number", "line": "Line", "description": "Description",
+            "qty": "Qty", "unit_price": "Unit Price", "amount": "Extended Price"}
+HEAD_BAND = (37.3, 297.6, 583.0, 319.1)
+HEAD_TOP = 304.8
+HEAD_RULES_TOP = 297.1  # the column rules start here, above the heading band
+
+
+class _Columns:
+    """Where each column sits for one PO. The default order is the sample's own layout (`is_default`),
+    in which case nothing about the template's heading row or rules is touched."""
+
+    def __init__(self, column_order: list[str] | None) -> None:
+        requested = [FORM_KEYS[k] for k in (untouched_order(column_order) or []) if k in FORM_KEYS]
+        self.order = order_columns(requested, COLUMNS)
+        self.is_default = self.order == list(COLUMNS)
+        self.boxes = column_boxes(TABLE_X0, COL_WIDTHS, self.order)
+        # Interior rules only: the table's outer frame is template artwork and doesn't move.
+        self.rules = [self.boxes[key][1] for key in self.order[:-1]]
+        if self.is_default:
+            self.x = {"part_number": X_PART_NUMBER, "line": R_LINE_NO, "description": X_DESCRIPTION,
+                      "qty": R_QTY, "unit_price": R_UNIT_PRICE, "amount": R_AMOUNT}
+        else:
+            box = self.boxes
+            self.x = {"part_number": box["part_number"][0] + PART_PAD, "line": box["line"][1] - LINE_PAD_RIGHT,
+                      "description": box["description"][0] + DESC_PAD, "qty": box["qty"][1] - QTY_PAD_RIGHT,
+                      "unit_price": box["unit_price"][1] - UNIT_PAD_RIGHT, "amount": box["amount"][1] - AMOUNT_PAD_RIGHT}
 
 
 @dataclass
@@ -291,21 +340,40 @@ def _paginate(rows: list[_Row], notes: list[str]) -> list[_PageSpec]:
     return pages
 
 
-def _draw_row(c: canvas.Canvas, page_height: float, row: _Row, top: float) -> None:
-    _text(c, page_height, R_LINE_NO, top, row.line_no, align="right")
+def _draw_row(c: canvas.Canvas, page_height: float, row: _Row, top: float, cols: _Columns) -> None:
+    x = cols.x
+    _text(c, page_height, x["line"], top, row.line_no, align="right")
     for i, line in enumerate(row.part_lines):
         size = fit_size(line, FONT, FONT_SIZE, PART_NUMBER_WIDTH, 5.0)
-        _text(c, page_height, X_PART_NUMBER, top + LINE_HEIGHT * i, line, size)
+        _text(c, page_height, x["part_number"], top + LINE_HEIGHT * i, line, size)
     for i, line in enumerate(row.description_lines):
-        _text(c, page_height, X_DESCRIPTION, top + LINE_HEIGHT * i, line)
-    _text(c, page_height, R_UNIT_PRICE, top, row.unit_price, align="right")
-    _text(c, page_height, R_QTY, top, row.qty, align="right")
-    _text(c, page_height, R_AMOUNT, top, _money(row.amount), align="right")
+        _text(c, page_height, x["description"], top + LINE_HEIGHT * i, line)
+    _text(c, page_height, x["unit_price"], top, row.unit_price, align="right")
+    _text(c, page_height, x["qty"], top, row.qty, align="right")
+    _text(c, page_height, x["amount"], top, _money(row.amount), align="right")
 
 
-def _draw_page(c, page_height, spec: _PageSpec, number: int, total_pages: int, fields: dict, grand_total: Decimal) -> None:
+def _draw_headings(c: canvas.Canvas, page_height: float, cols: _Columns) -> None:
+    """Redraws the heading row in the columns' current order (the template's own headings sit
+    in the default order, so they are whited out first)."""
+    x0, top, x1, bottom = HEAD_BAND
+    _whiteout(c, page_height, x0, top, x1, bottom)
+    for key in cols.order:
+        left, right = cols.boxes[key]
+        text = HEADINGS[key]
+        size = fit_size(text, FONT_BOLD, FONT_SIZE, right - left - 4, 5.0)
+        c.saveState()
+        c.setFont(FONT_BOLD, size)
+        c.setFillColorRGB(0, 0, 0)
+        c.drawCentredString((left + right) / 2, page_height - HEAD_TOP - size * BASELINE_FACTOR, text)
+        c.restoreState()
+
+
+def _draw_page(c, page_height, spec: _PageSpec, number: int, total_pages: int, fields: dict, grand_total: Decimal, cols: _Columns) -> None:
     x0, top, x1, bottom = ITEMS_AREA[spec.template]
     _whiteout(c, page_height, x0, top, x1, bottom)
+    if not cols.is_default:
+        _draw_headings(c, page_height, cols)
 
     # Every output page is a copy of a template page, and both template pages print the same
     # header, so each value is replaced on every page or the sample's old value stays.
@@ -325,20 +393,26 @@ def _draw_page(c, page_height, spec: _PageSpec, number: int, total_pages: int, f
 
     y = FIRST_TOP if number == 1 else CONT_TOP
     for row in spec.rows:
-        _draw_row(c, page_height, row, y)
+        _draw_row(c, page_height, row, y, cols)
         y += row.height
     if spec.notes:
         y += NOTES_GAP - ROW_PADDING
         for line in spec.notes:
-            _text(c, page_height, X_DESCRIPTION + 1.0, y, line)
+            _text(c, page_height, cols.x["description"] + 1.0, y, line)
             y += NOTES_PITCH
 
     # The whiteout above erased any column rules inside the items area; put them back.
     c.saveState()
     c.setLineWidth(RULE_WIDTH)
     c.setStrokeColorRGB(0, 0, 0)
-    for rule_x in RULES_X:
-        c.line(rule_x, page_height - top, rule_x, page_height - bottom)
+    if cols.is_default:
+        for rule_x in RULES_X:
+            c.line(rule_x, page_height - top, rule_x, page_height - bottom)
+    else:
+        # The heading band was whited out too, so the rules start above it. The template's old
+        # rules are covered by the whiteouts; the table's frame (outside them) is untouched.
+        for rule_x in cols.rules:
+            c.line(rule_x, page_height - HEAD_RULES_TOP, rule_x, page_height - bottom)
     c.restoreState()
 
     if HAS_TOTAL and spec.template == TEMPLATE_LAST:
@@ -346,7 +420,8 @@ def _draw_page(c, page_height, spec: _PageSpec, number: int, total_pages: int, f
         _text(c, page_height, TOTAL_RIGHT, TOTAL_TOP, f"{TOTAL_PREFIX}{_money(grand_total)}", bold=True, align="right")
 
 
-def generate_carahsoft_technology_corp_po(fields: dict, line_items: list[dict]) -> bytes:
+def generate_carahsoft_technology_corp_po(fields: dict, line_items: list[dict], column_order: list[str] | None = None) -> bytes:
+    cols = _Columns(column_order)
     path = find_template_path(SLUG)
     if path is None:
         raise FileNotFoundError(f"No template PDF found for distributor '{SLUG}'")
@@ -363,7 +438,7 @@ def generate_carahsoft_technology_corp_po(fields: dict, line_items: list[dict]) 
         overlay = _render_overlay(
             width,
             height,
-            lambda c, s=spec, n=number, h=height: _draw_page(c, h, s, n, len(pages), fields, grand_total),
+            lambda c, s=spec, n=number, h=height: _draw_page(c, h, s, n, len(pages), fields, grand_total, cols),
         )
         page.merge_page(overlay.pages[0])
         writer.add_page(page)

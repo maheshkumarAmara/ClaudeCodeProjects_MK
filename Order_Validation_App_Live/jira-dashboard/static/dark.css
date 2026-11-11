@@ -1,0 +1,225 @@
+/* Dark ProdOps theme for the embedded Jira dashboard.
+ * GENERATED from style.css (light colors remapped to the navy palette). Applies only inside an
+ * iframe (script in index.html adds html.embedded), so the standalone page stays light.
+ * If style.css changes, regenerate or edit the affected rule here. */
+html.embedded { color-scheme: dark; }
+html.embedded body { background: #0c1929; color: #e8f4fc; }
+html.embedded select option { background: #112238; color: #e8f4fc; }
+html.embedded ::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); }
+html.embedded ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 4px; }
+
+/* Colors written inline by script.js */
+html.embedded [style*="color:#1a1a2e"] { color: #e8f4fc !important; }
+html.embedded [style*="color:#6b778c"], html.embedded [style*="color:#9ca3af"] { color: #9db9cc !important; }
+html.embedded [style*="color:#0052cc"] { color: #6aa8ff !important; }
+html.embedded [style*="color:#dc2626"] { color: #f87171 !important; }
+html.embedded [style*="color:#16a34a"] { color: #4ade80 !important; }
+html.embedded [style*="color:#7c3aed"] { color: #a78bfa !important; }
+html.embedded [style*="background:#fef9c3"] { background: rgba(251,191,36,0.18) !important; color: #fbbf24 !important; }
+
+html.embedded body { background: #0c1929; color: #e8f4fc; }
+html.embedded header { background: #112238; border-bottom: 1px solid rgba(255,255,255,0.10); }
+html.embedded .filters select { border: 1px solid rgba(255,255,255,0.14); background: #112238; color: #e8f4fc; }
+html.embedded #btn-refresh { border: 1px solid rgba(255,255,255,0.14); background: #112238; color: #e8f4fc; }
+html.embedded #btn-refresh:hover { background: #0e1d32; }
+html.embedded .btn-export { border: 1px solid rgba(255,255,255,0.14); background: #112238; color: #e8f4fc; }
+html.embedded .btn-export:hover { background: #0e1d32; }
+html.embedded .btn-export-excel { background: rgba(74,222,128,0.14); border-color: rgba(74,222,128,0.45); color: #4ade80; }
+html.embedded .btn-export-excel:hover { background: rgba(74,222,128,0.24); }
+html.embedded .qa-table th.sortable:hover { background: rgba(96,165,250,0.16); color: #6aa8ff; }
+html.embedded .qa-table th.sort-active { color: #6aa8ff; background: rgba(96,165,250,0.16); }
+html.embedded .qa-table th.sort-active .sort-indicator { color: #6aa8ff; }
+html.embedded .date-range-filter { border: 1px solid rgba(255,255,255,0.14); background: #112238; }
+html.embedded .date-range-filter.has-dates { background: rgba(96,165,250,0.16); }
+html.embedded .date-range-label { color: #9db9cc; }
+html.embedded .date-range-filter.has-dates .date-range-label { color: #6aa8ff; }
+html.embedded .date-input { color: #e8f4fc; }
+html.embedded .date-input:focus { color: #6aa8ff; }
+html.embedded .date-range-sep { color: #9db9cc; }
+html.embedded .btn-clear-dates { color: #9db9cc; }
+html.embedded .btn-clear-dates:hover { color: #f87171; background: rgba(248,113,113,0.16); }
+html.embedded .multi-select-toggle { border: 1px solid rgba(255,255,255,0.14); background: #112238; color: #e8f4fc; }
+html.embedded .multi-select-toggle::after { color: #9db9cc; }
+html.embedded .multi-select-dropdown { background: #112238; }
+html.embedded .multi-select-search { border: 1px solid rgba(255,255,255,0.14); }
+html.embedded .multi-select-item { color: #e8f4fc; }
+html.embedded .multi-select-item:hover { background: rgba(255,255,255,0.10); }
+html.embedded .multi-select-item .sprint-state { color: #9db9cc; }
+html.embedded .status-operator-btn { border: 1px solid rgba(255,255,255,0.14); background: #112238; color: #9db9cc; }
+html.embedded .status-operator-btn:hover { background: #0e1d32; color: #e8f4fc; }
+html.embedded .status-operator-btn.not-equals { background: rgba(251,191,36,0.18); border-color: rgba(251,191,36,0.55); color: #fbbf24; }
+html.embedded .multi-select-actions { border-top: 1px solid rgba(255,255,255,0.10); }
+html.embedded .multi-select-actions button { color: #6aa8ff; }
+html.embedded .multi-select-actions button:hover { background: rgba(96,165,250,0.20); }
+html.embedded .tab-nav { border-bottom: 2px solid rgba(255,255,255,0.10); }
+html.embedded .tab-btn { color: #9db9cc; }
+html.embedded .tab-btn:hover { color: #e8f4fc; }
+html.embedded .tab-btn.active { color: #6aa8ff; }
+html.embedded .loading { color: #9db9cc; }
+html.embedded .error { background: rgba(248,113,113,0.16); color: #f87171; }
+html.embedded .section-header h2 { color: #e8f4fc; }
+html.embedded .project-badge { background: rgba(129,140,248,0.20); color: #a5b4fc; }
+html.embedded .stats-subtitle { color: #9db9cc; }
+html.embedded .view-mode-btns { border: 1px solid rgba(255,255,255,0.14); }
+html.embedded .view-mode-btn { background: #0e1d32; color: #c4daea; }
+html.embedded .view-mode-btn + .view-mode-btn { border-left: 1px solid rgba(255,255,255,0.14); }
+html.embedded .toggle-label.fail-label { color: #f87171; }
+html.embedded .toggle-label.pass-label { color: #4ade80; }
+html.embedded .toggle-label.both-label { color: #6aa8ff; }
+html.embedded .stat-card { background: #112238; border: 1px solid rgba(255,255,255,0.10); }
+html.embedded .stat-label { color: #9db9cc; }
+html.embedded .stat-value.total { color: #e8f4fc; }
+html.embedded .stat-value.stories { color: #6aa8ff; }
+html.embedded .stat-value.defects { color: #f87171; }
+html.embedded .stat-value.critical { color: #f87171; }
+html.embedded .stat-value.high { color: #fb923c; }
+html.embedded .stat-value.medium { color: #fbbf24; }
+html.embedded .stat-value.low { color: #4ade80; }
+html.embedded .owner-heading { color: #e8f4fc; }
+html.embedded .owner-card { background: #112238; border: 1px solid rgba(255,255,255,0.10); }
+html.embedded .owner-name { color: #e8f4fc; }
+html.embedded .owner-count-label { color: #9db9cc; }
+html.embedded .owner-badge { background: rgba(248,113,113,0.16); color: #f87171; }
+html.embedded .issue-row { border-top: 1px solid rgba(255,255,255,0.08); }
+html.embedded .issue-key { color: #6aa8ff; }
+html.embedded .badge.story { background: rgba(96,165,250,0.18); color: #7db3ff; }
+html.embedded .badge.bug { background: rgba(248,113,113,0.16); color: #f87171; }
+html.embedded .badge.epic { background: rgba(167,139,250,0.22); color: #a78bfa; }
+html.embedded .badge.status-resolved { background: rgba(74,222,128,0.16); color: #4ade80; }
+html.embedded .badge.status-done { background: rgba(74,222,128,0.16); color: #4ade80; }
+html.embedded .badge.status-closed { background: rgba(74,222,128,0.16); color: #4ade80; }
+html.embedded .badge.status-in-progress { background: rgba(96,165,250,0.18); color: #7db3ff; }
+html.embedded .badge.status-open { background: #0e1d32; color: #b6cfe0; }
+html.embedded .badge.status-todo { background: #0e1d32; color: #b6cfe0; }
+html.embedded .priority-badge.critical,
+html.embedded .priority-badge.p0 { background: rgba(248,113,113,0.16); color: #f87171; }
+html.embedded .priority-badge.high,
+html.embedded .priority-badge.p1 { background: rgba(251,146,60,0.18); color: #fb923c; }
+html.embedded .priority-badge.medium,
+html.embedded .priority-badge.p2 { background: rgba(251,191,36,0.18); color: #fbbf24; }
+html.embedded .priority-badge.low,
+html.embedded .priority-badge.p3 { background: rgba(74,222,128,0.16); color: #4ade80; }
+html.embedded .issue-summary { color: #b6cfe0; }
+html.embedded .issue-role { color: #7f9db3; border: 1px solid rgba(255,255,255,0.10); }
+html.embedded .latest-comment { background: rgba(96,165,250,0.12); color: #c4daea; }
+html.embedded .latest-comment-label { color: #a5b4fc; }
+html.embedded .latest-comment-author { color: #93c5fd; }
+html.embedded .latest-comment-text { color: #c4daea; }
+html.embedded .empty-state { color: #7f9db3; }
+html.embedded .badge.quality-pass { background: rgba(74,222,128,0.16); color: #4ade80; }
+html.embedded .badge.quality-fail { background: rgba(248,113,113,0.16); color: #f87171; }
+html.embedded .quality-reasons { color: #f87171; }
+html.embedded .subtask-checkbox-label { color: #c4daea; background: #0e1d32; border: 1px solid rgba(255,255,255,0.14); }
+html.embedded .epic-row { background: #112238; border: 1px solid rgba(255,255,255,0.10); }
+html.embedded .epic-children-section { border-top: 1px solid rgba(255,255,255,0.10); }
+html.embedded .epic-child-count { color: #9db9cc; }
+html.embedded .epic-child-row .issue-summary { color: #b6cfe0; }
+html.embedded .epic-child-assignee { color: #7f9db3; }
+html.embedded .epic-child-row-wrap { border-top: 1px solid rgba(255,255,255,0.08); }
+html.embedded .pending-task-tag { background: rgba(251,191,36,0.18); color: #fbbf24; border: 1px solid rgba(251,191,36,0.40); }
+html.embedded .pending-task-selectable:has(input:not(:checked)) { background: #0e1d32; color: #7f9db3; border-color: rgba(255,255,255,0.10); }
+html.embedded .signoff-complete-badge { color: #4ade80; background: rgba(74,222,128,0.16); }
+html.embedded .signoff-pending-badge { color: #fbbf24; background: rgba(251,191,36,0.18); }
+html.embedded .sprint-missing-label { color: #fbbf24; background: rgba(251,191,36,0.18); border: 1px solid rgba(251,191,36,0.40); }
+html.embedded .qa-table { background: #112238; }
+html.embedded .qa-table th { background: #0a1626; }
+html.embedded .qa-table td { border-bottom: 1px solid rgba(255,255,255,0.08); }
+html.embedded .qa-table tbody tr:hover { background: rgba(96,165,250,0.10); }
+html.embedded .qa-table tbody tr:nth-child(even) { background: #0e1d32; }
+html.embedded .qa-table tbody tr:nth-child(even):hover { background: rgba(96,165,250,0.14); }
+html.embedded .qa-table .issue-key { color: #6aa8ff; }
+html.embedded .qa-duration.short { background: rgba(74,222,128,0.16); color: #4ade80; }
+html.embedded .qa-duration.medium { background: rgba(251,191,36,0.18); color: #fbbf24; }
+html.embedded .qa-duration.long { background: rgba(251,146,60,0.18); color: #fb923c; }
+html.embedded .qa-duration.very-long { background: rgba(248,113,113,0.16); color: #f87171; }
+html.embedded .qa-duration.empty { color: #5f7d94; }
+html.embedded .qa-total-row td { background: rgba(255,255,255,0.10) !important; border-top: 2px solid rgba(255,255,255,0.10); }
+html.embedded .alert-card { background: #112238; border: 1px solid rgba(255,255,255,0.10); }
+html.embedded .alert-icon.critical { background: rgba(248,113,113,0.16); }
+html.embedded .alert-icon.warning { background: rgba(251,146,60,0.18); }
+html.embedded .alert-icon.info { background: rgba(96,165,250,0.18); }
+html.embedded .alert-title { color: #e8f4fc; }
+html.embedded .alert-count-badge { background: rgba(248,113,113,0.16); color: #f87171; }
+html.embedded .alert-card.warning .alert-count-badge { background: rgba(251,146,60,0.18); color: #fb923c; }
+html.embedded .alert-card.info .alert-count-badge { background: rgba(96,165,250,0.18); color: #6aa8ff; }
+html.embedded .alert-issue-row { border-top: 1px solid rgba(255,255,255,0.08); }
+html.embedded .alert-issue-row .issue-key { color: #6aa8ff; }
+html.embedded .alert-issue-summary { color: #b6cfe0; }
+html.embedded .alert-days { background: rgba(248,113,113,0.16); color: #f87171; }
+html.embedded .alerts-empty { color: #4ade80; }
+html.embedded .metrics-card { background: #112238; border: 1px solid rgba(255,255,255,0.10); }
+html.embedded .metrics-section-title { color: #e8f4fc; }
+html.embedded .metrics-mini-card { background: #0c1929; border: 1px solid rgba(255,255,255,0.10); }
+html.embedded .metrics-mini-label { color: #9db9cc; }
+html.embedded .metrics-quality-row { border-top: 1px solid rgba(255,255,255,0.08); }
+html.embedded .metrics-quality-label { color: #e8f4fc; }
+html.embedded .metrics-quality-count { color: #9db9cc; }
+html.embedded .metrics-bar { background: #0e1d32; }
+html.embedded .metrics-bar-pct { color: #e8f4fc; }
+html.embedded .unassigned-heading { color: #fb923c; }
+html.embedded .unassigned-card { border-left: 4px solid rgba(251,191,36,0.55); }
+html.embedded .assign-qa-select { border: 1px solid rgba(255,255,255,0.14); background: #112238; color: #e8f4fc; }
+html.embedded .fetch-freshness { color: #9db9cc; }
+html.embedded .qa-avg-row { background: #0e1d32; border-top: 2px solid rgba(255,255,255,0.18); }
+html.embedded .qa-avg-label { color: #c4daea; }
+html.embedded .trend-bar-label { color: #e8f4fc; }
+html.embedded .trend-bar-track { background: rgba(255,255,255,0.10); }
+html.embedded .trend-bar-sub { color: #9db9cc; }
+html.embedded .trend-bar-empty { color: #7f9db3; }
+html.embedded .metrics-section-sub { color: #9db9cc; }
+html.embedded .failure-reason { color: #c4daea; }
+html.embedded .failure-bar-track { background: #0e1d32; }
+html.embedded .failure-count { color: #f87171; }
+html.embedded .failure-pct { color: #7f9db3; }
+html.embedded .workload-sprint-tag { color: #7db3ff; background: rgba(96,165,250,0.12); border: 1px solid rgba(96,165,250,0.35); }
+html.embedded .health-score-banner { background: #0e1d32; border: 1px solid rgba(255,255,255,0.10); }
+html.embedded .health-score-label { color: #9db9cc; }
+html.embedded .health-score-value.health-green { color: #4ade80; }
+html.embedded .health-score-value.health-yellow { color: #fbbf24; }
+html.embedded .health-score-value.health-red { color: #f87171; }
+html.embedded .health-score-detail { color: #7f9db3; }
+html.embedded .workload-row { border-bottom: 1px solid rgba(255,255,255,0.08); }
+html.embedded .workload-name { color: #e8f4fc; }
+html.embedded .workload-bar-wrap { background: rgba(255,255,255,0.10); }
+html.embedded .workload-count { color: #c4daea; }
+html.embedded .workload-status-chip { background: #0e1d32; color: #c4daea; border: 1px solid rgba(255,255,255,0.10); }
+html.embedded .velocity-table th { background: #0e1d32; border-bottom: 2px solid rgba(255,255,255,0.10); color: #c4daea; }
+html.embedded .velocity-table td { border-bottom: 1px solid rgba(255,255,255,0.08); color: #c4daea; }
+html.embedded .velocity-table tr:hover td { background: #0e1d32; }
+html.embedded .snapshot-statuses { color: #9db9cc; }
+html.embedded .bulk-action-bar { background: rgba(96,165,250,0.12); border: 1px solid rgba(96,165,250,0.35); }
+html.embedded .bulk-count { color: #9db9cc; }
+html.embedded .btn-slack-config { border-color: rgba(167,139,250,0.40); color: #a78bfa; }
+html.embedded .btn-slack-config:hover { background: rgba(167,139,250,0.14); }
+html.embedded .btn-slack-config.slack-configured { color: #4ade80; }
+html.embedded .btn-slack { color: #a5b4fc; border-color: rgba(129,140,248,0.40); }
+html.embedded .btn-slack:hover { background: rgba(129,140,248,0.16); }
+html.embedded .slack-config-row { background: rgba(167,139,250,0.14); border: 1px solid rgba(167,139,250,0.35); }
+html.embedded .slack-config-label { color: #c4b5fd; }
+html.embedded .slack-token-input { border: 1px solid rgba(167,139,250,0.40); color: #c4daea; }
+html.embedded .slack-config-status.ok { color: #4ade80; }
+html.embedded .slack-config-status.error { color: #f87171; }
+html.embedded .btn-secondary { border: 1px solid rgba(255,255,255,0.14); background: #112238; color: #c4daea; }
+html.embedded .btn-secondary:hover { background: #0e1d32; }
+html.embedded .auto-refresh-label { color: #9db9cc; }
+html.embedded .modal-box { background: #112238; }
+html.embedded .modal-header { border-bottom: 1px solid rgba(255,255,255,0.10); }
+html.embedded .modal-header h3 { color: #e8f4fc; }
+html.embedded .modal-close { color: #7f9db3; }
+html.embedded .modal-close:hover { color: #c4daea; }
+html.embedded .modal-footer { border-top: 1px solid rgba(255,255,255,0.10); }
+html.embedded .modal-close-btn { border: 1px solid rgba(255,255,255,0.14); background: #112238; }
+html.embedded .settings-label { color: #9db9cc; }
+html.embedded .settings-row { color: #c4daea; }
+html.embedded .settings-input { border: 1px solid rgba(255,255,255,0.14); }
+html.embedded .settings-input-wide { border: 1px solid rgba(255,255,255,0.14); }
+html.embedded .settings-hint { color: #7f9db3; }
+html.embedded .digest-text { color: #c4daea; }
+
+/* ── Embedded layout (hand-written; keep when regenerating the colors above) ──
+ * Use the full iframe width instead of the standalone page's centered 1400px column, and scale
+ * the text up: the dashboard sizes everything in fixed px (mostly 11-13px), which is small in
+ * the wide ProdOps page. CSS zoom scales fonts, spacing and icons together; change 1.2 to taste. */
+html.embedded body { zoom: 1.2; }
+html.embedded main,
+html.embedded .header-content { max-width: none; margin: 0; }

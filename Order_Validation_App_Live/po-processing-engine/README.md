@@ -42,6 +42,25 @@ Known limitations:
 - The distributor dropdown auto-selects based on the Quote's Opportunity `Distributor_Lookup__r.Name` matching a name in `config.DISTRIBUTORS`; if there's no match, pick a distributor and load its template manually, then click "Use this Quote" again to merge in the pulled data. If a distributor is already loaded when you pull a Quote, its slug is sent to the server and takes priority over auto-detection, so the fields returned always match what's on screen.
 - Quote search matches only the Quote Name, not the Account or Opportunity name.
 
+## Reordering the line-item columns
+
+Drag a column heading in the Line items table (or use its ◀ ▶ arrows) to change the column order; "Reset column order" restores the default. The order is not saved: every page load and template load starts in the default (template) order, and it only changes when the user moves a column. The UI sends it as `column_order` (keys `sno`, `part_number`, `description`, `qty`, `unit_cost`, `pct_disc`, `terms`, `total`) on generate, preview and convert.
+
+A generator opts in by accepting a `column_order` argument; `main.py` only passes it to generators that do, so the others keep printing their fixed layout. A converted generator builds its columns with `pdf_engine/common.py` `order_columns` / `column_boxes`: each column keeps its own width wherever it moves, headers and values move together, and the default order is byte-identical to the old output. A PDF column with no form column (Innocom's Exchange Rate, iValue's Item Type) travels beside a related one; a form column with no PDF column (iValue's Terms and % disc.) is ignored for that PDF.
+
+All eleven distributors follow the order: ADN, Arrow (Netherlands), Carahsoft, Computer Gross, Exclusive Networks (Norway), Ingram Micro Canada, Innocom, iValue, Networld (ordinary and CRSD layouts), NextGen and NOX.
+
+The page sends `column_order` only once a column has been moved (`null` while the columns are in the default order), so an untouched page always gets each distributor's own template layout. A distributor's template order isn't necessarily the table's default order, so a generator also treats the form's default order as "use the template layout".
+
+How a PDF follows the order depends on how its table is built:
+- Where the column headings are part of the template page (ADN, Arrow, Carahsoft, Computer Gross, Exclusive Networks (Norway), Networld, NextGen, NOX), a reordered PDF covers or cuts out the template's heading band and redraws it in the new order; the default order draws nothing extra, so its output is byte-identical to before. Redrawn headings are Helvetica Bold, not the template's own font (Computer Gross reuses the template's own heading cells, so it matches). Old heading text left under the cover is removed by `strip_hidden_text` in `main.py`: Networld's teal band fill is in `_STRIP_COVER_COLORS`, and Carahsoft is in `_STRIP_PER_SHOW_REORDERED` (per-operator stripping only when reordered).
+- NOX's template carries drawn `/Line` annotations, which paint above any white cover; a reordered NOX removes the ones inside the table block. Another template with such annotations would show a stray line the same way.
+- Ingram Micro Canada prints on a 132-character grid; a reordered PDF re-lays the header, item rows, info rows and the boxes under the columns at new character offsets.
+
+PDF columns the form has no key for travel beside a related one (Innocom's Exchange Rate beside Terms, iValue's Item Type beside Description, Arrow's Vendor item beside Arrow item and RRP beside Unit price, NextGen's Start/End/Term Description/Billing Term beside Term Qty, Computer Gross's Asset Serial and Start Date beside TERM, ADN's List price/Discount before Price per unit and VAT after Total, Norway's Quote ID after SKU, Ingram's IM SKU before MFG PART NO.). Form columns a PDF has no column for are ignored for that PDF: S.No, % disc. and Terms are missing from most of them (a term is usually printed inside the description or as its own line).
+
+Known limitations: reordered Computer Gross PDFs are about twice the size (each moved heading cell repeats the template page content); the SKU/description block in Norway and the item block in ADN can't be separated from their anchor columns; ADN's descriptions wrap more when the Item column moves right, so pagination can differ from the default order.
+
 ## Email addresses are forced to `sandbox.com`
 
 Every email address in a field value has its domain replaced with `sandbox.com` (the part before the `@` is kept, so `rubriklog@computergross.it` becomes `rubriklog@sandbox.com`). This is applied in `main.py` through `sandbox_email.py` at the three points field values cross the API — the template load, the Salesforce quote pull, and the generate/preview request — so it covers every distributor and can't be bypassed by typing a real address into the form. Addresses embedded in longer text (e.g. a shipping reference line or an IOR contact line) are rewritten in place. The domain is set by `config.SANDBOX_EMAIL_DOMAIN`.
