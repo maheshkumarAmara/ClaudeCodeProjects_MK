@@ -1,10 +1,19 @@
 const MULTILINE_FIELD_KEYS = new Set(["end_user_block", "reseller_block", "ship_to_block", "bill_to_block", "address_block", "delivery_address", "invoice_address", "licensee_address", "to_block", "supplier", "bill_to", "ship_to", "end_customer", "reseller", "freight_forwarder", "special_information", "reseller_street"]);
 const LINE_ITEM_COLUMNS = ["part_number", "description", "qty", "unit_cost", "pct_disc", "terms"];
+// Every column the Line items table can show, in its default order. "sno" and "total" are
+// display-only (never stored on a line item) but move like the rest; the chosen order is sent
+// to the generators as `column_order` so the PDF's items table is laid out the same way.
+const COLUMN_LABELS = { sno: "S.No", part_number: "Part number", description: "Description", qty: "Qty", unit_cost: "Unit cost", pct_disc: "% disc.", terms: "Terms", total: "Total (Ext)" };
+const DEFAULT_COLUMN_ORDER = ["sno", "part_number", "description", "qty", "unit_cost", "pct_disc", "terms", "total"];
+// Distributors whose form has a true / false switch (a select) for the closing "accepts all
+// additional terms mentioned on <quote> dated <date>" sentence: slug -> the field's key.
+const SENTENCE_SWITCH_KEYS = { "Computer Gross spa": "contingency_note", "NOX Co.,LTD.": "additional_terms_note" };
 // Fields shown with a date picker instead of a text box. Their value is an ISO date (YYYY-MM-DD).
 const DATE_FIELD_KEYS = new Set(["crsd"]);
 
 let currentSlug = null;
 let currentLineItems = [];
+let columnOrder = [...DEFAULT_COLUMN_ORDER];
 // Values for field keys hidden from the Fields grid (see renderFields) --
 // these still need to round-trip into the generate request, since generator.py
 // expects a value for every key even when it derives/ignores it server-side.
@@ -95,9 +104,9 @@ function renderFields(fields, hiddenKeys) {
         label.textContent = key === "crsd" ? "CRSD" : key;
         label.setAttribute("for", `field-${key}`);
 
-        // Computer Gross only: CONTINGENCY_NOTE is a true / false switch for the closing
-        // "Accepts all additional terms" sentence. (ADN's contingency_note is free text.)
-        const isSwitch = key === "contingency_note" && currentSlug === "Computer Gross spa";
+        // A true / false switch for the closing "accepts all additional terms" sentence, for the
+        // distributors in SENTENCE_SWITCH_KEYS only. (ADN's contingency_note is free text.)
+        const isSwitch = SENTENCE_SWITCH_KEYS[currentSlug] === key;
         const input = isSwitch
             ? document.createElement("select")
             : MULTILINE_FIELD_KEYS.has(key)
@@ -163,7 +172,10 @@ function lineTotal(item) {
     // Networld's Net Total Price column is the unit cost itself (Salesforce SBQQ__NetPrice__c), not qty x unit cost.
     let total = currentSlug === "Networld Corporation" ? unit : qty * unit;
     if (DISCOUNTED_TOTAL_SLUGS.has(currentSlug)) {
-        const pct = parseLineNumber(item.pct_disc) || 0;
+        // A % disc. that still equals the one pulled from Salesforce (pct_disc_sf) is already in the
+        // unit cost (SBQQ__NetPrice__c), so it isn't taken off again; a % the user typed over it is.
+        const pulled = String(item.pct_disc_sf ?? "").trim();
+        const pct = pulled && String(item.pct_disc ?? "").trim() === pulled ? 0 : parseLineNumber(item.pct_disc) || 0;
         total *= 1 - pct / 100;
     }
     // A row pulled from Salesforce carries the whole-term price (price_basis "term"), so the term
@@ -178,7 +190,89 @@ function lineTotal(item) {
     return total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// The order is not saved anywhere: every page load and every template load starts in the
+// default (template) order, and it only changes when the user moves a column.
+// A requested order is only used if it lists exactly the known columns, so it can never
+// drop or duplicate a column.
+function sanitizeColumnOrder(order) {
+    if (!Array.isArray(order) || order.length !== DEFAULT_COLUMN_ORDER.length) return [...DEFAULT_COLUMN_ORDER];
+    return DEFAULT_COLUMN_ORDER.every((key) => order.includes(key)) ? [...order] : [...DEFAULT_COLUMN_ORDER];
+}
+
+// What goes to the server as `column_order`: null while the columns are in their default
+// order, so an untouched page always gets each distributor's own template layout (a
+// distributor's template order isn't necessarily the table's default order).
+function requestedColumnOrder() {
+    return columnOrder.every((key, i) => key === DEFAULT_COLUMN_ORDER[i]) ? null : columnOrder;
+}
+
+function setColumnOrder(order) {
+    columnOrder = sanitizeColumnOrder(order);
+    renderLineItems();
+}
+
+function moveColumn(key, delta) {
+    const from = columnOrder.indexOf(key);
+    const to = from + delta;
+    if (from < 0 || to < 0 || to >= columnOrder.length) return;
+    const next = [...columnOrder];
+    next.splice(to, 0, next.splice(from, 1)[0]);
+    setColumnOrder(next);
+}
+
+function renderLineItemsHeader() {
+    const headRow = document.getElementById("line-items-head");
+    headRow.innerHTML = "";
+    columnOrder.forEach((key, position) => {
+        const th = document.createElement("th");
+        th.draggable = true;
+        th.dataset.col = key;
+        th.className = "col-head" + (key === "sno" ? " serial-col" : "") + (key === "total" ? " total-col" : "");
+        th.title = "Drag to reorder, or use the arrows";
+        const label = document.createElement("span");
+        label.textContent = COLUMN_LABELS[key];
+        const left = document.createElement("button");
+        left.type = "button";
+        left.className = "col-move";
+        left.textContent = "◀";
+        left.title = "Move left";
+        left.disabled = position === 0;
+        left.addEventListener("click", () => moveColumn(key, -1));
+        const right = document.createElement("button");
+        right.type = "button";
+        right.className = "col-move";
+        right.textContent = "▶";
+        right.title = "Move right";
+        right.disabled = position === columnOrder.length - 1;
+        right.addEventListener("click", () => moveColumn(key, 1));
+        th.append(left, label, right);
+        th.addEventListener("dragstart", (event) => {
+            event.dataTransfer.setData("text/plain", key);
+            event.dataTransfer.effectAllowed = "move";
+        });
+        th.addEventListener("dragover", (event) => {
+            event.preventDefault();
+            th.classList.add("col-drop");
+        });
+        th.addEventListener("dragleave", () => th.classList.remove("col-drop"));
+        th.addEventListener("drop", (event) => {
+            event.preventDefault();
+            th.classList.remove("col-drop");
+            const dragged = event.dataTransfer.getData("text/plain");
+            if (!dragged || dragged === key || !columnOrder.includes(dragged)) return;
+            // The dragged column takes the drop target's place.
+            const next = columnOrder.filter((k) => k !== dragged);
+            const targetAt = next.indexOf(key);
+            next.splice(columnOrder.indexOf(dragged) < columnOrder.indexOf(key) ? targetAt + 1 : targetAt, 0, dragged);
+            setColumnOrder(next);
+        });
+        headRow.appendChild(th);
+    });
+    headRow.appendChild(document.createElement("th")); // the Remove button column
+}
+
 function renderLineItems() {
+    renderLineItemsHeader();
     const body = document.getElementById("line-items-body");
     body.innerHTML = "";
     currentLineItems.forEach((item, index) => {
@@ -188,10 +282,10 @@ function renderLineItems() {
         const serialCell = document.createElement("td");
         serialCell.className = "serial-col";
         serialCell.textContent = String(index + 1);
-        row.appendChild(serialCell);
         const totalCell = document.createElement("td");
         totalCell.className = "total-col";
         totalCell.textContent = lineTotal(item);
+        const cells = { sno: serialCell, total: totalCell };
         for (const col of LINE_ITEM_COLUMNS) {
             const cell = document.createElement("td");
             const input = document.createElement("input");
@@ -204,11 +298,11 @@ function renderLineItems() {
                 totalCell.textContent = lineTotal(currentLineItems[index]);
             });
             cell.appendChild(input);
-            row.appendChild(cell);
+            cells[col] = cell;
         }
-        // Display-only, like the S.No: recalculated on every edit and never stored
-        // on the line item, so it isn't sent to /generate.
-        row.appendChild(totalCell);
+        // Total (Ext) is display-only, like the S.No: recalculated on every edit and never
+        // stored on the line item, so it isn't sent to /generate.
+        for (const key of columnOrder) row.appendChild(cells[key]);
         const removeCell = document.createElement("td");
         const removeBtn = document.createElement("button");
         removeBtn.type = "button";
@@ -339,6 +433,7 @@ async function loadTemplate() {
         }
         const data = await res.json();
         currentSlug = slug;
+        columnOrder = [...DEFAULT_COLUMN_ORDER];
         // The template's sample SKUs belong to the sample PO, not the user's
         // order, so start with no rows; a Quote pull or "+ Add line item" fills them.
         currentLineItems = [];
@@ -365,7 +460,7 @@ async function fetchGeneratedPdf(preview = false) {
     const res = await fetch(`/api/distributors/${encodeURIComponent(currentSlug)}/generate${preview ? "?preview=true" : ""}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fields: collectFieldValues(), line_items: currentLineItems }),
+        body: JSON.stringify({ fields: collectFieldValues(), line_items: currentLineItems, column_order: requestedColumnOrder() }),
     });
     if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -612,7 +707,7 @@ async function convertAndDownload(format, label) {
         const res = await fetch(`/api/distributors/${encodeURIComponent(currentSlug)}/convert/${encodeURIComponent(format)}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ fields: collectFieldValues(), line_items: currentLineItems }),
+            body: JSON.stringify({ fields: collectFieldValues(), line_items: currentLineItems, column_order: requestedColumnOrder() }),
         });
         if (!res.ok) {
             const body = await res.json().catch(() => ({}));
@@ -660,6 +755,7 @@ document.getElementById("sf-quote-search").addEventListener("keydown", (e) => {
 });
 document.getElementById("load-template-btn").addEventListener("click", loadTemplate);
 document.getElementById("add-row-btn").addEventListener("click", addEmptyRow);
+document.getElementById("reset-columns-btn").addEventListener("click", () => setColumnOrder(DEFAULT_COLUMN_ORDER));
 document.getElementById("preview-btn").addEventListener("click", previewPdf);
 document.getElementById("generate-btn").addEventListener("click", generateAndDownload);
 

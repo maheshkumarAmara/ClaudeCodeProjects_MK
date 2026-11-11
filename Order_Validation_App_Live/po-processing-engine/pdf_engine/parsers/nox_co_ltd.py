@@ -222,4 +222,7 @@ def parse_template(path: Path) -> dict:
         fields.update(_parse_shipping(page))
         fields.update(_parse_signature(page))
         items = _parse_items(page)
+    # The footer's "Nox accepts all additional terms mentioned on <quote> dated <date>" prints by
+    # default; the form can switch it to "false" to leave the whole sentence off the PDF.
+    fields["additional_terms_note"] = "true"
     return {"fields": fields, "line_items": items}

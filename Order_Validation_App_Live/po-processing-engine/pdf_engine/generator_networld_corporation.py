@@ -47,7 +47,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
 import config
-from pdf_engine.common import add_links
+from pdf_engine.common import add_links, column_boxes, order_columns, untouched_order
 from pdf_engine.extractor import find_template_path
 from pdf_engine.generator import _render_overlay
 from pdf_engine.paginate import _to_decimal, wrap_text
@@ -110,6 +110,53 @@ AMOUNT_RIGHT = 725.6
 # line the template prints on one.
 DESC_ROOM = 547.2 - DESC_X - 1.5
 CODE_ROOM = 178.4 - CODE_X - 3.0
+
+# --- Column order -----------------------------------------------------------------
+# The grid's columns in the template's order, keyed like the form's `column_order` (the form's
+# unit_cost is this grid's Net Total Price, which prints the unit cost). The form's sno, pct_disc
+# and total have no column here and are ignored. Each column keeps its width wherever it moves.
+COLUMNS = ("part_number", "description", "qty", "terms", "amount")
+FORM_KEYS = {"part_number": "part_number", "description": "description", "qty": "qty",
+             "terms": "terms", "unit_cost": "amount"}
+# Column edges: the left edge of each vertical rule (_VRULES), first to last.
+COL_EDGES = tuple(x for x, _ in _VRULES)
+COL_WIDTHS = {key: COL_EDGES[i + 1] - COL_EDGES[i] for i, key in enumerate(COLUMNS)}
+# Where a value sits inside its column, measured from the template (default positions above).
+CODE_PAD = CODE_X - COL_EDGES[0]
+DESC_PAD = DESC_X - COL_EDGES[1]
+AMOUNT_PAD = COL_EDGES[5] - AMOUNT_RIGHT
+QTY_OFFSET = QTY_CENTER - COL_EDGES[2]    # Qty / Term text is centred this far from its column's left edge
+TERM_OFFSET = TERM_CENTER - COL_EDGES[3]
+TOTAL_LABEL_PAD = COL_EDGES[4] - 640.0  # "Total" ends this far left of the amount column
+# The teal column-header band, its title lines (template tops) and the titles per column.
+BAND = (23.5, 118.3, 730.3, 145.7)
+BAND_FILL = (0.0, 0.698, 0.663)
+HEAD_SIZE = 10.2
+HEAD_TOPS = (121.2, 127.7, 134.0)
+HEAD_TITLES = {
+    "part_number": ((0, "Product"), (2, "Code")),
+    "description": ((1, "Product Description"),),
+    "qty": ((1, "Qty"),),
+    "terms": ((1, "Term"),),
+    "amount": ((0, "Net Total"), (2, "Price")),
+}
+
+
+class _Columns:
+    """Where each column sits for one PO: `order` is the left-to-right column keys,
+    `boxes[key]` its (left, right) edges and `rules` the vertical rules (x, width), each
+    rule keeping its template width. The default order reproduces the template exactly."""
+
+    def __init__(self, column_order: list[str] | None, edges=COL_EDGES, widths=COL_WIDTHS, vrules=_VRULES) -> None:
+        requested = [FORM_KEYS[k] for k in (untouched_order(column_order) or []) if k in FORM_KEYS]
+        self.order = order_columns(requested, COLUMNS)
+        self.default = tuple(self.order) == COLUMNS
+        self.boxes = column_boxes(edges[0], widths, self.order)
+        xs = [self.boxes[self.order[0]][0]] + [self.boxes[k][1] for k in self.order]
+        self.rules = tuple((x, w) for x, (_, w) in zip(xs, vrules))
+
+
+DEFAULT_COLUMNS = _Columns(None)
 
 # --- Label / value block ---------------------------------------------------------
 BLOCK_TOP = 280.0  # clip: everything from here down is the label / value block
@@ -330,14 +377,35 @@ class _Row:
         return ROW_PITCH * max(1, len(self.desc_lines))
 
 
-def _draw_row(c: canvas.Canvas, row: _Row, top: float) -> None:
+def _draw_row(c: canvas.Canvas, row: _Row, top: float, cols: _Columns = DEFAULT_COLUMNS) -> None:
     text_top = top + ROW_TEXT_OFFSET
-    _text(c, CODE_X, text_top, row.code, TEXT_SIZE, max_width=CODE_ROOM)
+    box = cols.boxes
+    _text(c, box["part_number"][0] + CODE_PAD, text_top, row.code, TEXT_SIZE, max_width=CODE_ROOM)
     for i, line in enumerate(row.desc_lines):
-        _text(c, DESC_X, text_top + ROW_PITCH * i, line, TEXT_SIZE)
-    _text(c, QTY_CENTER, text_top, _qty_text(row.qty), TEXT_SIZE, align="center")
-    _text(c, TERM_CENTER, text_top, row.terms, TEXT_SIZE, align="center")
-    _text(c, AMOUNT_RIGHT, text_top, _money(row.amount), TEXT_SIZE, align="right")
+        _text(c, box["description"][0] + DESC_PAD, text_top + ROW_PITCH * i, line, TEXT_SIZE)
+    _text(c, box["qty"][0] + QTY_OFFSET, text_top, _qty_text(row.qty), TEXT_SIZE, align="center")
+    _text(c, box["terms"][0] + TERM_OFFSET, text_top, row.terms, TEXT_SIZE, align="center")
+    _text(c, box["amount"][1] - AMOUNT_PAD, text_top, _money(row.amount), TEXT_SIZE, align="right")
+
+
+def _draw_column_header(c: canvas.Canvas, cols: _Columns, band=BAND, fill=BAND_FILL, tops=HEAD_TOPS,
+                        page_h: float | None = None, text=None) -> None:
+    """Repaints the teal column-header band (cut from the template) with the titles in the
+    column order. Only called for a non-default order; the default keeps the template's band."""
+    page_h = PAGE_H if page_h is None else page_h
+    draw_text = text or _text
+    left, top, right, bottom = band
+    c.saveState()
+    c.setFillColorRGB(*fill)
+    c.rect(left, page_h - bottom, right - left, bottom - top, fill=1, stroke=0)
+    c.setFillColorRGB(*BLACK)
+    for x, width in cols.rules:
+        c.rect(x, page_h - bottom, width, bottom - top, fill=1, stroke=0)
+    c.restoreState()
+    for key in cols.order:
+        centre = sum(cols.boxes[key]) / 2
+        for line, title in HEAD_TITLES[key]:
+            draw_text(c, centre, tops[line], title, HEAD_SIZE, bold=True, align="center")
 
 
 def _draw_hrule(c: canvas.Canvas, y_top: float, thickness: float = RULE_THIN) -> None:
@@ -347,10 +415,11 @@ def _draw_hrule(c: canvas.Canvas, y_top: float, thickness: float = RULE_THIN) ->
     c.restoreState()
 
 
-def _draw_vrules(c: canvas.Canvas, y_top: float, y_bottom: float, columns: tuple[int, ...] | None = None) -> None:
+def _draw_vrules(c: canvas.Canvas, y_top: float, y_bottom: float, columns: tuple[int, ...] | None = None,
+                 cols: _Columns = DEFAULT_COLUMNS) -> None:
     c.saveState()
     c.setFillColorRGB(*BLACK)
-    for i, (x, width) in enumerate(_VRULES):
+    for i, (x, width) in enumerate(cols.rules):
         c.rect(x, PAGE_H - y_bottom, width, y_bottom - y_top, fill=1, stroke=0)
     c.restoreState()
 
@@ -427,16 +496,19 @@ def _draw_value_block(c: canvas.Canvas, fields: dict, dy: float, links: list) ->
         _text(c, VALUE_X, SHIP_TO_FIRST_TOP + SHIP_TO_PITCH * i + dy, line, TEXT_SIZE, max_width=VALUE_COVER_RIGHT - VALUE_X - 6.0)
 
 
-def _draw_total_row(c: canvas.Canvas, top: float, total: Decimal) -> None:
-    """The Total row: a taller row closing the grid. top = its top rule's y."""
+def _draw_total_row(c: canvas.Canvas, top: float, total: Decimal, cols: _Columns = DEFAULT_COLUMNS) -> None:
+    """The Total row: a taller row closing the grid. top = its top rule's y. The "Total" label
+    and the amount follow the Net Total Price column."""
     bottom = top + TOTAL_ROW_HEIGHT
     _draw_hrule(c, top)
     _draw_hrule(c, bottom)
-    _text(c, 640.0, top + TOTAL_TEXT_OFFSET, "Total", TEXT_SIZE, bold=True, align="right")
-    _text(c, AMOUNT_RIGHT, top + TOTAL_TEXT_OFFSET, _money(total), TEXT_SIZE, bold=True, align="right")
+    amount_left, amount_right = cols.boxes["amount"]
+    _text(c, amount_left - TOTAL_LABEL_PAD, top + TOTAL_TEXT_OFFSET, "Total", TEXT_SIZE, bold=True, align="right")
+    _text(c, amount_right - AMOUNT_PAD, top + TOTAL_TEXT_OFFSET, _money(total), TEXT_SIZE, bold=True, align="right")
 
 
-def generate_networld_corporation_po(fields: dict, line_items: list[dict]) -> bytes:
+def generate_networld_corporation_po(fields: dict, line_items: list[dict], column_order: list[str] | None = None) -> bytes:
+    cols = _Columns(column_order)
     path = find_template_path(SLUG)
     if path is None:
         raise FileNotFoundError(f"No template PDF found for distributor '{SLUG}'")
@@ -461,8 +533,10 @@ def generate_networld_corporation_po(fields: dict, line_items: list[dict]) -> by
             # Every page is cut from the template's one page, so each carries its "Details of PO#"
             # and "Quote#" heading; draw the new values on all of them, not just the first.
             _draw_heading(c, fields)
+            if not cols.default:
+                _draw_column_header(c, cols)
             for row, top in spec["rows"]:
-                _draw_row(c, row, top)
+                _draw_row(c, row, top, cols)
             # Row separators and the grid's closing rule.
             y = ROW_TOP0
             for row, top in spec["rows"]:
@@ -474,12 +548,12 @@ def generate_networld_corporation_po(fields: dict, line_items: list[dict]) -> by
                 while spec["first"] and slot_y < grid_bottom - 0.01:
                     slot_y += ROW_PITCH
                     _draw_hrule(c, slot_y)
-                _draw_vrules(c, ROW_TOP0 - 0.5, total_top)
-                _draw_total_row(c, total_top, total)
-                _draw_vrules(c, total_top, total_top + TOTAL_ROW_HEIGHT)
+                _draw_vrules(c, ROW_TOP0 - 0.5, total_top, cols=cols)
+                _draw_total_row(c, total_top, total, cols)
+                _draw_vrules(c, total_top, total_top + TOTAL_ROW_HEIGHT, cols=cols)
                 _draw_value_block(c, fields, block_dy, links)
             else:
-                _draw_vrules(c, ROW_TOP0 - 0.5, grid_bottom)
+                _draw_vrules(c, ROW_TOP0 - 0.5, grid_bottom, cols=cols)
                 _draw_hrule(c, grid_bottom)
 
         pieces: list[tuple[float, float, float]] = [(0.0, HEAD_BOTTOM, 0.0)]

@@ -58,66 +58,6 @@ def _log_tail(lines: int = 30) -> str:
         return "(no log yet)"
 
 
-# Same approach as pages/PO_Processing_Engine.py: the tab reference lives on the Streamlit page
-# (window.parent) so a rerun focuses the open tab instead of opening another, an attempt in the
-# last few seconds is not repeated, and the tab closes with the main page. Browsers may block a
-# tab opened without a click; the link is then the fallback.
-OPEN_TAB_HTML = """
-<style>
-  html, body { margin: 0; background: transparent; }
-  a { color: #7dd3fc; font-family: "Source Sans Pro", sans-serif; font-size: 1rem; }
-</style>
-<a id="jira-open" href="__URL__" target="_blank" rel="noopener">Open in a new tab ↗</a>
-<script>
-  (function () {
-    var url = "__URL__";
-    var KEY = "jiraDashboardTab";
-    var localTab = null;
-
-    function storedTab() {
-      try { return window.parent[KEY] || null; } catch (e) { return localTab; }
-    }
-    function storeTab(tab) {
-      localTab = tab;
-      try { window.parent[KEY] = tab; } catch (e) { /* fall back to localTab */ }
-    }
-    function closeTabWithPage() {
-      var tab = storedTab();
-      if (tab && !tab.closed) { tab.close(); }
-    }
-    function openTab() {
-      var tab = storedTab();
-      if (tab && !tab.closed) { tab.focus(); return true; }
-      var opened = window.open(url, "jiraDashboardWin");
-      if (opened) { storeTab(opened); return true; }
-      return false;
-    }
-
-    document.getElementById("jira-open").addEventListener("click", function (event) {
-      event.preventDefault();
-      openTab();
-    });
-
-    var AUTO_KEY = "jiraDashboardAutoOpenAt";
-    var lastTry = 0;
-    try { lastTry = window.parent[AUTO_KEY] || 0; } catch (e) { lastTry = 0; }
-    if (Date.now() - lastTry > 5000) {
-      try { window.parent[AUTO_KEY] = Date.now(); } catch (e) { /* may retry on the next rerun */ }
-      try { openTab(); } catch (e) { /* blocked: the link is the fallback */ }
-    }
-
-    try {
-      var previous = window.parent[KEY + "Hook"];
-      if (previous) { window.parent.removeEventListener("pagehide", previous); }
-      window.parent[KEY + "Hook"] = closeTabWithPage;
-      window.parent.addEventListener("pagehide", closeTabWithPage);
-    } catch (e) {
-      window.addEventListener("pagehide", closeTabWithPage);
-    }
-  })();
-</script>
-"""
-
 apply_theme("jira")
 
 st.caption(
@@ -141,7 +81,6 @@ else:
                 break
 
     if _port_is_listening(PORT):
-        components.html(OPEN_TAB_HTML.replace("__URL__", server_url), height=32)
         components.iframe(server_url, height=1100, scrolling=True)
     else:
         st.error("Jira Dashboard did not start in time. Recent log output:")

@@ -28,11 +28,12 @@ from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 from pypdf import PdfWriter
+from pypdf.generic import NameObject
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
 import config
-from pdf_engine.common import clip_text, fit_size
+from pdf_engine.common import clip_text, column_boxes, fit_size, order_columns
 from pdf_engine.extractor import find_template_path
 from pdf_engine.generator import _fresh_page, _render_overlay
 from pdf_engine.paginate import _to_decimal
@@ -105,6 +106,9 @@ _TERMS_TOP = 596.3
 _TERMS_COVER = (251.0, 595.7, 400.0, 607.6)  # left, top, right, bottom: the old quote and date only
 _TERMS_SIZE = 10.0
 _TERMS_RIGHT = 400.0  # nothing else prints on this line to the right of the date
+# The whole sentence, for when the additional_terms_note switch is off: "■Nox" starts at x=17.3, the
+# date ends at 375.6, and the full stop that closes it prints on the line below (top 606.3).
+_TERMS_SENTENCE_COVER = (15.0, 595.5, 400.0, 617.0)  # left, top, right, bottom
 
 # --- Order date, "Order Date:Dec 03 2025" (label stays; only the date is replaced)
 _ORDER_DATE = (505.5, 23.1, 503.0, 22.6, 578.0, 33.4, 10.0)  # text x, top, cover l/t/r/b, size
@@ -144,6 +148,48 @@ _QTY_COL = (485.5, 522.8)
 _ITEM_SIZE = 7.0
 _PAD = 1.6
 _COVER_INSET = 0.9  # keep covers clear of the 0.5pt column rules
+
+# --- Column order ------------------------------------------------------------------
+# The table's columns in the template's order, keyed like the form's `column_order` (the form's
+# unit_cost / total / terms are this table's unit_price / amount / term). The form's % disc. has
+# no column here, so it is ignored; every column here has a form key, so none needs an anchor.
+COLUMNS = ("pos", "part_number", "description", "term", "unit_price", "qty", "amount")
+FORM_KEYS = {"sno": "pos", "part_number": "part_number", "description": "description", "term": "term",
+             "terms": "term", "unit_cost": "unit_price", "qty": "qty", "total": "amount"}
+UI_DEFAULT_ORDER = ("sno", "part_number", "description", "qty", "unit_cost", "pct_disc", "terms", "total")
+_TABLE_EDGES = (14.3, 28.3, 172.8, 412.3, 433.1, 485.5, 522.8, 580.7)
+# A column keeps this width wherever it moves, so the room each value has is unchanged.
+COL_WIDTHS = {key: _TABLE_EDGES[i + 1] - _TABLE_EDGES[i] for i, key in enumerate(COLUMNS)}
+HEADER_LABELS = {"pos": "No.", "part_number": "Parts No.", "description": "Description", "term": "Term",
+                 "unit_price": "Unit Price", "qty": "Q'ty", "amount": "Amount"}
+# The table block (header band, rows and their rules) that is covered and redrawn when the order
+# differs from the template's: left, top, right, bottom. It stops above the Total / Shipping Term row.
+_TABLE_BLOCK = (13.8, 339.8, 581.4, 460.9)
+_HEADER_BOTTOM = 347.3
+_TABLE_BOTTOM = 460.4
+_RULE_WIDTH = 0.5
+_HEADER_LABEL_SIZE = 6.0
+_HEADER_LABEL_TOP = 340.9
+
+
+class _Columns:
+    """Where each column sits for one PO: `order` is the left-to-right column keys and
+    `boxes[key]` the (left, right) x edges. `is_default` is true when the order is the
+    template's own, in which case the template's printed table is used as it is."""
+
+    def __init__(self, column_order: list[str] | None) -> None:
+        # The form's own default order (what the page sends until the user moves a column) lists
+        # Qty before Unit cost and Terms near the end, which isn't this PDF's order (Term, Unit
+        # Price, Q'ty). It must still give the template's printed table, so it counts as default.
+        if not column_order or list(column_order) == list(UI_DEFAULT_ORDER):
+            requested: list[str] = []
+        else:
+            requested = [FORM_KEYS[k] for k in column_order if k in FORM_KEYS]
+        self.order = order_columns(requested, COLUMNS)
+        self.is_default = self.order == list(COLUMNS)
+        self.boxes = column_boxes(_TABLE_EDGES[0], COL_WIDTHS, self.order)
+        self.edges = [self.boxes[self.order[0]][0]] + [self.boxes[k][1] for k in self.order]
+
 
 # TOTAL. Covers the "Total" label and the amount, for sheets that don't print it.
 _TOTAL_TEXT_RIGHT = 576.5
@@ -302,9 +348,113 @@ def _line_amount(item: dict) -> Decimal:
     return (qty * unit_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
-def _draw_items(c: canvas.Canvas, page_height: float, items: list[dict], first_position: int) -> None:
+def _line(c: canvas.Canvas, page_height: float, x0: float, top0: float, x1: float, top1: float) -> None:
+    c.saveState()
+    c.setStrokeColorRGB(*BLACK)
+    c.setLineWidth(_RULE_WIDTH)
+    c.line(x0, page_height - top0, x1, page_height - top1)
+    c.restoreState()
+
+
+def _drop_table_annotations(page) -> None:
+    """The template has a drawn /Line annotation on the Term column's left rule. Annotations are
+    painted above the page's content, so the white cover can't hide it; when the table is
+    redrawn in another order it would cut across the new columns. Remove the annotations that
+    lie inside the table block (and any /Popup that belongs to one)."""
+    annots = page.get("/Annots")
+    if not annots:
+        return
+    left, top, right, bottom = _TABLE_BLOCK
+    page_height = float(page.mediabox.height)
+    keep, dropped = [], []
+    for ref in annots:
+        annot = ref.get_object()
+        x0, y0, x1, y1 = (float(v) for v in annot.get("/Rect", (0, 0, 0, 0)))
+        # /Rect is bottom-up; the block is in top-down page coordinates.
+        inside = x0 >= left and x1 <= right and page_height - y1 >= top - 2.0 and page_height - y0 <= bottom + 45.0
+        if annot.get("/Subtype") == "/Line" and inside:
+            dropped.append(ref.idnum if hasattr(ref, "idnum") else id(annot))
+        else:
+            keep.append(ref)
+    if not dropped:
+        return
+    # A popup is only meaningful for its parent; drop those whose parent was dropped.
+    kept = [ref for ref in keep if not (ref.get_object().get("/Subtype") == "/Popup"
+            and getattr(ref.get_object().get("/Parent"), "idnum", None) in dropped)]
+    from pypdf.generic import ArrayObject
+
+    page[NameObject("/Annots")] = ArrayObject(kept)
+
+
+def _draw_items_reordered(
+    c: canvas.Canvas, page_height: float, items: list[dict], first_position: int, cols: _Columns
+) -> None:
+    """The items table in the user's column order. The template prints the header band, the
+    column rules and the row rules itself, so the whole table block is covered and redrawn:
+    header labels, rules and cells all follow `cols`. Each value uses the same size, padding
+    and alignment as in the template's order."""
+    left, top, right, bottom = _TABLE_BLOCK
+    _cover(c, page_height, left, top, right, bottom)
+    x0, x1 = cols.edges[0], cols.edges[-1]
+    # Header band, in the same grey as the page label's band.
+    _cover(c, page_height, x0, ROW_EDGES[0][0] - 7.4, x1, _HEADER_BOTTOM, color=BAND_GRAY)
+    # Horizontal rules: the table's top, under the header, between rows, and the bottom.
+    ys = [ROW_EDGES[0][0] - 7.4, _HEADER_BOTTOM]
+    ys += [(ROW_EDGES[i][1] + ROW_EDGES[i + 1][0]) / 2 for i in range(ITEM_ROWS - 1)]
+    ys.append(_TABLE_BOTTOM)
+    for y in ys:
+        _line(c, page_height, x0, y, x1, y)
+    # Vertical rules at every column edge, the full height of the table.
+    for x in cols.edges:
+        _line(c, page_height, x, ys[0], x, _TABLE_BOTTOM)
+    for key in cols.order:
+        col_left, col_right = cols.boxes[key]
+        _draw_text(
+            c, page_height, HEADER_LABELS[key], (col_left + col_right) / 2, _HEADER_LABEL_TOP, _HEADER_LABEL_SIZE,
+            font=FONT_BOLD, align="center",
+        )
+
+    box = cols.boxes
+    for index in range(ITEM_ROWS):
+        text_top = FIRST_TEXT_TOP + TEXT_PITCH * index
+        pos_left, pos_right = box["pos"]
+        _draw_text(c, page_height, str(first_position + index), (pos_left + pos_right) / 2, text_top, _ITEM_SIZE, align="center")
+        if index >= len(items):
+            continue  # a blank row keeps its printed position number only
+        item = items[index]
+        qty = _to_decimal(item.get("qty"))
+        unit_price = _to_decimal(item.get("unit_cost"))
+
+        part_left, part_right = box["part_number"]
+        part = str(item.get("part_number") or "")
+        part_room = part_right - part_left - 2 * _PAD
+        part_size = _fit(part, FONT, _ITEM_SIZE, part_room)
+        _draw_text(c, page_height, _clip(part, FONT, part_size, part_room), part_left + _PAD + 0.5, text_top, part_size)
+
+        desc_left, desc_right = box["description"]
+        desc = str(item.get("description") or "")
+        desc_room = desc_right - desc_left - 2 * _PAD
+        desc_size = _fit(desc, FONT, _ITEM_SIZE, desc_room)
+        desc_top = text_top + (_ITEM_SIZE - desc_size) * 0.45  # keep small text vertically centered
+        _draw_text(c, page_height, _clip(desc, FONT, desc_size, desc_room), desc_left + _PAD + 0.9, desc_top, desc_size)
+
+        terms = str(item.get("terms") or "").strip()
+        term_left, term_right = box["term"]
+        _draw_text(c, page_height, terms, (term_left + term_right) / 2, text_top - 1.4, _ITEM_SIZE, align="center")
+        _draw_text(c, page_height, _format_money(unit_price), box["unit_price"][1] - 0.6, text_top, _ITEM_SIZE, align="right")
+        _draw_text(c, page_height, f"{qty.normalize():f}", box["qty"][1] - 1.0, text_top, _ITEM_SIZE, align="right")
+        _draw_text(c, page_height, _format_money(_line_amount(item)), box["amount"][1] - 0.8, text_top, _ITEM_SIZE, align="right")
+
+
+def _draw_items(
+    c: canvas.Canvas, page_height: float, items: list[dict], first_position: int, cols: _Columns | None = None
+) -> None:
     """Draws one sheet's rows. `first_position` is the number printed on the
-    sheet's first row, so position numbers carry on across sheets."""
+    sheet's first row, so position numbers carry on across sheets. In the template's own
+    column order the template's printed table is reused; any other order redraws it."""
+    if cols is not None and not cols.is_default:
+        _draw_items_reordered(c, page_height, items, first_position, cols)
+        return
     for index in range(ITEM_ROWS):
         row_top, row_bottom = ROW_EDGES[index]
         # Clear each cell's text, staying clear of the column rules.
@@ -416,10 +566,20 @@ def _draw_order_date(c: canvas.Canvas, page_height: float, fields: dict) -> None
     _draw_text(c, page_height, text, x, top, _fit(text, FONT, size, cover_right - x - 1.0))
 
 
+def _terms_note_on(fields: dict) -> bool:
+    """The additional_terms_note switch: false / no / 0 / off leaves the whole sentence off the PDF.
+    A form without the field, or with any other value, prints it as before."""
+    return str(fields.get("additional_terms_note", "true")).strip().lower() not in {"false", "no", "n", "0", "off"}
+
+
 def _draw_terms_sentence(c: canvas.Canvas, page_height: float, fields: dict) -> None:
     """The footer's "... mentioned on <quote> dated <date>": swaps in the form's quote number and
     quote date. A value the form doesn't have keeps the template's, so a request without
-    either leaves the sentence exactly as printed."""
+    either leaves the sentence exactly as printed. With the additional_terms_note switch off the
+    whole sentence (and the full stop printed under it) is covered instead."""
+    if not _terms_note_on(fields):
+        _cover(c, page_height, *_TERMS_SENTENCE_COVER)
+        return
     if "quote_number" not in fields and "quote_date" not in fields:
         return
     quote = str(fields.get("quote_number") or "").strip()
@@ -440,6 +600,7 @@ def _draw(
     sheet_number: int,
     sheet_count: int,
     grand_total: Decimal,
+    cols: _Columns | None = None,
 ) -> None:
     for key, spec in _TEXT_FIELDS.items():
         if key in fields:
@@ -450,7 +611,7 @@ def _draw(
     _draw_bill_to(c, page_height, fields)
     _draw_shipping_term(c, page_height, fields)
     _draw_page_label(c, page_height, sheet_number, sheet_count)
-    _draw_items(c, page_height, sheet_items, first_position)
+    _draw_items(c, page_height, sheet_items, first_position, cols)
     _draw_total(c, page_height, grand_total, show=sheet_number == sheet_count)
 
 
@@ -459,7 +620,8 @@ def _sheet_count(item_count: int) -> int:
     return max(1, -(-item_count // ITEM_ROWS))
 
 
-def generate_nox_co_ltd_po(fields: dict, line_items: list[dict]) -> bytes:
+def generate_nox_co_ltd_po(fields: dict, line_items: list[dict], column_order: list[str] | None = None) -> bytes:
+    cols = _Columns(column_order)
     path = find_template_path(SLUG)
     if path is None:
         raise FileNotFoundError(f"No template PDF found for distributor '{SLUG}'")
@@ -473,6 +635,8 @@ def generate_nox_co_ltd_po(fields: dict, line_items: list[dict]) -> bytes:
     for sheet_index in range(sheet_count):
         first = sheet_index * ITEM_ROWS
         page = _fresh_page(pdf_bytes, 0)
+        if not cols.is_default:
+            _drop_table_annotations(page)
         width, height = float(page.mediabox.width), float(page.mediabox.height)
         overlay = _render_overlay(
             width,
@@ -486,6 +650,7 @@ def generate_nox_co_ltd_po(fields: dict, line_items: list[dict]) -> bytes:
                 sheet_index + 1,
                 sheet_count,
                 grand_total,
+                cols,
             ),
         )
         page.merge_page(overlay.pages[0])

@@ -23,6 +23,7 @@ from pypdf import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
 
 import config
+from pdf_engine.common import column_boxes, fit_size, order_columns
 from pdf_engine.extractor import find_template_path
 from pdf_engine.generator import _fresh_page, _render_overlay
 from pdf_engine.paginate import _to_decimal, wrap_text
@@ -63,6 +64,61 @@ PAGE_LABEL_TOP = {TEMPLATE_FIRST: 308.2, TEMPLATE_CONT: 148.3, TEMPLATE_LAST: 14
 WHITE = (1.0, 1.0, 1.0)
 FOOTER_GREY = (0.82745, 0.82745, 0.82745)
 
+# --- Item columns ---------------------------------------------------------------
+# The column-header band is template artwork (grey cells, a dark grey 0.75pt border on the
+# top, bottom and outer sides, bold 7pt labels). In the default order it is left as printed;
+# for any other order it is covered and redrawn in the new order. Keys follow the form's
+# `column_order` (unit_cost -> unit_price, sno -> pos); "item" carries the item number with the
+# SKU / description / terms lines beneath it, so the form's description moves with part_number.
+# List price (printed equal to the unit price) travels beside Price per unit and VAT beside
+# Total price; the form's Terms has no column (it is a line in the item block).
+COLUMNS = ("pos", "item", "qty", "list_price", "discount", "unit_price", "total", "vat")
+COL_EDGES = (56.69, 85.04, 201.6, 270.72, 345.6, 385.92, 455.04, 538.58, 566.93)
+COL_WIDTHS = {key: COL_EDGES[i + 1] - COL_EDGES[i] for i, key in enumerate(COLUMNS)}
+# The form's % disc. is not mapped: ADN's Discount column is always empty (the sample's discount is 0
+# and the form has no source for it), and mapping it would make the form's own default order
+# (unit cost before % disc.) disagree with the template's (Discount before Price per unit). So
+# Discount sits just before Price per unit with the List price, and VAT just after Total price.
+FORM_KEYS = {"sno": "pos", "part_number": "item", "description": "item", "qty": "qty",
+             "unit_cost": "unit_price", "total": "total"}
+ANCHORS = {"list_price": "unit_price", "discount": "unit_price"}
+HEAD_LABELS = {
+    "pos": "Pos.", "item": "Item number / Label", "qty": "Quantity", "list_price": "List price",
+    "discount": "Discount", "unit_price": "Price per unit", "total": "Total price", "vat": "VAT",
+}
+# Band position per template page (top, bottom), its colours and the border thickness.
+HEAD_BAND = {TEMPLATE_FIRST: (480.46, 491.97), TEMPLATE_CONT: (158.65, 170.15), TEMPLATE_LAST: (158.65, 170.15)}
+HEAD_BORDER = (0.41176, 0.41176, 0.41176)
+HEAD_RULE = 0.75
+HEAD_LABEL_OFFSET = 3.01  # label top below the band's top
+HEAD_LABEL_PAD = 0.7      # label left inside its cell
+# The values' x positions in the sample (default column order). In another order each value
+# moves by its column's shift, so it keeps the same place inside its cell.
+POS_X, ITEM_X = 56.7, 86.5                                  # left-aligned
+QTY_RIGHT, LIST_RIGHT, UNIT_RIGHT, TOTAL_RIGHT, VAT_RIGHT = 242.8, 325.0, 437.3, 535.7, 564.7
+DESCRIPTION_RIGHT = 564.7  # the item block's free lines (SKU, description, terms) run to here
+
+
+class _Columns:
+    """Where each column sits for one PO. In the default order every shift is exactly 0 and the
+    template's own header band is kept, so the output is the sample's layout unchanged."""
+
+    def __init__(self, column_order: list[str] | None) -> None:
+        requested = [FORM_KEYS[k] for k in (column_order or []) if k in FORM_KEYS]
+        self.order = order_columns(requested, COLUMNS, ANCHORS)
+        # VAT always prints right after Total price (order_columns only places before an anchor).
+        self.order.remove("vat")
+        self.order.insert(self.order.index("total") + 1, "vat")
+        self.custom = tuple(self.order) != COLUMNS
+        self.boxes = column_boxes(COL_EDGES[0], COL_WIDTHS, self.order)
+        self.shift = {
+            key: (self.boxes[key][0] - COL_EDGES[i]) if self.custom else 0.0 for i, key in enumerate(COLUMNS)
+        }
+        # The free lines start under the item number and run to the table's right margin; they
+        # sit below the first line, so columns to the item's right don't get in their way.
+        self.item_x = ITEM_X + self.shift["item"]
+        self.description_width = DESCRIPTION_RIGHT - self.item_x
+
 
 @dataclass
 class _Block:
@@ -76,6 +132,10 @@ class _Block:
     unit_price: str
     amount: Decimal
     height: float
+    # List price and Discount columns. With no discount they are the sample's: the List price
+    # prints the unit price and Discount stays blank.
+    list_price: str = ""
+    discount: str = ""
 
 
 @dataclass
@@ -93,7 +153,7 @@ def _format_number(value: Decimal, places: int) -> str:
     return f"{sign}{grouped},{fraction}" if places else f"{sign}{grouped}"
 
 
-def _build_blocks(line_items: list[dict]) -> list[_Block]:
+def _build_blocks(line_items: list[dict], description_width: float = DESCRIPTION_WIDTH) -> list[_Block]:
     blocks: list[_Block] = []
     last_pos = 0
     for item in line_items:
@@ -112,8 +172,16 @@ def _build_blocks(line_items: list[dict]) -> list[_Block]:
         unit_price = _to_decimal(item.get("unit_cost")).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
         amount = (qty * unit_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         qty_places = 0 if qty == qty.to_integral_value() else 2
+        # The price per unit and the total stay the unit cost and qty x unit cost (the unit cost is
+        # already net of any discount). A discount (a % pulled from Salesforce, or typed) prints in
+        # the Discount column, and the List price becomes the price before it:
+        # unit price / (1 - discount / 100), as Arrow derives its RRP.
+        discount = _to_decimal(str(item.get("pct_disc") or "").replace("%", ""))
+        list_price = unit_price
+        if 0 < discount < 100:
+            list_price = (unit_price / (1 - discount / 100)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
 
-        description_lines = wrap_text(str(item.get("description") or ""), DESCRIPTION_WIDTH, ITEM_FONT_SIZE)
+        description_lines = wrap_text(str(item.get("description") or ""), description_width, ITEM_FONT_SIZE)
         terms = str(item.get("terms") or "")
         height = (
             DESCRIPTION_OFFSET
@@ -133,6 +201,8 @@ def _build_blocks(line_items: list[dict]) -> list[_Block]:
                 unit_price=_format_number(unit_price, 4),
                 amount=amount,
                 height=height,
+                list_price=_format_number(list_price, 4),
+                discount=_format_number(discount, 2).replace(",00", "") + " %" if discount > 0 else "",
             )
         )
     return blocks
@@ -189,29 +259,51 @@ def _text(
     c.restoreState()
 
 
-def _draw_block(c: canvas.Canvas, page_height: float, block: _Block, top: float) -> None:
-    _text(c, page_height, 56.7, top, block.pos)
-    _text(c, page_height, 86.5, top, block.item_number, bold=True)
-    _text(c, page_height, 242.8, top, block.qty, align="right")
-    _text(c, page_height, 325.0, top, block.unit_price, align="right")
-    _text(c, page_height, 437.3, top, block.unit_price, align="right")
-    _text(c, page_height, 535.7, top, _format_number(block.amount, 2), align="right")
-    _text(c, page_height, 564.7, top, "0 %", align="right")
+def _draw_block(c: canvas.Canvas, page_height: float, block: _Block, top: float, cols: _Columns) -> None:
+    s = cols.shift
+    item_x = cols.item_x
+    _text(c, page_height, POS_X + s["pos"], top, block.pos)
+    _text(c, page_height, item_x, top, block.item_number, bold=True)
+    _text(c, page_height, QTY_RIGHT + s["qty"], top, block.qty, align="right")
+    _text(c, page_height, LIST_RIGHT + s["list_price"], top, block.unit_price, align="right")
+    _text(c, page_height, UNIT_RIGHT + s["unit_price"], top, block.unit_price, align="right")
+    _text(c, page_height, TOTAL_RIGHT + s["total"], top, _format_number(block.amount, 2), align="right")
+    _text(c, page_height, VAT_RIGHT + s["vat"], top, "0 %", align="right")
 
     if block.sku:
-        _text(c, page_height, 86.5, top + SKU_OFFSET, f"[{block.sku}]")
+        _text(c, page_height, item_x, top + SKU_OFFSET, f"[{block.sku}]")
     if block.sku and block.unit_text:
-        _text(c, page_height, 86.5, top + UNIT_OFFSET, f"{block.sku} - {block.unit_text}", bold=True)
+        unit_line = f"{block.sku} - {block.unit_text}"
+        # In a custom order the item column can sit further right, leaving this one-line label
+        # less room than in the sample; shrink it to fit there (the default is drawn as before).
+        size = fit_size(unit_line, FONT_BOLD, ITEM_FONT_SIZE, cols.description_width, 4.5) if cols.custom else ITEM_FONT_SIZE
+        _text(c, page_height, item_x, top + UNIT_OFFSET, unit_line, size, bold=True)
     for i, line in enumerate(block.description_lines):
-        _text(c, page_height, 86.5, top + DESCRIPTION_OFFSET + LINE_HEIGHT * i, line)
+        _text(c, page_height, item_x, top + DESCRIPTION_OFFSET + LINE_HEIGHT * i, line)
     if block.terms:
         _text(
             c,
             page_height,
-            86.5,
+            item_x,
             top + DESCRIPTION_OFFSET + LINE_HEIGHT * len(block.description_lines),
             block.terms,
         )
+
+
+def _draw_head_band(c: canvas.Canvas, page_height: float, template: int, cols: _Columns) -> None:
+    """Redraws the column-header band in `cols` order over the template's own band. Its grey
+    is the template's, so main.py's strip pass (which removes text under ADN's 0.827 grey)
+    drops the template's original labels from the text layer."""
+    top, bottom = HEAD_BAND[template]
+    x0, x1 = COL_EDGES[0], COL_EDGES[-1]
+    _whiteout(c, page_height, x0, top, x1, bottom, fill=FOOTER_GREY)
+    _whiteout(c, page_height, x0, top, x1, top + HEAD_RULE, fill=HEAD_BORDER)
+    _whiteout(c, page_height, x0, bottom - HEAD_RULE, x1, bottom, fill=HEAD_BORDER)
+    _whiteout(c, page_height, x0, top, x0 + HEAD_RULE, bottom, fill=HEAD_BORDER)
+    _whiteout(c, page_height, x1 - HEAD_RULE, top, x1, bottom, fill=HEAD_BORDER)
+    for key in cols.order:
+        left = cols.boxes[key][0]
+        _text(c, page_height, left + HEAD_LABEL_PAD, top + HEAD_LABEL_OFFSET, HEAD_LABELS[key], bold=True)
 
 
 LICENSEE_BLOCK_COVER = (396.0, 334.0, 546.0, 396.5)
@@ -328,10 +420,13 @@ def _draw_page(
     fields: dict,
     grand_total: Decimal,
     balance: Decimal | None,
+    cols: _Columns,
 ) -> None:
     t = spec.template
     x0, top, x1, bottom = ITEMS_AREA[t]
     _whiteout(c, page_height, x0, top, x1, bottom)
+    if cols.custom:
+        _draw_head_band(c, page_height, t, cols)
 
     po_top = PO_LINE_TOP[t]
     _whiteout(c, page_height, 56.0, po_top - 2.5, 300.0, po_top + 12.5)
@@ -349,7 +444,7 @@ def _draw_page(
 
     y = FIRST_TOP if t == TEMPLATE_FIRST else CONT_TOP
     for block in spec.blocks:
-        _draw_block(c, page_height, block, y)
+        _draw_block(c, page_height, block, y, cols)
         y += block.height
 
     if balance is not None:
@@ -360,7 +455,8 @@ def _draw_page(
         _draw_totals(c, page_height, fields, grand_total)
 
 
-def generate_adn_po(fields: dict, line_items: list[dict]) -> bytes:
+def generate_adn_po(fields: dict, line_items: list[dict], column_order: list[str] | None = None) -> bytes:
+    cols = _Columns(column_order)
     path = find_template_path(SLUG)
     if path is None:
         raise FileNotFoundError(f"No template PDF found for distributor '{SLUG}'")
@@ -370,7 +466,7 @@ def generate_adn_po(fields: dict, line_items: list[dict]) -> bytes:
     page_width = float(reader.pages[0].mediabox.width)
     page_height = float(reader.pages[0].mediabox.height)
 
-    blocks = _build_blocks(line_items)
+    blocks = _build_blocks(line_items, cols.description_width)
     grand_total = sum((b.amount for b in blocks), Decimal("0"))
     pages = _paginate(blocks)
 
@@ -385,7 +481,7 @@ def generate_adn_po(fields: dict, line_items: list[dict]) -> bytes:
             page_width,
             page_height,
             lambda c, s=spec, n=number, b=balance: _draw_page(
-                c, page_height, s, n, len(pages), fields, grand_total, b
+                c, page_height, s, n, len(pages), fields, grand_total, b, cols
             ),
         )
         page.merge_page(overlay.pages[0])

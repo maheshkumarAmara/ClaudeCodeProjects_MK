@@ -33,6 +33,10 @@ body {
     padding: 1.2rem 1.6rem 2rem;
 }
 
+/* Inside the ProdOps iframe (index.html adds html.embedded), use the full width instead of the
+ * standalone page's 1440px column. */
+html.embedded .container { max-width: none; }
+
 /* ── History panel (left) ── */
 .layout {
     display: flex;
@@ -601,8 +605,50 @@ a.app-tag[href="/compare"]:hover {
     color: #d6e8f5;
 }
 
-#add-row-btn {
+#add-row-btn,
+#reset-columns-btn {
     margin-top: 0.8rem;
+}
+
+.line-items-table ~ .hint,
+#reset-columns-btn + .hint {
+    margin: 0.6rem 0 0;
+    font-size: 0.78rem;
+    color: #527a96;
+}
+
+/* Column headings can be dragged (or nudged with the arrows) to reorder the table and the PDF. */
+.line-items-table th.col-head {
+    cursor: grab;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.line-items-table th.col-head.col-drop {
+    outline: 2px dashed #4aa3df;
+    outline-offset: -3px;
+}
+
+.line-items-table .col-move {
+    background: none;
+    border: none;
+    padding: 0 3px;
+    font-size: 0.6rem;
+    color: #527a96;
+    cursor: pointer;
+    opacity: 0;
+}
+
+.line-items-table th.col-head:hover .col-move {
+    opacity: 1;
+}
+
+.line-items-table .col-move:hover:not(:disabled) {
+    color: #d6e8f5;
+}
+
+.line-items-table .col-move:disabled {
+    visibility: hidden;
 }
 
 /* ── Salesforce search ── */

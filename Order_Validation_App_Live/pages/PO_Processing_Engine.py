@@ -59,79 +59,6 @@ def _log_tail(lines: int = 30) -> str:
         return "(no log yet)"
 
 
-# Renders the "Open in a new tab" link. The tab reference is kept on the Streamlit
-# page (window.parent), which the iframe can reach because Streamlit sandboxes
-# components with allow-same-origin. That keeps the reference across reruns, so a
-# second click focuses the open tab instead of opening another one. A pagehide
-# listener on the main page closes the tab when the main page closes.
-OPEN_TAB_HTML = """
-<style>
-  html, body { margin: 0; background: transparent; }
-  a { color: #7dd3fc; font-family: "Source Sans Pro", sans-serif; font-size: 1rem; }
-</style>
-<a id="po-open" href="__URL__" target="_blank" rel="noopener">Open in a new tab ↗</a>
-<script>
-  (function () {
-    var url = "__URL__";
-    var KEY = "poEngineTab";
-    var localTab = null;
-
-    function storedTab() {
-      try { return window.parent[KEY] || null; } catch (e) { return localTab; }
-    }
-
-    function storeTab(tab) {
-      localTab = tab;
-      try { window.parent[KEY] = tab; } catch (e) { /* fall back to localTab */ }
-    }
-
-    function closeTabWithPage() {
-      var tab = storedTab();
-      if (tab && !tab.closed) { tab.close(); }
-    }
-
-    // Opens the engine in a new tab, or focuses the one that is already open. Returns true when a
-    // tab is open afterwards, false when the browser blocked the new one.
-    function openEngineTab() {
-      var tab = storedTab();
-      if (tab && !tab.closed) { tab.focus(); return true; }
-      var opened = window.open(url, "poEngineWin");
-      if (opened) { storeTab(opened); return true; }
-      return false;
-    }
-
-    document.getElementById("po-open").addEventListener("click", function (event) {
-      event.preventDefault();
-      openEngineTab();
-    });
-
-    // Opens the tab by itself when the page is shown. Streamlit re-creates this component on every
-    // rerun of the page, so two things stop that from opening more tabs: an engine tab that is
-    // already open is only focused (see openEngineTab), and an attempt made in the last few seconds
-    // is not repeated. Browsers often block a tab opened without a click: then nothing opens and
-    // the link above still works with one click.
-    var AUTO_KEY = "poEngineAutoOpenAt";
-    var RETRY_AFTER_MS = 5000;
-    var lastTry = 0;
-    try { lastTry = window.parent[AUTO_KEY] || 0; } catch (e) { lastTry = 0; }
-    if (Date.now() - lastTry > RETRY_AFTER_MS) {
-      try { window.parent[AUTO_KEY] = Date.now(); } catch (e) { /* no stamp: may retry on the next rerun */ }
-      try { openEngineTab(); } catch (e) { /* blocked: the link is the fallback */ }
-    }
-
-    try {
-      var previous = window.parent[KEY + "Hook"];
-      if (previous) { window.parent.removeEventListener("pagehide", previous); }
-      window.parent[KEY + "Hook"] = closeTabWithPage;
-      window.parent.addEventListener("pagehide", closeTabWithPage);
-    } catch (e) {
-      window.addEventListener("pagehide", closeTabWithPage);
-    }
-  })();
-</script>
-"""
-
-
 apply_theme("po")
 
 st.caption(
@@ -152,7 +79,6 @@ else:
                 break
 
     if _port_is_listening(PORT):
-        components.html(OPEN_TAB_HTML.replace("__URL__", server_url), height=32)
         components.iframe(server_url, height=1100, scrolling=True)
     else:
         st.error("PO Processing Engine did not start in time. Recent log output:")

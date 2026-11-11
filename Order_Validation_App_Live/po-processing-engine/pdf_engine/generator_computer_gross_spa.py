@@ -30,6 +30,12 @@ Behaviors worth knowing:
   - Fields missing from the request keep the value that is already on the
     template.
   - Text is drawn in Helvetica at the template's size, not its embedded Tahoma.
+  - `column_order` (the form's column order) reorders the items table. Each
+    column keeps its width; the template's own header cells are moved sideways
+    to match (so headings keep the template's font, fill and borders). The
+    form's s.no and % disc. have no column here and are ignored; Asset Serial
+    and Start Date travel just before TERM. The default order is output exactly
+    as before.
 """
 
 import io
@@ -43,7 +49,7 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
 import config
-from pdf_engine.common import add_links, clip_text, fit_size
+from pdf_engine.common import add_links, clip_text, column_boxes, fit_size, order_columns, untouched_order
 from pdf_engine.extractor import find_template_path
 from pdf_engine.generator import _fresh_page, _render_overlay
 from pdf_engine.paginate import _to_decimal
@@ -161,6 +167,49 @@ _COL_EDGES = {
 _TEXT_SIZE = 5.04
 _DESCRIPTION_SIZE = 3.96  # descriptions print smaller than the other columns
 _TEXT_PAD = 1.4
+
+# --- Column order (the form's `column_order`) --------------------------------
+# The table's columns in the sample's order. Form keys map to them as below; the form's
+# sno and pct_disc have no column in this PDF and are ignored. Asset Serial and Start Date have
+# no form key (they print blank), so each travels beside a related column.
+COLUMNS = ("part_number", "description", "qty", "term", "asset_serial", "start_date", "price", "total")
+FORM_KEYS = {"part_number": "part_number", "description": "description", "qty": "qty",
+             "terms": "term", "unit_cost": "price", "total": "total"}
+COLUMN_ANCHORS = {"asset_serial": "term", "start_date": "term"}
+# Column boundaries: the centre lines of the template's dividers (the heavy outer borders at
+# 28.8 and 654.82). A reordered column keeps its own boundary-to-boundary width, so the table
+# still ends at the template's right border and each value has the same room as in the sample.
+_BOUNDARIES = (28.8, 122.18, 265.73, 334.97, 363.17, 406.51, 460.75, 555.10, 654.82)
+_SPANS = {key: (_BOUNDARIES[i], _BOUNDARIES[i + 1]) for i, key in enumerate(COLUMNS)}
+_SPAN_WIDTHS = {key: right - left for key, (left, right) in _SPANS.items()}
+_THIN_RULE = 0.48
+
+
+class _Columns:
+    """Where each column sits for one PO. `order` is the left-to-right column keys, `boxes[key]`
+    the (left, right) text cell edges, `rules` the vertical body rules as (x, width), and
+    `band_moves` the (default boundary left, default boundary right, dx) slices of the template's
+    header band to move sideways. With no request the order is the sample's and everything is the
+    sample's own (`default` is then True, and the template's band and rules are used untouched)."""
+
+    def __init__(self, column_order: list[str] | None) -> None:
+        requested = [FORM_KEYS[k] for k in (untouched_order(column_order) or []) if k in FORM_KEYS]
+        self.order = order_columns(requested, COLUMNS, COLUMN_ANCHORS)
+        self.default = self.order == list(COLUMNS)
+        self.band_moves: list[tuple[float, float, float]] = []
+        if self.default:
+            self.boxes = dict(_COL_EDGES)
+            self.rules = _VRULES
+            return
+        spans = column_boxes(_BOUNDARIES[0], _SPAN_WIDTHS, self.order)
+        self.boxes = {}
+        for key in self.order:
+            dx = spans[key][0] - _SPANS[key][0]
+            self.boxes[key] = (_COL_EDGES[key][0] + dx, _COL_EDGES[key][1] + dx)
+            self.band_moves.append((_SPANS[key][0], _SPANS[key][1], dx))
+        inner = [(spans[key][0] - _THIN_RULE / 2, _THIN_RULE) for key in self.order[1:]]
+        self.rules = (_VRULES[0],) + tuple(inner) + (_VRULES[-1],)
+
 
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)+")
 
@@ -379,19 +428,20 @@ def _draw_hrule(c: canvas.Canvas, page_height: float, y_top: float, thickness: f
     c.restoreState()
 
 
-def _draw_vrules(c: canvas.Canvas, page_height: float, y_top: float, y_bottom: float) -> None:
+def _draw_vrules(c: canvas.Canvas, page_height: float, y_top: float, y_bottom: float, cols: _Columns) -> None:
     c.saveState()
     c.setFillColorRGB(*BLACK)
-    for x, width in _VRULES:
+    for x, width in cols.rules:
         c.rect(x, page_height - y_bottom, width, y_bottom - y_top, fill=1, stroke=0)
     c.restoreState()
 
 
-def _draw_item_row(c: canvas.Canvas, page_height: float, item: dict | None, text_top: float) -> None:
+def _draw_item_row(c: canvas.Canvas, page_height: float, item: dict | None, text_top: float, cols: _Columns) -> None:
+    box = cols.boxes
     if item is None:
         # Blank rows still print a zero in the Total column.
         _draw_text(
-            c, page_height, _format_money(Decimal("0")), _COL_EDGES["total"][1] - _TEXT_PAD, text_top, _TEXT_SIZE, align="right"
+            c, page_height, _format_money(Decimal("0")), box["total"][1] - _TEXT_PAD, text_top, _TEXT_SIZE, align="right"
         )
         return
 
@@ -402,32 +452,32 @@ def _draw_item_row(c: canvas.Canvas, page_height: float, item: dict | None, text
     # A part number is an identifier, so shrink it to fit rather than clip
     # characters off the end (descriptions are free text and do clip, as
     # the sample's own do).
-    part_left, part_right = _COL_EDGES["part_number"]
+    part_left, part_right = box["part_number"]
     part = str(item.get("part_number") or "")
     part_room = part_right - part_left - 2 * _TEXT_PAD
     part_size = _fit(part, FONT, _TEXT_SIZE, part_room)
     part = _clip(part, FONT, part_size, part_room)
     _draw_text(c, page_height, part, part_left + _TEXT_PAD, text_top, part_size)
 
-    desc_left, desc_right = _COL_EDGES["description"]
+    desc_left, desc_right = box["description"]
     desc = _clip(str(item.get("description") or ""), FONT, _DESCRIPTION_SIZE, desc_right - desc_left - 2 * _TEXT_PAD)
     _draw_text(c, page_height, desc, desc_left + _TEXT_PAD, text_top + 0.6, _DESCRIPTION_SIZE)
 
-    qty_left, qty_right = _COL_EDGES["qty"]
+    qty_left, qty_right = box["qty"]
     _draw_text(c, page_height, f"{qty.normalize():f}", (qty_left + qty_right) / 2, text_top, _TEXT_SIZE, align="center")
 
-    term_left, term_right = _COL_EDGES["term"]
+    term_left, term_right = box["term"]
     terms = str(item.get("terms") or "").strip()
     _draw_text(c, page_height, terms, (term_left + term_right) / 2, text_top, _TEXT_SIZE, align="center")
 
-    price_left, price_right = _COL_EDGES["price"]
+    price_left, price_right = box["price"]
     # The first row prints its price with a currency sign in the sample;
     # keep every row plain so the column reads consistently.
     _draw_text(
         c, page_height, _format_price(unit_price), (price_left + price_right) / 2, text_top, _TEXT_SIZE, align="center"
     )
 
-    _draw_text(c, page_height, _format_money(amount), _COL_EDGES["total"][1] - _TEXT_PAD, text_top, _TEXT_SIZE, align="right")
+    _draw_text(c, page_height, _format_money(amount), box["total"][1] - _TEXT_PAD, text_top, _TEXT_SIZE, align="right")
 
 
 def _line_amount(item: dict) -> Decimal:
@@ -436,7 +486,7 @@ def _line_amount(item: dict) -> Decimal:
     )
 
 
-def _draw_items_grid(c: canvas.Canvas, page_height: float, page_items: list[dict], y0: float, slots: int) -> None:
+def _draw_items_grid(c: canvas.Canvas, page_height: float, page_items: list[dict], y0: float, slots: int, cols: _Columns) -> None:
     """Draws `slots` rows (a real item, or a blank row past the end of page_items)
     with the first row's top rule at y0: each row's text, the rules between rows,
     and the vertical column rules. The rule closing the table is not drawn here --
@@ -444,10 +494,10 @@ def _draw_items_grid(c: canvas.Canvas, page_height: float, page_items: list[dict
     pages that continue."""
     for slot in range(slots):
         _, bottom_rule, text_top = _row_geometry(slot, y0)
-        _draw_item_row(c, page_height, page_items[slot] if slot < len(page_items) else None, text_top)
+        _draw_item_row(c, page_height, page_items[slot] if slot < len(page_items) else None, text_top, cols)
         if slot < slots - 1:
             _draw_hrule(c, page_height, bottom_rule, _HRULE_THIN)
-    _draw_vrules(c, page_height, y0 + _HRULE_HEAVY, _row_geometry(slots - 1, y0)[1])
+    _draw_vrules(c, page_height, y0 + _HRULE_HEAVY, _row_geometry(slots - 1, y0)[1], cols)
 
 
 # --- Tail pieces ---------------------------------------------------------------
@@ -498,16 +548,29 @@ def _page_label(c: canvas.Canvas, page_height: float, fields: dict, number: int,
 
 
 # --- Cutting pieces out of the template page -----------------------------------
-def _clip_piece(template_bytes: bytes, top: float, bottom: float, height: float) -> PageObject:
+def _clip_piece(
+    template_bytes: bytes, top: float, bottom: float, height: float, slices: list[tuple[float, float, float]] | None = None
+) -> PageObject:
     """A fresh copy of the template page whose visible area is limited to the
     horizontal band top..bottom (top-origin), with the template's own link
-    annotations removed (they would still open the original addresses)."""
+    annotations removed (they would still open the original addresses).
+
+    `slices`, when given, cuts that band into vertical strips (x0, x1, dx): each
+    strip x0..x1 of the template is shown moved dx to the right (used to move the
+    column-header cells when the columns are reordered)."""
     writer = PdfWriter(clone_from=PdfReader(io.BytesIO(template_bytes)))
     page = writer.pages[0]
     width = float(page.mediabox.width)
     data = page.get_contents().get_data()
     stream = DecodedStreamObject()
-    stream.set_data(f"q 0 {height - bottom:.3f} {width:.3f} {bottom - top:.3f} re W n\n".encode() + data + b"\nQ")
+    if slices is None:
+        stream.set_data(f"q 0 {height - bottom:.3f} {width:.3f} {bottom - top:.3f} re W n\n".encode() + data + b"\nQ")
+    else:
+        parts = []
+        for x0, x1, dx in slices:
+            head = f"q 1 0 0 1 {dx:.3f} 0 cm {x0:.3f} {height - bottom:.3f} {x1 - x0:.3f} {bottom - top:.3f} re W n\n"
+            parts.append(head.encode() + data + b"\nQ\n")
+        stream.set_data(b"".join(parts))
     page[NameObject("/Contents")] = writer._add_object(stream)
     if "/Annots" in page:
         del page["/Annots"]
@@ -515,13 +578,13 @@ def _clip_piece(template_bytes: bytes, top: float, bottom: float, height: float)
 
 
 def _compose_page(
-    template_bytes: bytes, width: float, height: float, pieces: list[tuple[float, float, float]], overlay_page
+    template_bytes: bytes, width: float, height: float, pieces: list[tuple], overlay_page
 ) -> PageObject:
-    """A blank page with each (clip top, clip bottom, dy-down) piece of the
-    template placed on it, then the drawn overlay on top."""
+    """A blank page with each (clip top, clip bottom, dy-down[, slices]) piece of the
+    template placed on it, then the drawn overlay on top (see _clip_piece for slices)."""
     page = PageObject.create_blank_page(width=width, height=height)
-    for clip_top, clip_bottom, dy_down in pieces:
-        piece = _clip_piece(template_bytes, clip_top, clip_bottom, height)
+    for clip_top, clip_bottom, dy_down, *rest in pieces:
+        piece = _clip_piece(template_bytes, clip_top, clip_bottom, height, *rest)
         page.merge_transformed_page(piece, Transformation().translate(0, -dy_down))
     page.merge_page(overlay_page)
     return page
@@ -562,7 +625,8 @@ def _paginate(count: int) -> list[dict]:
         y0 = cont_y0
 
 
-def generate_computer_gross_spa_po(fields: dict, line_items: list[dict]) -> bytes:
+def generate_computer_gross_spa_po(fields: dict, line_items: list[dict], column_order: list[str] | None = None) -> bytes:
+    cols = _Columns(column_order)
     path = find_template_path(SLUG)
     if path is None:
         raise FileNotFoundError(f"No template PDF found for distributor '{SLUG}'")
@@ -588,7 +652,7 @@ def generate_computer_gross_spa_po(fields: dict, line_items: list[dict]) -> byte
             if is_first:
                 _draw_header_values(c, height, fields, _HEAD_KEYS, links)
                 _draw_details(c, height, fields, links)
-            _draw_items_grid(c, height, items[spec["first"] : spec["last"]], y0, spec["rows"])
+            _draw_items_grid(c, height, items[spec["first"] : spec["last"]], y0, spec["rows"], cols)
             if spec["tail"]:
                 _draw_header_values(c, height, fields, _TAIL_KEYS, links, dy=tail_dy)
                 _draw_total_cell(c, height, grand_total, tail_dy)
@@ -598,16 +662,27 @@ def generate_computer_gross_spa_po(fields: dict, line_items: list[dict]) -> byte
             if total_pages > 1:
                 _page_label(c, height, fields, number, total_pages)
 
-        pieces: list[tuple[float, float, float]] = []
-        if is_first:
-            pieces.append((0.0, HEAD_BOTTOM, 0.0))
+        pieces: list[tuple] = []
+        band_dy = 0.0 if is_first else CONT_BAND_TOP - BAND_CLIP_TOP
+        if cols.default:
+            pieces.append((0.0, HEAD_BOTTOM, 0.0) if is_first else (BAND_CLIP_TOP, HEAD_BOTTOM, band_dy))
         else:
-            pieces.append((BAND_CLIP_TOP, HEAD_BOTTOM, CONT_BAND_TOP - BAND_CLIP_TOP))
+            # Reordered: the head stops just above the column-header band, and the band is
+            # placed cell by cell, each of the template's own header cells (grey fill, label and
+            # its half of each divider) moved sideways to its column's new place. The parts
+            # outside the outer borders' centre lines stay put.
+            if is_first:
+                pieces.append((0.0, BAND_CLIP_TOP, 0.0))
+            slices = [(0.0, _BOUNDARIES[0], 0.0), (_BOUNDARIES[-1], width, 0.0)] + cols.band_moves
+            pieces.append((BAND_CLIP_TOP, HEAD_BOTTOM, band_dy, slices))
         if spec["tail"]:
             pieces.append((TAIL_CLIP_TOP, height, tail_dy))
 
         overlay = _render_overlay(width, height, draw)
-        writer.add_page(_compose_page(template_bytes, width, height, pieces, overlay.pages[0]))
+        page = writer.add_page(_compose_page(template_bytes, width, height, pieces, overlay.pages[0]))
+        if not cols.default:
+            # The band slices each repeat the template's content stream; compress it.
+            page.compress_content_streams()
         _add_links(writer, links, height)
 
     output = io.BytesIO()

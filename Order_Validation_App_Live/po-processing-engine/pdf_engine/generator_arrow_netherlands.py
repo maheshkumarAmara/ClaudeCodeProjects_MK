@@ -32,6 +32,7 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
 import config
+from pdf_engine.common import column_boxes, order_columns
 from pdf_engine.extractor import find_template_path
 from pdf_engine.generator import _fresh_page, _render_overlay
 from pdf_engine.paginate import _to_decimal, format_amount, wrap_chars, wrap_text
@@ -74,6 +75,68 @@ X_CURRENCY = 821.9
 ARROW_ITEM_WIDTH = 144.7 - X_ARROW_ITEM
 VENDOR_ITEM_WIDTH = 271.0 - X_VENDOR_ITEM
 DESCRIPTION_WIDTH = 457.7 - X_DESCRIPTION
+
+# The nine columns in the template's order, with the x edges of their header cells. A column
+# keeps its own width wherever it moves, so the wrapping widths above stay valid.
+COLUMNS = ("line_no", "arrow_item", "vendor_item", "description", "qty", "rrp", "discount", "unit_price", "total")
+DEFAULT_EDGES = (19.98, 56.28, 144.74, 273.82, 457.67, 505.76, 591.32, 661.99, 747.34, 826.33)
+COL_WIDTHS = {key: DEFAULT_EDGES[i + 1] - DEFAULT_EDGES[i] for i, key in enumerate(COLUMNS)}
+# The form's column keys -> this table's. The Vendor item column prints the part number again
+# and RRP has no form column of its own; the form's Terms is appended to the description, so
+# it and anything else unmapped is ignored here.
+FORM_KEYS = {"sno": "line_no", "part_number": "arrow_item", "description": "description", "qty": "qty",
+             "unit_cost": "unit_price", "pct_disc": "discount", "total": "total"}
+# The order the form's table starts in (script.js DEFAULT_COLUMN_ORDER). Arrow's template is
+# laid out differently (Discount before Unit price), so a request still in this order means
+# "the user hasn't moved anything" and gets the template's own order.
+FORM_DEFAULT_ORDER = ("sno", "part_number", "description", "qty", "unit_cost", "pct_disc", "terms", "total")
+ANCHORS = {"vendor_item": "arrow_item", "rrp": "unit_price"}
+# Header labels on the band, with how each is positioned: left-aligned labels give their left
+# x, right-aligned ones the right x (both in the template's default column positions).
+HEADER_LABELS = {
+    "line_no": ("Line No.", "left", X_LINE_NO),
+    "arrow_item": ("Arrow item No.", "left", X_ARROW_ITEM),
+    "vendor_item": ("Vendor item No.", "left", X_VENDOR_ITEM),
+    "description": ("Item description", "left", X_DESCRIPTION),
+    "qty": ("Qty", "right", 502.8),
+    "rrp": ("RRP", "right", 589.1),
+    "discount": ("Discount %", "right", 659.8),
+    "unit_price": ("Unit price", "right", 745.1),
+    "total": ("Total price", "right", 824.3),
+}
+# Header band rows (top, bottom, label top) on the first page and on every later items page.
+BAND_FIRST = (289.67, 299.87, 291.8)
+BAND_LATER = (76.17, 86.37, 78.32)
+
+
+# When columns have moved, a right-aligned value is pulled in to the right edge of its header
+# label (the template prints Qty flush to its cell edge, which only works because the next
+# column is also right-aligned; a left-aligned column beside it would touch). The default
+# order keeps the template's positions, so these only apply to a reordered table.
+MOVED_INSET = {"qty": R_QTY - 502.8, "rrp": R_RRP - 589.1, "discount": R_DISCOUNT - 659.8, "unit_price": R_UNIT_PRICE - 745.1}
+
+
+class _Columns:
+    """Where each column sits for one PO. `order` is the left-to-right column keys and `shift[key]`
+    how far that column has moved from its template position. The default order has no shift and
+    leaves the template's own header band alone, so its output is unchanged."""
+
+    def __init__(self, column_order: list[str] | None) -> None:
+        requested = [FORM_KEYS[k] for k in (column_order or []) if k in FORM_KEYS]
+        template_requested = [FORM_KEYS[k] for k in FORM_DEFAULT_ORDER if k in FORM_KEYS]
+        if not requested or requested == template_requested:
+            self.order = list(COLUMNS)
+        else:
+            self.order = order_columns(requested, COLUMNS, ANCHORS)
+            # The Vendor item column repeats the part number: keep it right after Arrow item.
+            self.order.remove("vendor_item")
+            self.order.insert(self.order.index("arrow_item") + 1, "vendor_item")
+        self.is_default = self.order == list(COLUMNS)
+        if self.is_default:
+            self.shift = {key: 0.0 for key in COLUMNS}
+        else:
+            boxes = column_boxes(DEFAULT_EDGES[0], COL_WIDTHS, self.order)
+            self.shift = {key: boxes[key][0] - DEFAULT_EDGES[i] for i, key in enumerate(COLUMNS)}
 
 # Item area cleared on each template page: (x0, top, x1, bottom).
 ITEMS_AREA = {
@@ -322,20 +385,35 @@ def _replace_value(
     _text(c, page_height, x, top, text, size)
 
 
-def _draw_block(c: canvas.Canvas, page_height: float, block: _Block, top: float) -> None:
-    _text(c, page_height, X_LINE_NO, top, block.line_no)
+def _draw_header_band(c: canvas.Canvas, page_height: float, template: int, cols: _Columns) -> None:
+    """Redraws the column-header band with the columns in their new order. The template's band
+    is plain grey cells (INFO_GREY, no borders) with bold 8pt labels; it is only redrawn when
+    a column has moved, so the default order keeps the template's own band untouched."""
+    if cols.is_default:
+        return
+    top, bottom, label_top = BAND_FIRST if template == TEMPLATE_FIRST else BAND_LATER
+    _whiteout(c, page_height, DEFAULT_EDGES[0], top, DEFAULT_EDGES[-1], bottom, INFO_GREY)
+    for key in cols.order:
+        label, align, x = HEADER_LABELS[key]
+        _text(c, page_height, x + cols.shift[key], label_top, label, bold=True, align=align)
+
+
+def _draw_block(c: canvas.Canvas, page_height: float, block: _Block, top: float, cols: _Columns) -> None:
+    s = cols.shift
+    _text(c, page_height, X_LINE_NO + s["line_no"], top, block.line_no)
     for i, line in enumerate(block.arrow_lines):
-        _text(c, page_height, X_ARROW_ITEM, top + LINE_HEIGHT * i, line)
+        _text(c, page_height, X_ARROW_ITEM + s["arrow_item"], top + LINE_HEIGHT * i, line)
     for i, line in enumerate(block.vendor_lines):
-        _text(c, page_height, X_VENDOR_ITEM, top + LINE_HEIGHT * i, line)
+        _text(c, page_height, X_VENDOR_ITEM + s["vendor_item"], top + LINE_HEIGHT * i, line)
     for i, line in enumerate(block.description_lines):
-        _text(c, page_height, X_DESCRIPTION, top + LINE_HEIGHT * i, line)
-    _text(c, page_height, R_QTY, top, block.qty, align="right")
-    _text(c, page_height, R_RRP, top, block.rrp, align="right")
-    _text(c, page_height, R_DISCOUNT, top, block.discount, align="right")
-    _text(c, page_height, R_UNIT_PRICE, top, block.unit_price, align="right")
-    _text(c, page_height, R_TOTAL, top, _money(block.amount), align="right")
-    _text(c, page_height, X_CURRENCY, top, "$")
+        _text(c, page_height, X_DESCRIPTION + s["description"], top + LINE_HEIGHT * i, line)
+    inset = {} if cols.is_default else MOVED_INSET
+    _text(c, page_height, R_QTY + s["qty"] - inset.get("qty", 0.0), top, block.qty, align="right")
+    _text(c, page_height, R_RRP + s["rrp"] - inset.get("rrp", 0.0), top, block.rrp, align="right")
+    _text(c, page_height, R_DISCOUNT + s["discount"] - inset.get("discount", 0.0), top, block.discount, align="right")
+    _text(c, page_height, R_UNIT_PRICE + s["unit_price"] - inset.get("unit_price", 0.0), top, block.unit_price, align="right")
+    _text(c, page_height, R_TOTAL + s["total"], top, _money(block.amount), align="right")
+    _text(c, page_height, X_CURRENCY + s["total"], top, "$")
 
 
 def _draw_header_values(c: canvas.Canvas, page_height: float, fields: dict) -> None:
@@ -467,9 +545,11 @@ def _draw_items_page(
     total_pages: int,
     fields: dict,
     grand_total: Decimal,
+    cols: _Columns,
 ) -> None:
     x0, top, x1, bottom = ITEMS_AREA[spec.template]
     _whiteout(c, page_height, x0, top, x1, bottom)
+    _draw_header_band(c, page_height, spec.template, cols)
 
     _draw_po_number(c, page_height, fields)
     _whiteout(c, page_height, 760.0, 541.0, 828.0, 550.0)
@@ -481,7 +561,7 @@ def _draw_items_page(
 
     y = FIRST_TOP if spec.template == TEMPLATE_FIRST else CONT_TOP
     for block in spec.blocks:
-        _draw_block(c, page_height, block, y)
+        _draw_block(c, page_height, block, y, cols)
         y += block.height
 
     if spec.template == TEMPLATE_LAST:
@@ -525,7 +605,8 @@ def _draw_info_page(c: canvas.Canvas, page_height: float, fields: dict) -> None:
             _text(c, page_height, x, top, line)
 
 
-def generate_arrow_netherlands_po(fields: dict, line_items: list[dict]) -> bytes:
+def generate_arrow_netherlands_po(fields: dict, line_items: list[dict], column_order: list[str] | None = None) -> bytes:
+    cols = _Columns(column_order)
     path = find_template_path(SLUG)
     if path is None:
         raise FileNotFoundError(f"No template PDF found for distributor '{SLUG}'")
@@ -543,7 +624,7 @@ def generate_arrow_netherlands_po(fields: dict, line_items: list[dict]) -> bytes
         overlay = _render_overlay(
             width,
             height,
-            lambda c, s=spec, n=number, h=height: _draw_items_page(c, h, s, n, len(pages), fields, grand_total),
+            lambda c, s=spec, n=number, h=height: _draw_items_page(c, h, s, n, len(pages), fields, grand_total, cols),
         )
         page.merge_page(overlay.pages[0])
         writer.add_page(page)

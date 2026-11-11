@@ -125,6 +125,29 @@ AMOUNT_RIGHT = 731.7
 DESC_ROOM = 552.0 - DESC_X - 1.5
 CODE_ROOM = 179.9 - CODE_X - 3.0
 
+# --- Column order -----------------------------------------------------------------
+# Same five columns as the ordinary layout (generator_networld_corporation.py), with this
+# layout's own edges and widths; the form-key mapping, ignored keys and header redraw are shared.
+COL_EDGES = tuple(x for x, _ in _VRULES)
+COL_WIDTHS = {key: COL_EDGES[i + 1] - COL_EDGES[i] for i, key in enumerate(base.COLUMNS)}
+CODE_PAD = CODE_X - COL_EDGES[0]
+DESC_PAD = DESC_X - COL_EDGES[1]
+AMOUNT_PAD = COL_EDGES[5] - AMOUNT_RIGHT
+QTY_OFFSET = QTY_CENTER - COL_EDGES[2]
+TERM_OFFSET = TERM_CENTER - COL_EDGES[3]
+TOTAL_LABEL_PAD = COL_EDGES[4] - 646.4  # "Total" ends this far left of the amount column
+# The teal column-header band and its title lines (template tops, measured from page 2).
+BAND = (23.5, 118.7, 736.7, 146.3)
+BAND_FILL = (0.0, 0.698039, 0.662745)
+HEAD_TOPS = (121.6, 128.2, 134.8)
+
+
+def _columns(column_order: list[str] | None) -> "base._Columns":
+    return base._Columns(column_order, COL_EDGES, COL_WIDTHS, _VRULES)
+
+
+DEFAULT_COLUMNS = _columns(None)
+
 # Heading (page 2): the green PO number band and the quote number.
 PO_NUMBER_BOX = (180.2, 66.0, 552.5, 86.6)
 PO_NUMBER_RIGHT = 550.6
@@ -222,14 +245,16 @@ class _Row:
         return ROW_PITCH * max(1, len(self.desc_lines))
 
 
-def _draw_row(c: canvas.Canvas, row: _Row, top: float) -> None:
+def _draw_row(c: canvas.Canvas, row: _Row, top: float, cols=None) -> None:
+    cols = cols or DEFAULT_COLUMNS
     text_top = top + ROW_TEXT_OFFSET
-    _text(c, CODE_X, text_top, row.code, max_width=CODE_ROOM)
+    box = cols.boxes
+    _text(c, box["part_number"][0] + CODE_PAD, text_top, row.code, max_width=CODE_ROOM)
     for i, line in enumerate(row.desc_lines):
-        _text(c, DESC_X, text_top + ROW_PITCH * i, line)
-    _text(c, QTY_CENTER, text_top, base._qty_text(row.qty), align="center")
-    _text(c, TERM_CENTER, text_top, row.terms, align="center")
-    _text(c, AMOUNT_RIGHT, text_top, base._money(row.amount), align="right")
+        _text(c, box["description"][0] + DESC_PAD, text_top + ROW_PITCH * i, line)
+    _text(c, box["qty"][0] + QTY_OFFSET, text_top, base._qty_text(row.qty), align="center")
+    _text(c, box["terms"][0] + TERM_OFFSET, text_top, row.terms, align="center")
+    _text(c, box["amount"][1] - AMOUNT_PAD, text_top, base._money(row.amount), align="right")
 
 
 # --- Drawing helpers (page 2 and page 1 use different page sizes) --------------------------
@@ -261,6 +286,16 @@ def _hrule(c, y_top, thickness=RULE_THIN) -> None:
 
 # The legal-terms / Total row spans the description columns, so it has no rule at 179.9 or 552.0.
 _TOTAL_ROW_VRULES = tuple(v for v in _VRULES if v[0] not in (179.9, 552.0))
+
+
+def _total_row_vrules(cols) -> tuple:
+    """The Total row's rules. Its red legal-terms line runs from the grid's left edge to
+    LEGAL_BOX's right edge (595), so no rule may cross that span, wherever the columns are;
+    the outer left border and the rules to the right of the span are kept. For the default
+    order this is exactly _TOTAL_ROW_VRULES (the rules at 179.9 and 552.0 are dropped)."""
+    legal_right = LEGAL_BOX[2]
+    first = cols.rules[0]
+    return (first,) + tuple(r for r in cols.rules[1:] if r[0] > legal_right)
 
 
 def _vrules(c, y_top, y_bottom, rules=_VRULES) -> None:
@@ -362,7 +397,8 @@ def _draw_value_block(c, fields: dict, dy: float, links: list) -> None:
         _text(c, VALUE_X, SHIP_TO_FIRST_TOP + SHIP_TO_PITCH * i + dy, line, max_width=VALUE_COVER_RIGHT - VALUE_X - 6.0)
 
 
-def _draw_total_row(c, top: float, total: Decimal, fields: dict) -> None:
+def _draw_total_row(c, top: float, total: Decimal, fields: dict, cols=None) -> None:
+    cols = cols or DEFAULT_COLUMNS
     bottom = top + TOTAL_ROW_HEIGHT - RULE_THIN
     _hrule(c, top)
     _hrule(c, bottom)
@@ -371,8 +407,9 @@ def _draw_total_row(c, top: float, total: Decimal, fields: dict) -> None:
     legal = f"<Networld Corporation> ACCEPTS ALL ADDITIONAL TERMS ON <{quote}> DATED <{legal_date}>" if quote else ""
     # The template prints the legal-terms line in red.
     _text(c, LEGAL_X, top + LEGAL_TEXT_OFFSET, legal, bold=True, color=RED, max_width=595.0 - LEGAL_X - 4.0)
-    _text(c, 646.4, top + LEGAL_TEXT_OFFSET, "Total", bold=True, align="right")
-    _text(c, AMOUNT_RIGHT, top + LEGAL_TEXT_OFFSET, base._money(total), bold=True, align="right")
+    amount_left, amount_right = cols.boxes["amount"]
+    _text(c, amount_left - TOTAL_LABEL_PAD, top + LEGAL_TEXT_OFFSET, "Total", bold=True, align="right")
+    _text(c, amount_right - AMOUNT_PAD, top + LEGAL_TEXT_OFFSET, base._money(total), bold=True, align="right")
 
 
 def _legal_date(fields: dict) -> str:
@@ -547,7 +584,8 @@ def _crsd_page(template_bytes: bytes, crsd: str, quote_number: str = "", po_numb
     return page
 
 
-def generate_networld_crsd_po(fields: dict, line_items: list[dict]) -> bytes:
+def generate_networld_crsd_po(fields: dict, line_items: list[dict], column_order: list[str] | None = None) -> bytes:
+    cols = _columns(column_order)
     path = Path(config.TEMPLATES_DIR) / SLUG / TEMPLATE_NAME
     if not path.is_file():
         raise FileNotFoundError(f"No CRSD template PDF found for distributor '{SLUG}' ({TEMPLATE_NAME})")
@@ -577,8 +615,10 @@ def generate_networld_crsd_po(fields: dict, line_items: list[dict]) -> bytes:
 
         def draw(c, spec=spec, grid_bottom=grid_bottom, total_top=total_top, block_dy=block_dy) -> None:
             _draw_heading(c, fields)
+            if not cols.default:
+                base._draw_column_header(c, cols, BAND, BAND_FILL, HEAD_TOPS, page_h=P2_H, text=_text)
             for row, top in spec["rows"]:
-                _draw_row(c, row, top)
+                _draw_row(c, row, top, cols)
             y = ROW_TOP0
             for row, top in spec["rows"]:
                 y = top + row.height
@@ -588,12 +628,12 @@ def generate_networld_crsd_po(fields: dict, line_items: list[dict]) -> bytes:
                 while spec["first"] and slot_y < grid_bottom - 0.01:
                     slot_y += ROW_PITCH
                     _hrule(c, slot_y)
-                _vrules(c, ROW_TOP0 - 0.5, total_top)
-                _draw_total_row(c, total_top, total, fields)
-                _vrules(c, total_top, total_top + TOTAL_ROW_HEIGHT, _TOTAL_ROW_VRULES)
+                _vrules(c, ROW_TOP0 - 0.5, total_top, cols.rules)
+                _draw_total_row(c, total_top, total, fields, cols)
+                _vrules(c, total_top, total_top + TOTAL_ROW_HEIGHT, _total_row_vrules(cols))
                 _draw_value_block(c, fields, block_dy, links)
             else:
-                _vrules(c, ROW_TOP0 - 0.5, grid_bottom)
+                _vrules(c, ROW_TOP0 - 0.5, grid_bottom, cols.rules)
                 _hrule(c, grid_bottom)
 
         pieces = [(0.0, HEAD_BOTTOM, 0.0)]

@@ -31,7 +31,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from pypdf import PdfReader, PdfWriter
 
-from pdf_engine.common import fit_size, money_2dp, qty_text
+from pdf_engine.common import column_boxes, fit_size, money_2dp, order_columns, qty_text
 from pdf_engine.extractor import find_template_path
 from pdf_engine.generator import _render_overlay
 from pdf_engine.paginate import _to_decimal, wrap_chars, wrap_text
@@ -70,31 +70,54 @@ TABLE_TOP = 354.3  # top of the column-header band
 TABLE_HEAD_H = 30.8
 FIRST_ROW_TOP = 385.1
 COL_EDGES = (25.2, 43.2, 116.9, 217.2, 349.5, 413.8, 497.8, 585.6)
-HEAD_LABELS = (
-    ("No.",),
-    ("OEM", "Part No."),
-    ("Item Type /", "HSN Code"),
-    ("Description",),
-    ("Quantity",),
-    ("Unit Price", "[USD]"),
-    ("USD", "Amount"),
-)
+# The table's columns in the sample's order, keyed like the form's `column_order` (the form's
+# unit_cost / total are this table's unit_price / amount). "item_type" has no form column, so it
+# travels beside Description; the form's Terms and % disc. have no column of their own (a term is
+# printed inside the description, a discount is already in the unit price).
+COLUMNS = ("no", "part_number", "item_type", "description", "qty", "unit_price", "amount")
+FORM_KEYS = {"sno": "no", "part_number": "part_number", "description": "description", "qty": "qty",
+             "unit_cost": "unit_price", "total": "amount"}
+ITEM_TYPE_ANCHOR = {"item_type": "description"}
+# A column keeps this width wherever it moves, so the wrapping widths below stay valid.
+COL_WIDTHS = {key: COL_EDGES[i + 1] - COL_EDGES[i] for i, key in enumerate(COLUMNS)}
+HEAD_LABELS = {
+    "no": ("No.",),
+    "part_number": ("OEM", "Part No."),
+    "item_type": ("Item Type /", "HSN Code"),
+    "description": ("Description",),
+    "qty": ("Quantity",),
+    "unit_price": ("Unit Price", "[USD]"),
+    "amount": ("USD", "Amount"),
+}
 HEAD_SIZE = 7.5
 HEAD_PITCH = 9.5
 TEXT_SIZE = 8.0
 LINE_PITCH = 9.3
 TEXT_TOP = 4.3  # the first text line sits this far below the row's top rule
 ROW_PAD = 6.5
-PART_X = COL_EDGES[1] + 2.9
-PART_W = COL_EDGES[2] - COL_EDGES[1] - 5.8
+PART_PAD = 2.9  # left padding of the part number and description text inside their columns
+DESC_PAD = 2.8
+PART_W =COL_EDGES[2] - COL_EDGES[1] - 5.8
 TYPE_W = COL_EDGES[3] - COL_EDGES[2] - 6.0
-DESC_X = COL_EDGES[3] + 2.8
-DESC_W = COL_EDGES[4] - COL_EDGES[3] - 5.6
-QTY_RIGHT = 389.5
-UNIT_X = 393.0
-PRICE_RIGHT = 495.0
-AMOUNT_RIGHT = 583.0
+DESC_W =COL_EDGES[4] - COL_EDGES[3] - 5.6
+# Where a value sits inside its column: measured from the column's left edge (QTY_RIGHT, UNIT_X)
+# or from its right edge (PRICE_PAD_RIGHT, AMOUNT_PAD_RIGHT), as in the sample.
+QTY_RIGHT = 389.5 - COL_EDGES[4]
+UNIT_X = 393.0 - COL_EDGES[4]
+PRICE_PAD_RIGHT = COL_EDGES[6] - 495.0
+AMOUNT_PAD_RIGHT = COL_EDGES[7] - 583.0
 CONTENT_BOTTOM = 772.0
+
+
+class _Columns:
+    """Where each column sits for one PO: `order` is the left-to-right column keys and
+    `boxes[key]` the (left, right) x edges. The default order reproduces the sample exactly."""
+
+    def __init__(self, column_order: list[str] | None) -> None:
+        requested = [FORM_KEYS[k] for k in (column_order or []) if k in FORM_KEYS]
+        self.order = order_columns(requested, COLUMNS, ITEM_TYPE_ANCHOR)
+        self.boxes = column_boxes(COL_EDGES[0], COL_WIDTHS, self.order)
+        self.edges = [self.boxes[self.order[0]][0]] + [self.boxes[k][1] for k in self.order]
 
 # --- Totals box -----------------------------------------------------------------------
 TOTALS_X0, TOTALS_X1 = 354.7, 585.4
@@ -411,33 +434,37 @@ def _draw_header(c: canvas.Canvas, fields: dict) -> None:
             top += 11.5
 
 
-def _draw_table_head(c: canvas.Canvas, top: float) -> None:
+def _draw_table_head(c: canvas.Canvas, top: float, cols: _Columns) -> None:
     _rect(c, COL_EDGES[0], top, COL_EDGES[-1], top + TABLE_HEAD_H, GREY)
     _hline(c, COL_EDGES[0], COL_EDGES[-1], top)
     _hline(c, COL_EDGES[0], COL_EDGES[-1], top + TABLE_HEAD_H)
-    for edge in COL_EDGES:
+    for edge in cols.edges:
         _vline(c, edge, top, top + TABLE_HEAD_H)
-    for (x0, x1), label in zip(zip(COL_EDGES, COL_EDGES[1:]), HEAD_LABELS):
+    for key in cols.order:
+        label = HEAD_LABELS[key]
+        x0, x1 = cols.boxes[key]
         first = top + (TABLE_HEAD_H - len(label) * HEAD_PITCH) / 2
         for i, text in enumerate(label):
             _text(c, (x0 + x1) / 2, first + i * HEAD_PITCH, text, HEAD_SIZE, bold=True, align="center")
 
 
-def _draw_row(c: canvas.Canvas, row: _Row, top: float) -> None:
+def _draw_row(c: canvas.Canvas, row: _Row, top: float, cols: _Columns) -> None:
     bottom = top + row.height
     _hline(c, COL_EDGES[0], COL_EDGES[-1], top)
     _hline(c, COL_EDGES[0], COL_EDGES[-1], bottom)
-    for edge in COL_EDGES:
+    for edge in cols.edges:
         _vline(c, edge, top, bottom)
     y = top + TEXT_TOP
-    _text(c, (COL_EDGES[0] + COL_EDGES[1]) / 2, y, str(row.number), TEXT_SIZE, align="center")
-    _lines_at(c, PART_X, y, row.part_lines)
-    _lines_at(c, (COL_EDGES[2] + COL_EDGES[3]) / 2, y, row.type_lines, align="center")
-    _lines_at(c, DESC_X, y, row.desc_lines)
-    _text(c, QTY_RIGHT, y, row.qty, TEXT_SIZE, align="right")
-    _text(c, UNIT_X, y, row.unit, TEXT_SIZE)
-    _text(c, PRICE_RIGHT, y, row.price_text, TEXT_SIZE, align="right")
-    _text(c, AMOUNT_RIGHT, y, row.amount_text, TEXT_SIZE, align="right")
+    box = cols.boxes
+    _text(c, sum(box["no"]) / 2, y, str(row.number), TEXT_SIZE, align="center")
+    _lines_at(c, box["part_number"][0] + PART_PAD, y, row.part_lines)
+    _lines_at(c, sum(box["item_type"]) / 2, y, row.type_lines, align="center")
+    _lines_at(c, box["description"][0] + DESC_PAD, y, row.desc_lines)
+    qty_left = box["qty"][0]
+    _text(c, qty_left + QTY_RIGHT, y, row.qty, TEXT_SIZE, align="right")
+    _text(c, qty_left + UNIT_X, y, row.unit, TEXT_SIZE)
+    _text(c, box["unit_price"][1] - PRICE_PAD_RIGHT, y, row.price_text, TEXT_SIZE, align="right")
+    _text(c, box["amount"][1] - AMOUNT_PAD_RIGHT, y, row.amount_text, TEXT_SIZE, align="right")
 
 
 def _draw_totals(c: canvas.Canvas, top: float, values: list[str], words: str) -> None:
@@ -489,7 +516,7 @@ def _draw_closing(c: canvas.Canvas, top: float, fields: dict, closing: dict) -> 
     _text(c, RIGHT, line_top + 3.5, "Authorized By", 8, align="right")
 
 
-def _draw_page(c, fields, ops, page_no, page_count, totals, words) -> None:
+def _draw_page(c, fields, ops, page_no, page_count, totals, words, cols) -> None:
     for x0, top, x1, bottom in HEADER_BOXES:
         _rect(c, x0, top, x1, bottom, WHITE)
     _rect(c, *LOWER_AREA, WHITE)
@@ -498,9 +525,9 @@ def _draw_page(c, fields, ops, page_no, page_count, totals, words) -> None:
     for op in ops:
         kind = op[0]
         if kind == "table":
-            _draw_table_head(c, op[1])
+            _draw_table_head(c, op[1], cols)
         elif kind == "row":
-            _draw_row(c, op[1], op[2])
+            _draw_row(c, op[1], op[2], cols)
         elif kind == "totals":
             _draw_totals(c, op[1], totals, words)
         elif kind == "terms":
@@ -512,7 +539,8 @@ def _draw_page(c, fields, ops, page_no, page_count, totals, words) -> None:
     _text(c, RIGHT, 782.1, f"Page {page_no} of {page_count}", 8, align="right")
 
 
-def generate_ivalue_infosolutions_limited_po(fields: dict, line_items: list[dict]) -> bytes:
+def generate_ivalue_infosolutions_limited_po(fields: dict, line_items: list[dict], column_order: list[str] | None = None) -> bytes:
+    cols = _Columns(column_order)
     path = find_template_path(SLUG)
     if path is None:
         raise FileNotFoundError(f"No template PDF found for distributor '{SLUG}'")
@@ -536,7 +564,7 @@ def generate_ivalue_infosolutions_limited_po(fields: dict, line_items: list[dict
         overlay = _render_overlay(
             PAGE_W,
             PAGE_H,
-            lambda c, ops=ops, page_no=page_no: _draw_page(c, fields, ops, page_no, len(pages), totals, words),
+            lambda c, ops=ops, page_no=page_no: _draw_page(c, fields, ops, page_no, len(pages), totals, words, cols),
         )
         page.merge_page(overlay.pages[0])
         writer.add_page(page)
