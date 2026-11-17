@@ -1,0 +1,67 @@
+/* Email Editor page. Opens in its own tab, so it uses the full browser width. */
+.container { max-width: none; }
+
+.drop-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 1.6rem 1rem;
+    border: 2px dashed rgba(136, 184, 212, 0.35);
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.025);
+    color: #88b8d4;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.drop-zone strong { color: #dceef8; font-size: 0.95rem; }
+.drop-zone span { font-size: 0.8rem; }
+
+.drop-zone:hover,
+.drop-zone.dragging {
+    border-color: rgba(9, 132, 227, 0.7);
+    background: rgba(9, 132, 227, 0.1);
+}
+
+.ee-hint {
+    margin: 0.8rem 0 0;
+    font-size: 0.8rem;
+    color: #6f9bb8;
+}
+
+.ee-results-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 0.8rem;
+}
+
+.ee-results-head .card-title { margin: 0; }
+
+.ee-count {
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    color: #6f9bb8;
+    margin-left: 0.4rem;
+}
+
+.ee-table td { font-size: 0.85rem; vertical-align: middle; }
+.ee-table td.ee-old { word-break: break-all; min-width: 240px; }
+.ee-table td.ee-where { white-space: nowrap; color: #6f9bb8; font-size: 0.78rem; }
+.ee-table td.ee-new { width: 42%; }
+.ee-table td.ee-new input { width: 100%; box-sizing: border-box; }
+.ee-table td.ee-new input.invalid { border-color: #ff8a8a; }
+.ee-table td.ee-new input.changed { border-color: rgba(85, 214, 160, 0.7); }
+
+.ee-error { display: block; margin-top: 0.25rem; font-size: 0.75rem; color: #ff8a8a; }
+
+.ee-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 1rem; }
+
+/* The preview box itself (#pdf-preview-container / #pdf-preview-pages) is styled in style.css. */
+.ee-stale { font-size: 0.8rem; font-weight: 500; color: #f6c453; margin-left: 0.5rem; }

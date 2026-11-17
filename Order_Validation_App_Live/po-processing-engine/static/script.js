@@ -8,6 +8,20 @@ const DEFAULT_COLUMN_ORDER = ["sno", "part_number", "description", "qty", "unit_
 // Distributors whose form has a true / false switch (a select) for the closing "accepts all
 // additional terms mentioned on <quote> dated <date>" sentence: slug -> the field's key.
 const SENTENCE_SWITCH_KEYS = { "Computer Gross spa": "contingency_note", "NOX Co.,LTD.": "additional_terms_note" };
+// Fields shown as a dropdown of fixed choices: slug -> field key -> [[value, label], ...]. The first
+// choice is the default. ADN's address_order is the left-to-right order of the three address blocks.
+const SELECT_FIELD_OPTIONS = {
+    "ADN Distribution GmbH": {
+        address_order: [
+            ["invoice,delivery,licensee", "Invoice | Delivery | Licensee (template)"],
+            ["invoice,licensee,delivery", "Invoice | Licensee | Delivery"],
+            ["delivery,invoice,licensee", "Delivery | Invoice | Licensee"],
+            ["delivery,licensee,invoice", "Delivery | Licensee | Invoice"],
+            ["licensee,invoice,delivery", "Licensee | Invoice | Delivery"],
+            ["licensee,delivery,invoice", "Licensee | Delivery | Invoice"],
+        ],
+    },
+};
 // Fields shown with a date picker instead of a text box. Their value is an ISO date (YYYY-MM-DD).
 const DATE_FIELD_KEYS = new Set(["crsd"]);
 
@@ -107,14 +121,24 @@ function renderFields(fields, hiddenKeys) {
         // A true / false switch for the closing "accepts all additional terms" sentence, for the
         // distributors in SENTENCE_SWITCH_KEYS only. (ADN's contingency_note is free text.)
         const isSwitch = SENTENCE_SWITCH_KEYS[currentSlug] === key;
-        const input = isSwitch
+        const choices = (SELECT_FIELD_OPTIONS[currentSlug] || {})[key];
+        const input = isSwitch || choices
             ? document.createElement("select")
             : MULTILINE_FIELD_KEYS.has(key)
                 ? document.createElement("textarea")
                 : document.createElement("input");
         input.id = `field-${key}`;
         input.dataset.key = key;
-        if (isSwitch) {
+        if (choices) {
+            for (const [optionValue, optionLabel] of choices) {
+                const el = document.createElement("option");
+                el.value = optionValue;
+                el.textContent = optionLabel;
+                input.appendChild(el);
+            }
+            // A value that isn't one of the choices (an old history entry) falls back to the first.
+            input.value = choices.some(([v]) => v === value) ? value : choices[0][0];
+        } else if (isSwitch) {
             for (const option of ["true", "false"]) {
                 const el = document.createElement("option");
                 el.value = option;
@@ -125,7 +149,7 @@ function renderFields(fields, hiddenKeys) {
         } else {
             input.value = value || "";
         }
-        if (isSwitch) {
+        if (isSwitch || choices) {
             // nothing more to set: a select has no type or rows
         } else if (input.tagName === "TEXTAREA") {
             input.rows = 4;
@@ -454,13 +478,13 @@ function collectFieldValues() {
     return values;
 }
 
-let lastPreviewUrl = null;
-
 async function fetchGeneratedPdf(preview = false) {
+    // The size option only applies to the real download; "default" is the PDF as generated.
+    const sizeMode = preview ? "default" : document.getElementById("pdf-size-select").value;
     const res = await fetch(`/api/distributors/${encodeURIComponent(currentSlug)}/generate${preview ? "?preview=true" : ""}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fields: collectFieldValues(), line_items: currentLineItems, column_order: requestedColumnOrder() }),
+        body: JSON.stringify({ fields: collectFieldValues(), line_items: currentLineItems, column_order: requestedColumnOrder(), size_mode: sizeMode }),
     });
     if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -470,14 +494,24 @@ async function fetchGeneratedPdf(preview = false) {
     const disposition = res.headers.get("Content-Disposition") || "";
     const match = disposition.match(/filename="?([^"]+)"?/);
     const filename = match ? match[1] : `${currentSlug}.pdf`;
-    return { blob, filename };
+    const size = {
+        original: Number(res.headers.get("X-PDF-Original-Bytes")),
+        final: Number(res.headers.get("X-PDF-Size-Bytes")),
+        note: res.headers.get("X-PDF-Size-Note") || "",
+    };
+    return { blob, filename, size };
+}
+
+function formatBytes(bytes) {
+    if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
 async function generateAndDownload() {
     if (!currentSlug) return;
     showMessage("Generating PDF…", false);
     try {
-        const { blob, filename } = await fetchGeneratedPdf();
+        const { blob, filename, size } = await fetchGeneratedPdf();
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
@@ -486,7 +520,14 @@ async function generateAndDownload() {
         link.click();
         link.remove();
         URL.revokeObjectURL(url);
-        showMessage("PDF generated and downloaded.", false);
+        // Default (unchanged size) keeps the original message; a resized PDF reports before -> after.
+        let text = "PDF generated and downloaded.";
+        if (size.original && size.final && size.original !== size.final) {
+            text = `PDF generated and downloaded (${formatBytes(size.original)} → ${formatBytes(size.final)}).`;
+        } else if (size.note) {
+            text = `PDF generated and downloaded. ${size.note}`;
+        }
+        showMessage(text, false);
         loadHistory();
     } catch (err) {
         showMessage(err.message || "Could not generate PDF.", true);
@@ -497,10 +538,25 @@ async function previewPdf() {
     if (!currentSlug) return;
     showMessage("Generating preview…", false);
     try {
-        const { blob } = await fetchGeneratedPdf(true);
-        if (lastPreviewUrl) URL.revokeObjectURL(lastPreviewUrl);
-        lastPreviewUrl = URL.createObjectURL(blob);
-        document.getElementById("pdf-preview-frame").src = lastPreviewUrl;
+        // Page images, not the PDF in an <iframe>: this page runs inside Streamlit's
+        // sandboxed iframe, where Chrome blocks its PDF viewer.
+        const res = await fetch(`/api/distributors/${encodeURIComponent(currentSlug)}/preview`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fields: collectFieldValues(), line_items: currentLineItems, column_order: requestedColumnOrder() }),
+        });
+        if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body.detail || `Could not generate preview (${res.status}).`);
+        }
+        const { pages } = await res.json();
+        const holder = document.getElementById("pdf-preview-pages");
+        holder.replaceChildren(...pages.map((data, index) => {
+            const img = document.createElement("img");
+            img.src = `data:image/png;base64,${data}`;
+            img.alt = `PO page ${index + 1} of ${pages.length}`;
+            return img;
+        }));
         document.getElementById("pdf-preview-container").hidden = false;
         showMessage("Preview updated.", false);
     } catch (err) {

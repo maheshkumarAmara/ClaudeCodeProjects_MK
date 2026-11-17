@@ -123,8 +123,11 @@ class _Decoder:
         )
 
 
-def _sandbox_container(container, resources, writer, seen: set[int]) -> None:
-    """Rewrite the content stream of a page or form XObject (and the forms it draws)."""
+def _sandbox_container(container, resources, writer, seen: set[int], replace=sandbox_text) -> None:
+    """Rewrite the content stream of a page or form XObject (and the forms it draws).
+
+    replace(text) -> text decides what each text-showing operation becomes; text it returns
+    unchanged is left alone."""
     fonts = resources.get("/Font")
     fonts = fonts.get_object() if fonts is not None else {}
     xobjects = resources.get("/XObject")
@@ -158,13 +161,13 @@ def _sandbox_container(container, resources, writer, seen: set[int]) -> None:
             if form.get("/Subtype") == "/Form" and (ref is None or ref.idnum not in seen):
                 if ref is not None:
                     seen.add(ref.idnum)
-                _sandbox_container(form, form.get("/Resources") or resources, writer, seen)
+                _sandbox_container(form, form.get("/Resources") or resources, writer, seen, replace)
         elif operator in (b"Tj", b"TJ") and font_name is not None:
             dec = decoder_for(font_name)
             if dec is not None and dec.usable:
                 parts = [operands[0]] if operator == b"Tj" else [o for o in operands[0] if hasattr(o, "original_bytes")]
                 text = "".join(dec.decode(part.original_bytes) for part in parts)
-                safe = sandbox_text(text)
+                safe = replace(text)
                 if safe != text:
                     # Same place in the stream, so the text state (position, colour,
                     # spacing) carries over; only the font is swapped for one line.
@@ -198,23 +201,36 @@ def _sandbox_container(container, resources, writer, seen: set[int]) -> None:
     resources["/Font"].get_object()[_FONT_KEY] = DictionaryObject(_FONT_DICT)
 
 
-def _sandbox_links(page) -> None:
+def _sandbox_links(page, replace=sandbox_text) -> None:
     for annot in page.get("/Annots") or []:
         action = annot.get_object().get("/A")
         action = action.get_object() if action is not None else None
         if action is not None and "/URI" in action:
-            action[NameObject("/URI")] = TextStringObject(sandbox_text(str(action["/URI"])))
+            action[NameObject("/URI")] = TextStringObject(replace(str(action["/URI"])))
 
 
-def sandbox_pdf_emails(pdf_bytes: bytes) -> bytes:
+def rewrite_pdf_text(pdf_bytes: bytes, replace=sandbox_text, on_page=None, write: bool = True) -> bytes | None:
+    """Run replace over every text-showing operation and mailto: link of the PDF.
+
+    on_page(number) is called (1-based) before each page is processed, so a replace that only
+    records what it sees can tell which page the text is on. With write=False nothing is
+    serialised and None is returned (a read-only scan)."""
     writer = PdfWriter(clone_from=PdfReader(io.BytesIO(pdf_bytes)))
     seen: set[int] = set()
-    for page in writer.pages:
+    for number, page in enumerate(writer.pages, start=1):
+        if on_page is not None:
+            on_page(number)
         resources = page.get("/Resources")
         if resources is None:
             continue
-        _sandbox_container(page, resources.get_object(), writer, seen)
-        _sandbox_links(page)
+        _sandbox_container(page, resources.get_object(), writer, seen, replace)
+        _sandbox_links(page, replace)
+    if not write:
+        return None
     output = io.BytesIO()
     writer.write(output)
     return output.getvalue()
+
+
+def sandbox_pdf_emails(pdf_bytes: bytes) -> bytes:
+    return rewrite_pdf_text(pdf_bytes)

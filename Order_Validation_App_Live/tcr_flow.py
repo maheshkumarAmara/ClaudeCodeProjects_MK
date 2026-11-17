@@ -70,14 +70,39 @@ def clean_text(raw) -> str:
     return text
 
 
+GOOGLE_HOSTS = ("docs.google.com", "drive.google.com")
+
+
+def parse_ticket_field(raw) -> tuple[str | None, list[str]]:
+    """The Jira key field: one key/URL, optionally with Google Doc / Drive links (space or comma separated)
+    holding the test cases. Returns (key or None, links)."""
+    if not isinstance(raw, str) or not raw.strip():
+        return None, []
+    if any(ch in raw for ch in "\r\n\x00"):
+        raise InputError("The Jira key or URL must be a single line.")
+    key, links = None, []
+    for token in re.split(r"[\s,;]+", raw.strip()):
+        if not token:
+            continue
+        parsed = urlparse(token)
+        if parsed.scheme == "https" and (parsed.hostname or "").lower() in GOOGLE_HOSTS:
+            links.append(token)
+            continue
+        found = parse_ticket(token)
+        if key is not None and found != key:
+            raise InputError("Enter one Jira story key or URL (Google Doc links can be added after it).")
+        key = found
+    return key, links
+
+
 def clean_input(ticket, pasted=None) -> dict:
-    """A fixed-shape dict: {"ticket": key or None, "text": pasted text}. At least one must be given."""
+    """A fixed-shape dict: {"ticket": key or None, "text": pasted text, "links": Google Doc links}.
+    At least one of the three must be given."""
     text = clean_text(pasted)
-    ticket_raw = ticket.strip() if isinstance(ticket, str) else ticket
-    key = parse_ticket(ticket_raw) if ticket_raw else None
-    if key is None and not text:
+    key, links = parse_ticket_field(ticket)
+    if key is None and not text and not links:
         raise InputError("Enter a Jira key or URL, or paste a story or test cases.")
-    return {"ticket": key, "text": text}
+    return {"ticket": key, "text": text, "links": links}
 
 
 def config_defaults(config_file: Path | None = None) -> dict:
@@ -97,8 +122,15 @@ def config_defaults(config_file: Path | None = None) -> dict:
 def build_command(run_input: dict, post_jira: bool, post_slack: bool, text_path: Path | None = None,
                   result_path: Path | None = None) -> str:
     """The /test-case-review prompt: the input, a one-run override line, and where to write the result."""
+    links = run_input.get("links") or []
     if run_input["ticket"]:
         command = f"/{SKILL} {run_input['ticket']}"
+        if links:
+            command += "\nThe test cases are in this Google Doc: " + ", ".join(links) + "."
+        if text_path is not None:
+            command += f"\nAlso use the extra context pasted in {text_path}."
+    elif links:
+        command = f"/{SKILL} Review the story / test cases in this Google Doc: " + ", ".join(links) + "."
         if text_path is not None:
             command += f"\nAlso use the extra context pasted in {text_path}."
     else:

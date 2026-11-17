@@ -32,16 +32,20 @@ for bad in ("", "   ", "PRDOPS", "722", "PRDOPS-", "PRDOPS-722\nrm -rf /", "PRDO
     assert raises(flow.parse_ticket, bad), bad
 
 # clean_input / clean_text
-assert flow.clean_input("PRDOPS-1", "") == {"ticket": "PRDOPS-1", "text": ""}
-assert flow.clean_input("", "  a story  ") == {"ticket": None, "text": "a story"}
+assert flow.clean_input("PRDOPS-1", "") == {"ticket": "PRDOPS-1", "text": "", "links": []}
+assert flow.clean_input("", "  a story  ") == {"ticket": None, "text": "a story", "links": []}
 assert flow.clean_input("PRDOPS-1", "ctx\x00x")["text"] == "ctxx"
 assert raises(flow.clean_input, "", "")
 assert raises(flow.clean_input, None, None)
 assert raises(flow.clean_input, "nope", "")
+_doc = "https://docs.google.com/document/d/abc/edit"
+assert flow.clean_input(f"SMT2-286, {_doc}", "") == {"ticket": "SMT2-286", "text": "", "links": [_doc]}
+assert flow.clean_input(_doc, "")["ticket"] is None
+assert raises(flow.clean_input, "SMT2-286, PRDOPS-1", "")
 assert raises(flow.clean_text, "x" * (flow.MAX_TEXT_CHARS + 1))
 
 # build_command: overrides, result path, and one intact shell argument
-cmd = flow.build_command({"ticket": "PRDOPS-1", "text": ""}, False, True, None, Path("/tmp/r/result.json"))
+cmd = flow.build_command({"ticket": "PRDOPS-1", "text": "", "links": []}, False, True, None, Path("/tmp/r/result.json"))
 assert cmd.startswith("/test-case-review PRDOPS-1\n")
 assert "POST_JIRA_COMMENT=false" in cmd and "POST_SLACK_NOTIFICATION=true" in cmd
 assert "/tmp/r/result.json" in cmd
