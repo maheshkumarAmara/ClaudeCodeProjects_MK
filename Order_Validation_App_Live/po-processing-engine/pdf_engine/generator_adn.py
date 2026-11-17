@@ -14,6 +14,7 @@ Known limitations:
 """
 
 import io
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from decimal import ROUND_HALF_UP, Decimal
@@ -29,6 +30,8 @@ from pdf_engine.generator import _fresh_page, _render_overlay
 from pdf_engine.paginate import _to_decimal, wrap_text
 
 SLUG = "ADN Distribution GmbH"
+
+logger = logging.getLogger(__name__)
 
 FONT = "Helvetica"
 FONT_BOLD = "Helvetica-Bold"
@@ -354,6 +357,61 @@ def _draw_address_blocks(c: canvas.Canvas, page_height: float, fields: dict) -> 
             _text(c, page_height, text_x, ADDRESS_FIRST_TOP + ADDRESS_PITCH * i, line, ADDRESS_SIZE)
 
 
+# --- Address block order --------------------------------------------------------
+# The three address blocks sit side by side under their bold labels. `address_order` (a form
+# field, e.g. "licensee,delivery,invoice") lists them left to right. The default order leaves the
+# template's own labels and the drawing above untouched; any other order covers the label strip
+# and the three value boxes and redraws labels and values in their new places.
+ADDRESS_ORDER_DEFAULT = ("invoice", "delivery", "licensee")
+ADDRESS_ORDER_FIELD = "address_order"
+# block key -> (form field, label printed above it)
+ADDRESS_KINDS = {
+    "invoice": ("invoice_address", "Invoice address:"),
+    "delivery": ("delivery_address", "Delivery / Effort address:"),
+    "licensee": ("licensee_address", "Licensee address:"),
+}
+# The three columns: text x and right edge. Equal widths, so an address wraps the same way
+# wherever it lands (the template's own licensee column is a little narrower).
+ADDRESS_SLOTS = ((56.7, 222.0), (228.2, 393.0), (398.3, 562.0))
+ADDRESS_COVER_X = (54.0, 226.0, 396.0, 565.0)  # column edges the white covers are cut at
+ADDRESS_LABEL_TOP = 325.7
+ADDRESS_LABEL_COVER = (54.0, 322.5, 565.0, 334.0)  # clear of the rule at y=321 and the values below
+
+
+def address_order(fields: dict) -> tuple[str, ...]:
+    """The blocks left to right. Raises ValueError for a value that isn't an ordering of all three."""
+    raw = str(fields.get(ADDRESS_ORDER_FIELD) or "").strip()
+    if not raw:
+        return ADDRESS_ORDER_DEFAULT
+    order = tuple(part.strip().lower() for part in raw.split(","))
+    if sorted(order) != sorted(ADDRESS_ORDER_DEFAULT):
+        raise ValueError(
+            f"Address order '{raw}' must list invoice, delivery and licensee once each, separated by commas."
+        )
+    return order
+
+
+def _draw_reordered_address_blocks(c: canvas.Canvas, page_height: float, fields: dict, order: tuple[str, ...]) -> None:
+    """Labels and values of the three address blocks in `order`, left to right."""
+    x0, top, x1, bottom = ADDRESS_LABEL_COVER
+    _whiteout(c, page_height, x0, top, x1, bottom)
+    for slot, kind in enumerate(order):
+        key, label = ADDRESS_KINDS[kind]
+        text_x, right = ADDRESS_SLOTS[slot]
+        # Cover the old value box of this slot's column, then draw the value that belongs here.
+        # (A block whose field isn't supplied is blank here: its template text can't stay put,
+        # because the template's text for it sits in a different column.)
+        _whiteout(c, page_height, ADDRESS_COVER_X[slot], 334.0, ADDRESS_COVER_X[slot + 1], 397.0)
+        _text(c, page_height, text_x, ADDRESS_LABEL_TOP, label, 7.0, bold=True)
+        lines: list[str] = []
+        for raw in str(fields.get(key) or "").split("\n"):
+            lines.extend(wrap_text(raw.strip(), right - text_x, ADDRESS_SIZE) if raw.strip() else [])
+        if len(lines) > ADDRESS_MAX_LINES:
+            logger.warning("ADN %s has %d lines; only the first %d fit above the rule", key, len(lines), ADDRESS_MAX_LINES)
+        for i, line in enumerate(lines[:ADDRESS_MAX_LINES]):
+            _text(c, page_height, text_x, ADDRESS_FIRST_TOP + ADDRESS_PITCH * i, line, ADDRESS_SIZE)
+
+
 def _draw_header_values(c: canvas.Canvas, page_height: float, fields: dict) -> None:
     """Values on the first page's header block, which only prints once."""
     _whiteout(c, page_height, 433.0, 156.5, 566.0, 165.5)
@@ -439,8 +497,12 @@ def _draw_page(
 
     if t == TEMPLATE_FIRST:
         _draw_header_values(c, page_height, fields)
-        _draw_licensee_address(c, page_height, fields)
-        _draw_address_blocks(c, page_height, fields)
+        order = address_order(fields)
+        if order == ADDRESS_ORDER_DEFAULT:
+            _draw_licensee_address(c, page_height, fields)
+            _draw_address_blocks(c, page_height, fields)
+        else:
+            _draw_reordered_address_blocks(c, page_height, fields, order)
 
     y = FIRST_TOP if t == TEMPLATE_FIRST else CONT_TOP
     for block in spec.blocks:

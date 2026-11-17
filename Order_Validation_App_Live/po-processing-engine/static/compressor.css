@@ -1,0 +1,102 @@
+/* PDF Compressor page. Opens in its own tab, so it uses the full browser width. */
+.container { max-width: none; }
+
+.drop-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 1.6rem 1rem;
+    border: 2px dashed rgba(136, 184, 212, 0.35);
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.025);
+    color: #88b8d4;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.drop-zone strong { color: #dceef8; font-size: 0.95rem; }
+.drop-zone span { font-size: 0.8rem; }
+
+.drop-zone:hover,
+.drop-zone.dragging {
+    border-color: rgba(9, 132, 227, 0.7);
+    background: rgba(9, 132, 227, 0.1);
+}
+
+.comp-form {
+    display: flex;
+    align-items: end;
+    gap: 14px 18px;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+}
+
+.comp-field { flex: 1; min-width: 260px; }
+
+.comp-field label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #6f9bb8;
+    margin-bottom: 0.35rem;
+}
+
+.comp-field select,
+.comp-field input { width: 100%; box-sizing: border-box; }
+
+.comp-field-small { flex: 0 0 150px; min-width: 120px; }
+.comp-field[hidden] { display: none; }
+
+.comp-actions { display: flex; gap: 8px; }
+
+.comp-hint {
+    margin: 0.8rem 0 0;
+    font-size: 0.8rem;
+    color: #6f9bb8;
+}
+
+.comp-results-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 0.8rem;
+}
+
+.comp-results-head .card-title { margin: 0; }
+
+.comp-count {
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    color: #6f9bb8;
+    margin-left: 0.4rem;
+}
+
+.comp-table td { font-size: 0.85rem; vertical-align: middle; }
+.comp-table td.comp-name { word-break: break-all; max-width: 420px; }
+.comp-table td.comp-num { white-space: nowrap; }
+
+.comp-badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.comp-badge.queued { background: rgba(255, 255, 255, 0.07); color: #88b8d4; }
+.comp-badge.working { background: rgba(9, 132, 227, 0.18); color: #6cb8f5; }
+.comp-badge.done { background: rgba(85, 214, 160, 0.14); color: #55d6a0; }
+.comp-badge.same { background: rgba(246, 196, 83, 0.14); color: #f6c453; }
+.comp-badge.partial { background: rgba(246, 196, 83, 0.14); color: #f6c453; }
+.comp-badge.error { background: rgba(255, 138, 138, 0.14); color: #ff8a8a; }
+
+.comp-note { display: block; margin-top: 0.25rem; font-size: 0.75rem; color: #6f9bb8; }
+.comp-note.error { color: #ff8a8a; }

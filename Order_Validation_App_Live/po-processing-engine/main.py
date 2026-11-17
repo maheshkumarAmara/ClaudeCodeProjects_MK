@@ -1,3 +1,4 @@
+import base64
 import inspect
 import json
 import tempfile
@@ -14,7 +15,7 @@ import distributors
 import history
 import salesforce_client
 from sandbox_email import sandbox_fields
-from pdf_engine import compare, convert, detect, extractor, generator
+from pdf_engine import compare, compress, convert, detect, email_edit, extractor, generator, resize
 from pdf_engine.common import untouched_order, without_pulled_discount
 from pdf_engine.sandbox_pdf import sandbox_pdf_emails
 from pdf_engine.strip_hidden import strip_hidden_text
@@ -39,6 +40,122 @@ async def index(request: Request):
 @app.get("/compare")
 async def compare_page(request: Request):
     return templates.TemplateResponse(request, "compare.html", {})
+
+
+@app.get("/compressor")
+async def compressor_page(request: Request):
+    return templates.TemplateResponse(request, "compressor.html", {})
+
+
+@app.get("/email-editor")
+async def email_editor_page(request: Request):
+    return templates.TemplateResponse(request, "email_editor.html", {})
+
+
+async def _read_pdf_upload(pdf: UploadFile) -> bytes:
+    pdf_bytes = await pdf.read()
+    if not pdf_bytes:
+        raise HTTPException(status_code=400, detail="The file is empty.")
+    if len(pdf_bytes) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File is larger than 20 MB.")
+    if not pdf_bytes.startswith(b"%PDF"):
+        raise HTTPException(status_code=400, detail="This file is not a PDF.")
+    return pdf_bytes
+
+
+@app.post("/api/email-editor/scan")
+async def email_editor_scan(pdf: UploadFile = File(...)):
+    """The email addresses printed in one uploaded PDF. Nothing is stored or added to history."""
+    pdf_bytes = await _read_pdf_upload(pdf)
+    try:
+        return {"emails": email_edit.find_emails(pdf_bytes)}
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail="This PDF could not be read.") from exc
+
+
+async def _edited_pdf(pdf: UploadFile, mapping: str) -> bytes:
+    """The uploaded PDF with the chosen addresses replaced (mapping is JSON: old address -> new).
+    The new addresses are written exactly as typed: the sandbox.com rule used by the PO pages is
+    deliberately not applied here. Shared by the preview and the download, so the preview is
+    always the PDF the download delivers."""
+    try:
+        wanted = json.loads(mapping)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="The address list is not valid JSON.") from exc
+    if not isinstance(wanted, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in wanted.items()):
+        raise HTTPException(status_code=400, detail="The address list must map each old address to a new one.")
+    pdf_bytes = await _read_pdf_upload(pdf)
+    try:
+        return email_edit.replace_emails(pdf_bytes, wanted)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail="This PDF could not be edited.") from exc
+
+
+@app.post("/api/email-editor/preview")
+async def email_editor_preview(pdf: UploadFile = File(...), mapping: str = Form(...)):
+    """The edited PDF as page images, for the on-page preview (same reason as the PO preview:
+    plain images render inside Streamlit's sandboxed iframe, where Chrome blocks its PDF viewer).
+    Nothing is stored or added to history."""
+    result = await _edited_pdf(pdf, mapping)
+    try:
+        pages = convert._render_pages(result, "PNG")
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail="The edited PDF could not be previewed.") from exc
+    return {"pages": [base64.b64encode(page).decode("ascii") for page in pages]}
+
+
+@app.post("/api/email-editor/apply")
+async def email_editor_apply(pdf: UploadFile = File(...), mapping: str = Form(...)):
+    """The edited PDF as a download. Nothing is stored or added to history."""
+    result = await _edited_pdf(pdf, mapping)
+    stem = Path(pdf.filename or "document").stem or "document"
+    stem = "".join(c for c in stem if c.isalnum() or c in " ._-()") or "document"
+    return Response(
+        content=result,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{stem}_emails.pdf"'},
+    )
+
+
+@app.post("/api/compress")
+async def compress_pdf(pdf: UploadFile = File(...), level: str = Form("low"), target_mb: str = Form("")):
+    """One uploaded PDF, compressed. The page calls this once per file, so a batch is just
+    several calls and one bad file doesn't fail the rest. Nothing is stored or added to history."""
+    target_bytes = None
+    if target_mb.strip():
+        try:
+            target_bytes = int(float(target_mb) * 1024 * 1024)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=f"'{target_mb}' is not a valid size in MB.") from exc
+        if not 0 < target_bytes <= compress.MAX_TARGET_BYTES:
+            raise HTTPException(status_code=400, detail="The target size must be between 0 and 20 MB.")
+    elif level not in compress.LEVELS:
+        raise HTTPException(status_code=400, detail=f"Unknown compression level '{level}'.")
+    pdf_bytes = await pdf.read()
+    if not pdf_bytes:
+        raise HTTPException(status_code=400, detail="The file is empty.")
+    if len(pdf_bytes) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File is larger than 20 MB.")
+    if not pdf_bytes.startswith(b"%PDF"):
+        raise HTTPException(status_code=400, detail="This file is not a PDF.")
+    try:
+        result, info = compress.compress(pdf_bytes, level, target_bytes)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    stem = Path(pdf.filename or "document").stem or "document"
+    stem = "".join(c for c in stem if c.isalnum() or c in " ._-()") or "document"
+    return Response(
+        content=result,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{stem}_compressed.pdf"',
+            "X-PDF-Original-Bytes": str(info["original"]),
+            "X-PDF-Size-Bytes": str(info["final"]),
+            "X-PDF-Size-Note": info["note"],
+        },
+    )
 
 
 # The Streamlit app's Home page asks any open engine tab to close itself. The tab polls
@@ -166,6 +283,12 @@ async def get_distributor_template(slug: str):
 
             template["fields"]["crsd"] = ""
             template["fields"]["bill_to_block"] = template_bill_to_block()
+        # ADN only: the left-to-right order of the Invoice / Delivery / Licensee address blocks.
+        # The default is the template's own order, which the generator prints exactly as before.
+        if slug == "ADN Distribution GmbH":
+            from pdf_engine.generator_adn import ADDRESS_ORDER_DEFAULT, ADDRESS_ORDER_FIELD
+
+            template["fields"][ADDRESS_ORDER_FIELD] = ",".join(ADDRESS_ORDER_DEFAULT)
         return template
     except LookupError as exc:
         raise HTTPException(status_code=501, detail=str(exc)) from exc
@@ -180,6 +303,9 @@ class GenerateRequest(BaseModel):
     # description, qty, unit_cost, pct_disc, terms, total). Generators that can lay their PDF
     # table out in that order take it as a `column_order` argument; the rest ignore it.
     column_order: list[str] | None = None
+    # "Generate & download PDF" only: "default" (the PDF as generated), "smaller" or one of the
+    # "larger_<N>mb" options (see pdf_engine/resize.py). Preview and Convert ignore it.
+    size_mode: str = "default"
 
 
 def _accepts_column_order(fn) -> bool:
@@ -285,6 +411,11 @@ def _po_basename(slug: str, body: GenerateRequest) -> str:
 @app.post("/api/distributors/{slug}/generate")
 async def generate_distributor_po(slug: str, body: GenerateRequest, preview: bool = False):
     pdf_bytes = _build_po_pdf(slug, body)
+    # Resize last, so the archived copy and the download below are the same file.
+    try:
+        pdf_bytes, size_info = resize.apply(pdf_bytes, body.size_mode)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     filename = f"{_po_basename(slug, body)}.pdf"
     # Keep the archived copy (data/generated/<slug>/) identical to what was delivered.
     archive = config.GENERATED_DIR / slug / filename
@@ -296,8 +427,25 @@ async def generate_distributor_po(slug: str, body: GenerateRequest, preview: boo
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-PDF-Original-Bytes": str(size_info["original"]),
+            "X-PDF-Size-Bytes": str(size_info["final"]),
+            "X-PDF-Size-Note": size_info["note"],
+        },
     )
+
+
+@app.post("/api/distributors/{slug}/preview")
+async def preview_distributor_po(slug: str, body: GenerateRequest):
+    """The finished PO as page images, for the on-page preview.
+
+    The page is embedded in Streamlit's sandboxed iframe, where Chrome refuses to load its
+    PDF viewer ("This page has been blocked by Chrome"). Plain images render anywhere, and
+    they come from the same PDF the download delivers.
+    """
+    pages = convert._render_pages(_build_po_pdf(slug, body), "PNG")
+    return {"pages": [base64.b64encode(page).decode("ascii") for page in pages]}
 
 
 @app.get("/api/convert/formats")

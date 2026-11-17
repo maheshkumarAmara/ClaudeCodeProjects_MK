@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Compressor — PO Processing Engine</title>
+    <link rel="stylesheet" href="/static/style.css?v=13">
+    <link rel="stylesheet" href="/static/compressor.css?v=2">
+</head>
+<body>
+    <main class="container">
+        <header class="app-header">
+            <div class="app-header-icon">🗜️</div>
+            <div class="app-header-text">
+                <h1>PDF Compressor</h1>
+                <p>Make one or many PDFs smaller</p>
+            </div>
+            <div class="app-header-tags">
+                <a class="app-tag" id="back-link" href="/">&larr; Back to PO Processing Engine</a>
+            </div>
+        </header>
+
+        <section class="card">
+            <p class="card-title">PDF files</p>
+            <label id="cmp-drop" class="drop-zone" for="cmp-files">
+                <strong>Drop PDFs here or click to choose</strong>
+                <span>You can select a single PDF or several at once. Up to 20 MB each.</span>
+                <input id="cmp-files" type="file" accept="application/pdf,.pdf" multiple hidden>
+            </label>
+            <div class="comp-form">
+                <div class="comp-field">
+                    <label for="cmp-level">Compression level</label>
+                    <select id="cmp-level">
+                        <option value="low">Low: lossless, nothing visible changes</option>
+                        <option value="medium" selected>Medium: images recompressed (balanced)</option>
+                        <option value="high">High: smallest file, images reduced more</option>
+                        <option value="target">Target size: choose the MB you want</option>
+                    </select>
+                </div>
+                <div class="comp-field comp-field-small" id="cmp-target-wrap" hidden>
+                    <label for="cmp-target">Target size (MB)</label>
+                    <input id="cmp-target" type="number" min="0.1" max="20" step="0.1" value="1" inputmode="decimal">
+                </div>
+                <div class="comp-actions">
+                    <button id="cmp-run" type="button" disabled>Compress</button>
+                    <button id="cmp-clear" type="button" class="secondary" disabled>Clear</button>
+                </div>
+            </div>
+            <p class="comp-hint">Files are compressed on the server and are not stored. With a target size, image quality is lowered step by step until each PDF fits. A PDF with little or no image data may not reach a small target; it then gets the smallest size possible and the Status column says so. PDFs already under the target are left unchanged.</p>
+        </section>
+
+        <p id="comp-message" class="message" hidden></p>
+
+        <section id="comp-results" class="card" hidden>
+            <div class="comp-results-head">
+                <p class="card-title">Files <span id="comp-summary" class="comp-count"></span></p>
+                <button id="comp-download-all" type="button" class="secondary" disabled>Download all (ZIP)</button>
+            </div>
+            <div class="table-wrap">
+                <table class="line-items-table comp-table">
+                    <thead>
+                        <tr><th>File</th><th>Original</th><th>Compressed</th><th>Saved</th><th>Status</th><th></th></tr>
+                    </thead>
+                    <tbody id="comp-body"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+    <script src="/static/compressor.js?v=2"></script>
+    <script>
+        // Opens in its own tab from the PO Processing Engine; "back" closes it so the original tab
+        // is shown again. Falls back to a normal navigation if the browser won't close the tab.
+        document.getElementById("back-link").addEventListener("click", function (event) {
+            if (!window.opener || window.opener.closed) return;
+            event.preventDefault();
+            try { window.opener.focus(); } catch (e) { /* cross-window focus can be blocked */ }
+            window.close();
+            setTimeout(function () { window.location.href = "/"; }, 150);
+        });
+    </script>
+</body>
+</html>

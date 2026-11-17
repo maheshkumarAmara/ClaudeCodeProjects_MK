@@ -9,7 +9,7 @@
         try { if (window.self !== window.top) document.documentElement.classList.add("embedded"); }
         catch (e) { document.documentElement.classList.add("embedded"); }
     </script>
-    <link rel="stylesheet" href="/static/style.css?v=10">
+    <link rel="stylesheet" href="/static/style.css?v=13">
 </head>
 <body>
     <div class="layout">
@@ -30,6 +30,8 @@
             </div>
             <div class="app-header-tags">
                 <a class="app-tag" href="/compare" target="_blank" rel="opener">Compare PDF &amp; JSON</a>
+                <a class="app-tag" href="/compressor" target="_blank" rel="opener">PDF Compressor</a>
+                <a class="app-tag" href="/email-editor" target="_blank" rel="opener">Email Editor</a>
                 <span id="status" class="app-tag status">Checking server status&hellip;</span>
             </div>
         </header>
@@ -80,6 +82,17 @@
 
             <div class="actions">
                 <button id="preview-btn" type="button" class="secondary">Preview PDF</button>
+                <div class="size-control">
+                    <label for="pdf-size-select">PDF size</label>
+                    <select id="pdf-size-select" title="Size of the PDF that Generate &amp; download delivers. Default is the PDF as generated.">
+                        <option value="default" selected>Default</option>
+                        <option value="smaller">Smaller (compressed)</option>
+                        <option value="larger_1mb">Larger: ~1 MB</option>
+                        <option value="larger_5mb">Larger: ~5 MB</option>
+                        <option value="larger_10mb">Larger: ~10 MB</option>
+                        <option value="larger_25mb">Larger: ~25 MB</option>
+                    </select>
+                </div>
                 <button id="generate-btn" type="button">Generate &amp; download PDF</button>
                 <div class="convert-menu">
                     <button id="convert-btn" type="button" class="secondary" aria-haspopup="menu" aria-expanded="false">Convert &amp; Download ▾</button>
@@ -89,11 +102,11 @@
 
             <div id="pdf-preview-container" hidden>
                 <h2>Preview</h2>
-                <iframe id="pdf-preview-frame" title="PDF preview"></iframe>
+                <div id="pdf-preview-pages"></div>
             </div>
         </section>
     </main>
     </div>
-    <script src="/static/script.js?v=24"></script>
+    <script src="/static/script.js?v=27"></script>
 </body>
 </html>

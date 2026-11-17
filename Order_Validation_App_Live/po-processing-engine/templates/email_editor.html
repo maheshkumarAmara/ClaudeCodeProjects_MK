@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Editor — PO Processing Engine</title>
+    <link rel="stylesheet" href="/static/style.css?v=13">
+    <link rel="stylesheet" href="/static/email_editor.css?v=2">
+</head>
+<body>
+    <main class="container">
+        <header class="app-header">
+            <div class="app-header-icon">✉️</div>
+            <div class="app-header-text">
+                <h1>Email Editor</h1>
+                <p>Change only the email addresses in a PO PDF. Everything else stays as it is.</p>
+            </div>
+            <div class="app-header-tags">
+                <a class="app-tag" id="back-link" href="/">&larr; Back to PO Processing Engine</a>
+            </div>
+        </header>
+
+        <section class="card">
+            <p class="card-title">PDF file</p>
+            <label id="ee-drop" class="drop-zone" for="ee-file">
+                <strong id="ee-drop-title">Drop a PDF here or click to choose</strong>
+                <span id="ee-drop-sub">One PDF at a time. Up to 20 MB.</span>
+                <input id="ee-file" type="file" accept="application/pdf,.pdf" hidden>
+            </label>
+            <p class="ee-hint">The PDF is read on the server and is not stored. The new addresses are written exactly as you type them; the sandbox.com rule used on the PO pages is not applied here. Replacement text is drawn in Helvetica, squeezed to the width of the address it replaces, so a much longer address will look narrower. Scanned PDFs with no text layer have no addresses to find.</p>
+        </section>
+
+        <p id="ee-message" class="message" hidden></p>
+
+        <section id="ee-results" class="card" hidden>
+            <div class="ee-results-head">
+                <p class="card-title">Email addresses found <span id="ee-summary" class="ee-count"></span></p>
+            </div>
+            <div class="table-wrap">
+                <table class="line-items-table ee-table">
+                    <thead>
+                        <tr><th>Current address</th><th>Where</th><th>New address</th><th></th></tr>
+                    </thead>
+                    <tbody id="ee-body"></tbody>
+                </table>
+            </div>
+            <div class="ee-actions">
+                <button id="ee-preview" type="button" class="secondary" disabled>Preview PDF</button>
+                <button id="ee-generate" type="button" disabled>Generate &amp; download PDF</button>
+                <button id="ee-reset" type="button" class="secondary">Reset all</button>
+                <button id="ee-clear" type="button" class="secondary">Choose another PDF</button>
+            </div>
+
+            <div id="pdf-preview-container" hidden>
+                <h2>Preview <span id="ee-stale" class="ee-stale" hidden>(out of date: you changed an address since this preview)</span></h2>
+                <div id="pdf-preview-pages"></div>
+            </div>
+        </section>
+    </main>
+    <script src="/static/email_editor.js?v=2"></script>
+    <script>
+        // Opens in its own tab from the PO Processing Engine; "back" closes it so the original tab
+        // is shown again. Falls back to a normal navigation if the browser won't close the tab.
+        document.getElementById("back-link").addEventListener("click", function (event) {
+            if (!window.opener || window.opener.closed) return;
+            event.preventDefault();
+            try { window.opener.focus(); } catch (e) { /* cross-window focus can be blocked */ }
+            window.close();
+            setTimeout(function () { window.location.href = "/"; }, 150);
+        });
+    </script>
+</body>
+</html>
